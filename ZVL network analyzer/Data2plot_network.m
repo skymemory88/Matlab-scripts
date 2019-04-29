@@ -1,5 +1,5 @@
-cd('C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\LiHoF4\15.04.2019');
-scan = importdata('decoupling_300K_vacuum.dat',',',3);
+cd('C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\Cavity resonator\D24mm_T5mm_G0.2mm\24.04.2019');
+scan = importdata('D24mm_t5mm_g0.2mm_detuning_300K.dat',',',3);
 
 freq11=scan.data(:,1);
 S11=scan.data(:,2);
@@ -11,16 +11,13 @@ ampdB_S11=mag2db(amp11);
 bw11 = [];
 j=1;
 for i=1:size(ampdB_S11)
-    if ampdB_S11(i) <= -3
-        bw11(j)=freq(i); %group all frequencies below -3 dB.
+    if ampdB_S11(i) <= -3.0
+        bw11(j)=freq11(i); %group all frequencies below -3 dB.
         j=j+1;
-        i=i+1;
-    else
-        i=i+1;
     end
 end
-bw11 = nonzeros(bw11);  %remove zero elements
-[Peak11,Idx11] = min(ampdB_S11); %Find the peak and its corresponding index
+% bw11 = nonzeros(bw11);  %remove zero elements if necessary
+[~,Idx11] = min(ampdB_S11); %Find the peak and its corresponding index
 Q11 = freq11(Idx11)/(max(bw11)-min(bw11)); %Calculate the quality factor
 
 clear j i;
@@ -46,7 +43,7 @@ clear j i;
 % 
 % clear j i;
 % 
-% bw21 = nonzeros(bw21);  %remove zero elements
+% bw21 = nonzeros(bw21);  %remove zero elements if necessary
 % [Peak21,Idx21] = min(ampdB_S21); %Find the peak and its corresponding index
 % Q21 = freq21(Idx21)/(max(bw21)-min(bw21)); %Calculate the quality factor
 % 
@@ -68,7 +65,7 @@ for i=1:size(ampdB_S11_2)
         i=i+1;
     end
 end
-bw11_2 = nonzeros(bw11_2);  %remove zero elements
+% bw11_2 = nonzeros(bw11_2);  %remove zero elements if necessary
 [Peak11_2,Idx11_2] = min(ampdB_S11_2); %Find the peak and its corresponding index
 Q11_2 = freq11_2(Idx11_2)/(max(bw11_2)-min(bw11_2)); %Calculate the quality factor
 
