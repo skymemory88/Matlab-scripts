@@ -95,10 +95,10 @@ end
 
 function option1(plotopt)
 
-filepath = 'C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\LiHoF4\22.04.2019';
+filepath = 'G:\My Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\Cavity resonator\D24mm_T5mm_G0.2mm\26.04.2019';
 %filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4/Data/Matlab/Cavity resonator/D24mm_T5mm_G0.2mm/12.02.2019';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_04_0010';
+filename = '2019_04_0013';
 run = 12;
 nop = 31; % Number of points per segment for the frequency scan
 
@@ -121,12 +121,12 @@ T2 = out.data.Temperature2;
 HH = repmat(H,1,nop); HH = HH(:); %the third argument is the number of frequency points in each line/segment
 
 FdB = TriScatteredInterp(HH,freq,dB);
-FrS = TriScatteredInterp(HH,freq,real(S11));
-FiS = TriScatteredInterp(HH,freq,imag(S11)); %intrapolate points on a 2D grid
+% FrS = TriScatteredInterp(HH,freq,real(S11));
+% FiS = TriScatteredInterp(HH,freq,imag(S11)); %intrapolate points on a 2D grid
 
 % Plot frequency-field colour map
-freq_h = 3.490;
-freq_l = 3.520; %set frequency range, l: lower limit, h: higher limit
+freq_h = 3.520;
+freq_l = 3.540; %set frequency range, l: lower limit, h: higher limit
 field_h = 9.0;
 field_l = 0.0;  %set field range, l: lower limit, h: higher limit
 [xq,yq] = meshgrid(linspace(field_l,field_h,501),linspace(freq_l,freq_h,310)); %set the X and Y range
@@ -223,7 +223,7 @@ filename = '2014_11_';
 runs =  [ 53 56 59 62 65  68  71  74  77];
 power = [-10 -7 -4 -1  2 -16 -19 -22 -25];
 
-out = readdata_v2(filepath,filename,runs);
+out = readdata_v3(filepath,filename,runs);
 
 
 %% Plot data
@@ -321,10 +321,10 @@ filename = '2014_11_';
 runs =  [65 83 68 85];
 % power=  [  2  2 -16 -16];
 
-% out(1) = readdata_v2(filepath,filename,65);
-% out(2) = readdata_v2(filepath,filename,85);
+% out(1) = readdata_v3(filepath,filename,65);
+% out(2) = readdata_v3(filepath,filename,85);
 
-out = readdata_v2(filepath,filename,runs);
+out = readdata_v3(filepath,filename,runs);
 
 %% Plot data
 hfig(1) = setfig(31);
@@ -454,7 +454,7 @@ g = g/sum(g);
    
 [xq,yq] = meshgrid(linspace(0,9,901),linspace(3.4,3.5,101));  
 for n = 1:length(T)
-    tout = readdata_v2(filepath,filename,runs{n});
+    tout = readdata_v3(filepath,filename,runs{n});
     out(n) = mergeout_v1(tout);
     
     col = setcolours(n/length(T),'jet');
@@ -583,7 +583,7 @@ fac = 10;
 for n = 1:length(T)
     [xq,yq] = meshgrid(linspace(0,0.2,951),linspace(0.46,0.475,201)*fac);  
     
-    tout = readdata_v2(filepath,filename,runs{n});
+    tout = readdata_v3(filepath,filename,runs{n});
     out(n) = mergeout_v1(tout);
     
     col = setcolours(n/length(T),'jet');
@@ -746,7 +746,7 @@ fac = 10;
 for n = 1:length(Hx)
     [xq,yq] = meshgrid(linspace(0.8,4,501),linspace(0.46,0.475,201)*fac);  
     
-    tout = readdata_v2(filepath,filename,runs{n});
+    tout = readdata_v3(filepath,filename,runs{n});
     out(n) = mergeout_v1(tout);
     
     col = setcolours(n/length(Hx),'jet');
@@ -842,8 +842,8 @@ end
 function option7(plotopt)
 
 
-filepath = 'C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\LiHoF4\20.04.2019';
-filename = '2019_04_0007';
+filepath = 'C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\LiHoF4\22.04.2019';
+filename = '2019_04_0009';
 
 ll = 1;
 runs{ll} =  1;   T(ll) = 0.3;
@@ -856,14 +856,18 @@ runs{ll} =  1;   T(ll) = 0.3;
 
     
 %% Plot data
-hfig(1) = setfig(71);
-hold on
-box on
+% hfig(1) = setfig(71);
+% hold on
+% box on
 
 fac = 1.0;
+freq_h = 3.520;
+freq_l = 3.490; %set frequency range, l: lower limit, h: higher limit
+field_h = 9.0;
+field_l = 0.0;  %set field range, l: lower limit, h: higher limit
 
 for n = 1:length(T)
-    [xq,yq] = meshgrid(linspace(0,5,901),linspace(3.49,3.52,310)*fac);  
+    [xq,yq] = meshgrid(linspace(field_l,field_h,901),linspace(freq_l,freq_h,310*fac));
     
     tout = readdata_v3(filepath,filename,runs{n});
     out(n) = mergeout_v1(tout);
@@ -873,73 +877,111 @@ for n = 1:length(T)
     clear freq S11 dB N FdB FrS FiS FTT1 FTT2
     freq = out(n).data.ZVLfreq;
     S11 = out(n).data.ZVLreal + 1i*out(n).data.ZVLimag;
-    dB = mag2db(abs(S11));    
-    N = size(freq,2);
-
-    freq = freq(:)/1e9;
-    S11 = S11(:);
-    mag = (1- out(n).data.ZVLreal.^2 -out(n).data.ZVLimag.^2)./((1- out(n).data.ZVLreal).^2 + out(n).data.ZVLimag.^2);
-    mag = mag(:);
-    dB = dB(:);
-
     H = out(n).data.DCField1;
-    T1 = out(n).data.Temperature1;
-%     T2 = out(n).data.Temperature2;    %If there are two sets of
-%     temperature data
-    HH = repmat(H,1,N); HH = HH(:);
-    TT1 = repmat(T1,1,N); TT1 = TT1(:);
-%     TT2 = repmat(T2,1,N); TT2 = TT2(:);
-
-    FdB  = scatteredInterpolant(HH,freq*fac,dB);
-    Fmag  = scatteredInterpolant(HH,freq*fac,mag);
-    FrS  = scatteredInterpolant(HH,freq*fac,real(S11));
-    FiS  = scatteredInterpolant(HH,freq*fac,imag(S11));
-    FTT1 = scatteredInterpolant(HH,freq*fac,TT1);
-%     FTT2 = scatteredInterpolant(HH,freq*fac,TT2);
+    %     T1 = out(n).data.Temperature1;
+    dB = mag2db(abs(S11));
+    f0 = zeros(length(dB),1);
+    %Collect all the resonant peaks
+    for i = 1:length(dB)
+        [~,idx] = min(dB(i,:));
+        f0(i,1) = freq(i,idx)/1e9;
+    end
+      
+    %     N = length(yq(:,1));  % Option_1 Number of elements of the interpolated frequency data
+    N = size(freq,2);   % Option_2 Number of elements of the measured frequency data
     
-    % Plot colour map of freq-field scans
-    zq = FdB(xq,yq);
-%     hfig_map(n) = setfig(n);
-    hp = pcolor(xq,yq/fac,zq);
-    set(hp, 'edgeColor','none')
-    colorbar
-    set(gca,'fontsize',plotopt.ftsz)
-    tx(n+4) = xlabel('Field (T)');
-    ty(n+4) = ylabel('Frequency (GHz)');
-    tt(n) = title(num2str(T(n),'T = %3.2f K'));
-    
-%     disp(num2str(T(n),'Fitting: T = %3.2f K'))
-%     % Extract frequency cuts
-%     ll = 1;
-%     Hx = 0.1:0.1:8.9;
-%     for m = Hx
-%         xq = xq.*0 + m;
-%         zq = Fmag(xq,yq);
-%         zqf = medfilt1(zq(:,1),10);
-%         s = spec1d(yq(:,1)/fac,zqf,zqf.*0 + 0.05);
-%         p = [-1 0.467 0.001 1.2];
-%         fix = [1 1 1 1];
-%         [fQ fbck]=fits(s,'lorz',p,fix); 
-%         Q = fbck.pvals(2)/fbck.pvals(3);
-%         chi(ll) = 1/Q;        
-%         ll = ll + 1;
+    freq = freq(:)/1e9;
+    %     S11 = S11(:);
+    mag = (1- out(n).data.ZVLreal.^2 -out(n).data.ZVLimag.^2)./((1- out(n).data.ZVLreal).^2 + out(n).data.ZVLimag.^2);
+    mag = mag(:); %Unsure what these two lines are meant to do
+   
+%     % Option_1 Interpolate data along only the frequency axis.
+%     interp_dB = zeros(length(H),N);
+%     for i = 1:length(H)
+%         interp_dB(i,:) = interp1(freq(i,:),dB(i,:),yq(:,1));
 %     end
+%     interp_dB = interp_dB(:);
+%     yy = repmat(yq(:,1),1,length(H));
+%     yy = yy(:);
+     
+    %     T2 = out(n).data.Temperature2;    %If there are two sets of temperature data
+    %     TT1 = repmat(T1,1,N);  %populate the temperature to match the dimension of S11 matrix
+    HH = repmat(H,1,N); %populate the magnetic field to match the dimension of S11 matrix
+%     dB = dB(:);
+    HH = HH(:);
+    %     TT1 = TT1(:);
+    %     TT2 = repmat(T2,1,N); TT2 = TT2(:);
+    
+    % Option_2 Interpolate the data along all (two) axis.
+%     FdB  = scatteredInterpolant(HH,freq,dB);
+    Fmag  = scatteredInterpolant(HH,freq*fac,mag);
+    %     FrS  = scatteredInterpolant(HH,freq*fac,real(S11));
+    %     FiS  = scatteredInterpolant(HH,freq*fac,imag(S11));
+    %     FTT1 = scatteredInterpolant(HH,freq*fac,TT1);
+    %     FTT2 = scatteredInterpolant(HH,freq*fac,TT2);
+    
+    % option_1 plot surface interpolated data using pseudo-colormap
+%     zq = FdB(xq,yq);
+%     %     hfig_map(n) = setfig(n);
+%     hp = pcolor(xq,yq/fac,zq);
+%     set(hp, 'edgeColor','none')
+%     shading interp;
+    
+    %     option_2.1 plot single-direction interpolated data using pseudo-colormap
+%     hp = pcolor(H,yq(:,1),interp_dB');
+%     set(hp, 'edgeColor','none')
+   
+    %option_2.2 plot single-direction interpolated data using scatter plot
+%     C = linspace(min(interp_dB),max(interp_dB),length(HH));
+%     hp = scatter3(HH,yy,interp_dB,2,C,'o','filled','MarkerEdgeColor','none');   
+%     colormap(hsv);
 
-    yq = yq.*0 + 0.467;
+%     colorbar
+%     set(gca,'fontsize',plotopt.ftsz)
+%     axis([field_l field_h freq_l freq_h]);
+%     tx(n+4) = xlabel('Field (T)');
+%     ty(n+4) = ylabel('Frequency (GHz)');
+%     tt(n+4) = title(num2str(T(n),'S11 response at T = %3.3f K'));
+    
+    figure
+    axis([field_l field_h freq_l freq_h]);
+    plot(H,f0,'-o','MarkerSize',3);
+    tx(n+5) = xlabel('Field (T)');
+    ty(n+5) = ylabel('Resonant frequency (GHz)');
+    tt(n+5) = title(num2str(T(n),'Resonant frequency at T = %3.3f K'));
+    
+    figure
+    disp(num2str(T(n),'Fitting: T = %3.2f K'))
+    % Extract frequency cuts
+    ll = 1;
+    Hx = 0.1:0.1:8.9;
+    for m = Hx
+        xq = xq.*0 + m;
+        zq = Fmag(xq,yq);
+        zqf = medfilt1(zq(:,1),10);
+        s = spec1d(yq(:,1)/fac,zqf,zqf.*0 + 0.05);
+        p = [-1 0.467 0.001 1.2];
+        fix = [1 1 1 1];
+        [fQ fbck]=fits(s,'lorz',p,fix);
+        Q = fbck.pvals(2)/fbck.pvals(3);
+        chi(ll) = 1/Q;
+        ll = ll + 1;
+    end
+    
+    yq = yq.*0 + 0.349;
     zq = Fmag(xq,yq);
     figure(hfig(1))
-    h1(n) = plot(xq(1,:),zq);     
+    h1(n) = plot(xq(1,:),zq);
     ax(1) = gca;
     tx(1) = xlabel('Field (T)');
-    ty(1) = ylabel('Quality factor');    
-    set(h1(n),'color',col,'linewidth',plotopt.lnwd);    
+    ty(1) = ylabel('Quality factor');
+    set(h1(n),'color',col,'linewidth',plotopt.lnwd);
 end
 
-
-set(ax,'fontsize',plotopt.ftsz,'xlim',[0 9])
+set(ax,'fontsize',plotopt.ftsz,'xlim',[field_l field_h])
 % set(ax(2),'ylim',[0.2 0.6])
-tl = legend(h1,num2str(T(:),'%3.1f K'),'location','se');    
-set([tx ty tl tt],'fontsize',plotopt.ftsz,'interpreter','latex')
+% tl = legend(h1,num2str(T(:),'%3.1f K'),'location','se');
+% set([tx ty tl tt],'fontsize',plotopt.ftsz,'interpreter','latex')
 %     tt(2) = title([filename num2str(runs(n)) ', f = 3.437 GHz']);
 
 % saveplots(hfig(1),'7-Temperature_field-S_-16dBm_Q')
@@ -994,7 +1036,7 @@ fac = 10;
 for n = 1:length(T)
     [xq,yq] = meshgrid(linspace(-0.5,9,951),linspace(1.63,1.73,201)*fac);  
     
-    tout = readdata_v2(['V:\' year '\' mon{n}],[year '_' mon{n} '_'],runs{n});
+    tout = readdata_v3(['V:\' year '\' mon{n}],[year '_' mon{n} '_'],runs{n});
     out(n) = mergeout_v1(tout);
     
     col = setcolours(n/length(T),'jet');
@@ -1152,7 +1194,7 @@ fac = 10;
 for n = 1:length(Hx)
     [xq,yq] = meshgrid(linspace(0.8,2,501),linspace(1.63,1.73,201)*fac);  
     
-    tout = readdata_v2(filepath,filename,runs{n});
+    tout = readdata_v3(filepath,filename,runs{n});
     out(n) = mergeout_v1(tout);
     
     col = setcolours(n/length(Hx),'jet');
@@ -1292,7 +1334,7 @@ fac = 10;
 for n = 1:length(T)
     [xq,yq] = meshgrid(linspace(-0.5,9,951),linspace(4.4,4.5,201)*fac);  
     
-    tout = readdata_v2(['V:\' year '\' mon{n}],[year '_' mon{n} '_'],runs{n});
+    tout = readdata_v3(['V:\' year '\' mon{n}],[year '_' mon{n} '_'],runs{n});
     out(n) = mergeout_v1(tout);
     
     col = setcolours(n/length(T),'jet');
@@ -1490,7 +1532,7 @@ fac = 10;
 for n = 1:length(T)
     [xq,yq] = meshgrid(linspace(-0.5,9,951),linspace(5.55,5.65,201)*fac);  
     
-    tout = readdata_v2(['V:\' year '\' mon{n}],[year '_' mon{n} '_'],runs{n});
+    tout = readdata_v3(['V:\' year '\' mon{n}],[year '_' mon{n} '_'],runs{n});
     out(n) = mergeout_v1(tout);
     
     col = setcolours(n/length(T),'jet');
@@ -1687,7 +1729,7 @@ fac = 10;
 for n = 1:length(T)
     [xq,yq] = meshgrid(linspace(-0.5,9,951),linspace(3.875,3.975,201)*fac);  
     
-    tout = readdata_v2(filepath,filename,runs{n});
+    tout = readdata_v3(filepath,filename,runs{n});
     out(n) = mergeout_v1(tout);
     
     col = setcolours(n/length(T),'jet');
@@ -1848,7 +1890,7 @@ filepath = 'V:\2014\11';
 filename = '2014_11_';
 runs =  [ 283:285];
 
-tout = readdata_v2(filepath,filename,runs);
+tout = readdata_v3(filepath,filename,runs);
 out = mergeout_v1(tout);
 
 %% Plot data
