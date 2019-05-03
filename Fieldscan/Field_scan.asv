@@ -927,8 +927,8 @@ for n = 1:length(T)
 
     %plot the resonant frequency versus
     figure
-    plot(H0,f0,'o','MarkerSize',2);
     axis([field_l field_h freq_l freq_h]);
+    plot(H0,f0,'o','MarkerSize',2);
     tx(n+5) = xlabel('Field (T)');
     ty(n+5) = ylabel('Resonant frequency (GHz)');
     tt(n+5) = title(num2str(T(n),'Resonant frequency at T = %3.3f K'));
@@ -937,9 +937,9 @@ for n = 1:length(T)
     freq = freq(:)/1e9;
     dB = dB(:);
     HH = HH(:);
-    S11 = S11(:);
-    mag = (1- out(n).data.ZVLreal.^2 -out(n).data.ZVLimag.^2)./((1- out(n).data.ZVLreal).^2 + out(n).data.ZVLimag.^2);
-    mag = mag(:); %Unsure what these two lines are meant to do
+    %     S11 = S11(:);
+    %     mag = (1- out(n).data.ZVLreal.^2 -out(n).data.ZVLimag.^2)./((1- out(n).data.ZVLreal).^2 + out(n).data.ZVLimag.^2);
+    %     mag = mag(:); %Unsure what these two lines are meant to do
     
     %     % Option_1 Interpolate data along only the frequency axis.
     %     interp_dB = zeros(length(H),N);
@@ -991,14 +991,11 @@ for n = 1:length(T)
     ty(n+4) = ylabel('Frequency (GHz)');
     tt(n+4) = title(num2str(T(n),'S11 response at T = %3.3f K'));
     
-    %Fit each frequency scan to Lorentzian form to extract the quality factor
+    %
     figure
     disp(num2str(T(n),'Fitting: T = %3.3f K'))
     % Extract frequency cuts
     Hx = field_l:0.1:field_h;
-    ff0 = interp1(H0,f0,Hx); %Create an interpolation of the resonant frequency along the DC magnetic field (Hx) axis
-%     Hx = H0;
-%     ff0 = f0; %Alernatively use the raw data for fitting
     ll = 1;
     for m = Hx
         xq = xq.*0 + m;
