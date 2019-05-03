@@ -1,6 +1,6 @@
-cd('C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\LiHoF4\01.05.2019');
+cd('C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\LiHoF4\18.04.2019');
 format long g;
-scan = importdata('detune_LiHoF4_300K.dat',',',3);
+scan = importdata('detuning_300K_2nd_try.dat',',',3);
 
 freq11=scan.data(:,1);
 S11=scan.data(:,2);
@@ -26,9 +26,9 @@ p = [-1 f0 range(bw11) 2];
 fix = [1 1 1 1];
 [fQ, fbck]=fits(s,'lorz',p,fix);
 Q11_fit = fbck.pvals(2)/fbck.pvals(3); %Calculate the quality factor
-chill = 1/Q11_fit;
+chi11 = 1/Q11_fit;
 disp(num2str(Q11_fit,'First calculated quality factor from fitting: %3.2f.'));
-clear fQ fbck s p zqf fix mag bw11 f0 Idx;
+clear fQ fbck s p zqf fix mag bw11 f0 Idx11 pk;
 
 % freq21=scan.data(:,1);
 % S21=scan.data(:,4);
@@ -77,9 +77,9 @@ p = [-1 f0_2 range(bw11_2) 2];
 fix = [1 1 1 1];
 [fQ, fbck]=fits(s,'lorz',p,fix);
 Q11_fit_2 = fbck.pvals(2)/fbck.pvals(3); %Calculate the quality factor
-chill_2 = 1/Q11_fit;
+chi11_2 = 1/Q11_fit;
 disp(num2str(Q11_fit_2,'Second calculated quality factor from fitting: %3.2f.'));
-clear fQ fbck s p zqf mag_2 fix mag_2 bw11_2 f0_2 Idx11_2;
+clear fQ fbck s p zqf mag_2 fix mag_2 bw11_2 f0_2 Idx11_2 pk2;
 
 % freq11_3=scan.data3(:,1);
 % S11_3=scan.data3(:,3);
@@ -104,6 +104,7 @@ vline(:,4)=vline(:,2);
 plot(vline(:,1),vline(:,2),'r',vline(:,3),vline(:,4),'r');
 plot(vline(:,1),vline(:,2),'r');
 %}
-legend(sprintf('S11 undercoupled 300K with Q = %.2f', Q11), sprintf('S11 critical 300K with Q = %.2f', Q11_2));
+title('S11 response at 300K');
+legend(sprintf('Detunned, Q_g = %.2f and Q_f = %.2f', Q11, Q11_fit), sprintf('Critical, Q_g = %.2f and Q_f = %.2f', Q11_2, Q11_fit_2));
 xlabel('Frequency (Hz)');ylabel('S11 (dB)');
 hold off
