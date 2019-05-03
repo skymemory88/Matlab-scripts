@@ -28,7 +28,7 @@ fix = [1 1 1 1];
 Q11_fit = fbck.pvals(2)/fbck.pvals(3); %Calculate the quality factor
 chill = 1/Q11_fit;
 disp(num2str(Q11_fit,'First calculated quality factor from fitting: %3.2f.'));
-clear fQ fbck s p zqf fix mag bw11 f0 Idx;
+clear fQ fbck s p zqf fix mag bw11 f0;
 
 % freq21=scan.data(:,1);
 % S21=scan.data(:,4);
