@@ -5,8 +5,8 @@ format long;
 %addpath('C:\Users\babkevic\Documents\MATLAB\legendflex')
 
 % curdir = cd;
-addpath('C:\Users\yiyang\Google Drive\File sharing\Programming scripts\Matlab\Fieldscan\functions');
-addpath(genpath('C:\Users\yiyang\Google Drive\File sharing\Programming scripts\Matlab\spec1d--Henrik'));
+addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Fieldscan\functions');
+addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\spec1d--Henrik'));
 
 %cd('/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4/Data/Matlab/Cavity resonator/D24mm_T5mm_G0.2mm/12.02.2019/functions')
 %The first line is for windows, the second line is for mac OS
@@ -29,20 +29,11 @@ plotopt.mksz = 5;
 %% Read ZVL
 
 %Set data range and parameters
-freq_l = 5.025; %set frequency range, l: lower limit, h: higher limit
-freq_h = 5.043;
-field_l = 0.0;  %set field range, l: lower limit, h: higher limit
-field_h = 9.0;
-nop = 31; % Number of points per segment for the frequency scan according to ZVL network analyzer
-step = 1e-4; %Scanning step in unit of GHz,default is 1 MHz according to ZVL network analyser
-lineDiv = floor((freq_h-freq_l)/((nop - 1) * step)); %compute how many lines per complete frequency scan.
-
-opt  = 7;
+opt  = 1;
 
 switch opt
     case 1
-        % Test of frequency scans using ZVL as a function of field, ramp
-        % rate 0.1 T/min and -10 dBm input power
+        % Test of frequency scans using ZVL as a function of field
         option1(plotopt)
     case 2
         % Test at 600 mK using different input powers
@@ -106,16 +97,16 @@ end
 
 function option1(plotopt)
 
-filepath = 'C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\Cavity resonator\D24mm_T5mm_G0.6mm\30.04.2019';
+filepath = 'G:\My Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\LiHoF4\10.05.2019';
 %filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4/Data/Matlab/Cavity resonator/D24mm_T5mm_G0.2mm/12.02.2019';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_04_0015';
+filename = '2019_05_0014';
 run = 12;
 out = readdata_v3(filepath,filename,run);
 
 %Set data range and parameters
-freq_l = 5.025; %set frequency range, l: lower limit, h: higher limit
-freq_h = 5.043;
+freq_l = 3.400; %set frequency range, l: lower limit, h: higher limit
+freq_h = 3.580;
 field_l = 0.0;  %set field range, l: lower limit, h: higher limit
 field_h = 9.0;
 nop = 31; % Number of points per segment for the frequency scan according to ZVL network analyzer
@@ -855,8 +846,8 @@ end
 function option7(plotopt)
 
 
-filepath = 'C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\Cavity resonator\D24mm_T5mm_G0.6mm\30.04.2019';
-filename = '2019_04_0014';
+filepath = 'C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\Cavity resonator\D24mm_T5mm_G0.6mm\06.05.2019';
+filename = '2019_05_0008';
 
 ll = 1;
 runs{ll} =  1;   T(ll) = 0.3;
@@ -925,7 +916,7 @@ for n = 1:length(T)
         H0(i) = HH_temp(idx,i);
     end
 
-    %plot the resonant frequency versus
+    %plot the resonant frequency versus DC magnetic field
     figure
     plot(H0,f0,'o','MarkerSize',2);
     axis([field_l field_h freq_l freq_h]);
