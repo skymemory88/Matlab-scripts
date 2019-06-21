@@ -1,6 +1,6 @@
-cd('C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\LiHoF4\18.04.2019');
+addpath(genpath('C:\Users\yiyang\Google Drive\File sharing\Programming scripts\Matlab\spec1d--Henrik'));
 format long g;
-scan = importdata('detuning_300K_2nd_try.dat',',',3);
+scan = importdata('C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\LiHoF4\12.05.2019\LiHoF4_Detuning_300K.dat',',',3);
 
 freq11=scan.data(:,1);
 S11=scan.data(:,2);
@@ -18,7 +18,7 @@ Q11 = freq11(Idx11)/range(bw11); %Calculate the quality factor
 
 clear j i;
 
-mag = (1- S11.^2 -S11i.^2)./((1- S11).^2 + S11i.^2); %1-abs(S11)^2/( (1-S11_real)^2+S11_img^2 )
+mag = (1- S11.^2 -S11i.^2)./(1- (S11.^2 + S11i.^2)); %1-abs(S11)^2/( (1-S11_real)^2+S11_img^2 )
 zqf = medfilt1(mag,10);
 s = spec1d(freq11,zqf,zqf.*0 + 0.05);
 p = [-1 f0 range(bw11) 2];
@@ -27,7 +27,7 @@ fix = [1 1 1 1];
 [fQ, fbck]=fits(s,'lorz',p,fix);
 Q11_fit = fbck.pvals(2)/fbck.pvals(3); %Calculate the quality factor
 chi11 = 1/Q11_fit;
-disp(num2str(Q11_fit,'First calculated quality factor from fitting: %3.2f.'));
+disp(num2str(Q11_fit,'Calculated quality factor for curve 1 from fitting: %3.2f.'));
 clear fQ fbck s p zqf fix mag bw11 f0 Idx11 pk;
 
 % freq21=scan.data(:,1);
@@ -55,6 +55,9 @@ clear fQ fbck s p zqf fix mag bw11 f0 Idx11 pk;
 % [Peak21,Idx21] = min(ampdB_S21); %Find the peak and its corresponding index
 % Q21 = freq21(Idx21)/(max(bw21)-min(bw21)); %Calculate the quality factor
 % 
+% scan = importdata('transsmission_300K.dat',',',3);
+%For import from a second file.
+
 freq11_2=scan.data(:,1);
 S11_2=scan.data(:,4);
 S11i_2=scan.data(:,5);
@@ -78,7 +81,7 @@ fix = [1 1 1 1];
 [fQ, fbck]=fits(s,'lorz',p,fix);
 Q11_fit_2 = fbck.pvals(2)/fbck.pvals(3); %Calculate the quality factor
 chi11_2 = 1/Q11_fit;
-disp(num2str(Q11_fit_2,'Second calculated quality factor from fitting: %3.2f.'));
+disp(num2str(Q11_fit_2,'Calculated quality factor for curve 2 from fitting: %3.2f.'));
 clear fQ fbck s p zqf mag_2 fix mag_2 bw11_2 f0_2 Idx11_2 pk2;
 
 % freq11_3=scan.data3(:,1);
@@ -105,6 +108,7 @@ plot(vline(:,1),vline(:,2),'r',vline(:,3),vline(:,4),'r');
 plot(vline(:,1),vline(:,2),'r');
 %}
 title('S11 response at 300K');
-legend(sprintf('Detunned, Q_g = %.2f and Q_f = %.2f', Q11, Q11_fit), sprintf('Critical, Q_g = %.2f and Q_f = %.2f', Q11_2, Q11_fit_2));
+%legend(sprintf('Active strip_300K, Q_g = %.2f and Q_f = %.2f', Q11, Q11_fit), sprintf('Cavity_300K, Q_g = %.2f and Q_f = %.2f', Q11_2, Q11_fit_2));
+legend('Detunned 300K in vacuum','Critically coupled 300K in vacuum');
 xlabel('Frequency (Hz)');ylabel('S11 (dB)');
 hold off
