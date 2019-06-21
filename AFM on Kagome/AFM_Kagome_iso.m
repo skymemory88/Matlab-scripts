@@ -1,33 +1,28 @@
-clear;
 sigx = [0 1; 1 0];
 sigy = [0 1i; -1i 0];
 sigz = [1 0; 0 -1];
 
-sigx3 = [0 1 0; 1 0 1; 0 1 0];
-sigy3 = [0 -1i 0; i 0 -1i; 0 i 0];
-sigz3 = [1 0 0; 0 0 0; 0 0 -1];
+Sx_1 = sigx;
+Sx_2 = 1/2.*sigx;
 
-Sx_1 = sigx3;
-Sx_2 = 0.5.*sigx;
+Sy_1 = sigy;
+Sy_2 = 1/2.*sigy;
 
-Sy_1 = sigy3;
-Sy_2 = 0.5.*sigy;
-
-Sz_1 = sigz3;
-Sz_2 = 0.5.*sigz;
+Sz_1 = sigz;
+Sz_2 = 1/2.*sigz;
 
 limit = 100; %set iteration limit
 D = 1; %setting dimensions
 k = 0.0862875; %Boltzmann constant
 J_1 = 0.5; %coupling strength
 J_2 = 2.0 * J_1;
-minField = -0.12;
-maxField = 0.12;
-fieldStep = 3e-4;
+minField = -1e-1;
+maxField = 1e-1;
+fieldStep = 1e-4;
 
 minTemp = 0.01;
-maxTemp = 0.55;
-tempStep = 0.1;
+maxTemp = 0.2;
+tempStep = 0.04;
 
 field = int8((maxField-minField)/fieldStep); % discretization of the field
 % temperature = 0.05;
@@ -61,29 +56,29 @@ for hL = minField:fieldStep:maxField
         avSz_2 = -0.5; %initial guess of average Sz(1/2)
         
         while 1
-            Hx = J_1*avSx_2*kron(kron(Sx_2,Sx_1),eye(2)) + J_2*avSx_2*kron(kron(Sx_2,Sx_2),eye(3));
-            Hy = J_1*avSy_2*kron(kron(Sy_2,Sy_1),eye(2)) + J_2*avSy_2*kron(kron(Sy_2,Sy_2),eye(3));
-            Hz = J_1*avSz_2*kron(kron(Sz_2,Sz_1),eye(2)) + J_2*avSz_2*kron(kron(Sz_2,Sz_2),eye(3));
+            Hx = J_1*avSx_2*kron(Sx_2,Sx_1) + J_2*avSx_2*kron(Sx_2,Sx_2);
+            Hy = J_1*avSy_2*kron(Sy_2,Sy_1) + J_2*avSy_2*kron(Sy_2,Sy_2);
+            Hz = J_1*avSz_2*kron(Sz_2,Sz_1) + J_2*avSz_2*kron(Sz_2,Sz_2);
             
-            Hamlt = Hx + Hy + Hz - hL*kron(eye(4),Sz_1) - 2 * hL*kron(eye(6),Sz_2);
+            Hamlt = Hx + Hy + Hz - hL*kron(eye(2),Sz_1) - 2 * hL*kron(eye(2),Sz_2);
 %             Hamlt = J_1*avSz_2*kron(kron(Sz_2,Sz_2),Sz_1) + J_2*avSz_2*kron(kron(Sz_1,Sz_2),Sz_2) - hL*kron(eye(4),Sz_1) - 2 * hL*kron(eye(4),Sz_2);
 %             Hamlt = 2 * J_1*avSz_2*kron(Sz_2,Sz_1) + J_2*avSz_2*kron(Sz_2,Sz_2) - hL*kron(eye(2),Sz_1) - 2 * hL*kron(eye(2),Sz_2);
             [v, E] = eig(Hamlt);
             beta = 1/(k*temp);
             Z = trace(exp(-beta.*E));
             
-            newAvSx_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sx_1)*v)/Z;
-            newAvSx_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sx_2)*v)/Z;
+            newAvSx_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(2),Sx_1)*v)/Z;
+            newAvSx_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(2),Sx_2)*v)/Z;
             diffx_1 = newAvSx_1 - avSx_1;
             diffx_2 = newAvSx_2 - avSx_2;
             
-            newAvSy_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sy_1)*v)/Z;
-            newAvSy_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sy_2)*v)/Z;
+            newAvSy_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(2),Sy_1)*v)/Z;
+            newAvSy_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(2),Sy_2)*v)/Z;
             diffy_1 = newAvSy_1 - avSy_1;
             diffy_2 = newAvSy_2 - avSy_2;
             
-            newAvSz_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sz_1)*v)/Z;
-            newAvSz_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sz_2)*v)/Z;
+            newAvSz_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(2),Sz_1)*v)/Z;
+            newAvSz_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(2),Sz_2)*v)/Z;
             diffz_1 = newAvSz_1 - avSz_1;
             diffz_2 = newAvSz_2 - avSz_2;
             
@@ -101,7 +96,6 @@ for hL = minField:fieldStep:maxField
                 avSz_2 = newAvSz_2;
             end
         end
-%         avm(ti,hi) = newAvSz_1;
         avm(ti,hi) = newAvSz_1 + 2 * newAvSz_2;
         %         vector(iterator,:) = [temp, hL, newAvSz_1 + 2 * newAvSz_2];
         %         map(floor(iterator/(temperature+1))+1,rem(iterator,temperature+1)+1) = avm;
@@ -116,7 +110,7 @@ end
 % avm = [nonzeros(avm(1,:)) nonzeros(avm(2,:))];
 figure
 hold on
-axis([-0.15 0.15 -2 2]);
+axis([-2e-2 2e-2 -2.5 2.5]);
 xlabel('External magnetic filed (H)');
 ylabel('Magnetization per site');
 for i = 1:temperature
