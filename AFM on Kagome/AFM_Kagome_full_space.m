@@ -20,13 +20,13 @@ Sz_2 = 0.5.*sigz;
 limit = 100; %set iteration limit
 D = 1; %setting dimensions
 k = 0.0862875; %Boltzmann constant
-minField = -0.25;
-maxField = 0.25;
+minField = -0.29;
+maxField = 0.29;
 fieldStep = 5e-4;
 
 minTemp = 0.01;
-maxTemp = 0.02;
-tempStep = 0.01;
+maxTemp = 0.22;
+tempStep = 0.1;
 
 field = int8((maxField-minField)/fieldStep); % discretization of the field
 % temperature = 0.05;
@@ -55,7 +55,7 @@ ti = 1;
 for temp = minTemp:tempStep:maxTemp
     
     beta = 1/(k*temp);
-    J_1 = 200.0/beta; %coupling strength
+    J_1 = 100.0/beta; %coupling strength
     factor = 1;
     J_2 = factor * J_1;
     %         temp = temperature;
@@ -206,7 +206,7 @@ axis([1.2*minField 1.2*maxField -2 2]);
 xlabel('External magnetic filed (H)');
 ylabel('Magnetization per unit cell (<m>)');
 for i = 1:temperature
-    plot(minField:fieldStep:maxField, avmx_up(i,:),'o-');
+    plot(minField:fieldStep:maxField, avmx_up(i,:),'o-','MarkerSize',5);
     plot(maxField:-fieldStep:minField, avmx_down(i,:),'s-');
 end
 hold off
@@ -218,8 +218,8 @@ axis([1.2*minField 1.2*maxField -2 2]);
 xlabel('External magnetic filed (H)');
 ylabel('Magnetization per unit cell (<m>)');
 for i = 1:temperature
-    plot(minField:fieldStep:maxField, avmy_up(i,:),'o-');
-    plot(maxField:-fieldStep:minField, avmy_down(i,:),'s-');
+    plot(minField:fieldStep:maxField, avmy_up(i,:),'o-','MarkerSize',5);
+    plot(maxField:-fieldStep:minField, avmy_down(i,:),'s-','MarkerSize',5);
 end
 hold off
 
@@ -230,8 +230,8 @@ axis([1.2*minField 1.2*maxField -2 2]);
 xlabel('External magnetic filed (H)');
 ylabel('Magnetization per unit cell (<m>)');
 for i = 1:temperature
-    plot(minField:fieldStep:maxField, avmz_up(i,:),'o-');
-    plot(maxField:-fieldStep:minField, avmz_down(i,:),'s-');
+    plot(minField:fieldStep:maxField, avmz_up(i,:),'o-','MarkerSize',5);
+    plot(maxField:-fieldStep:minField, avmz_down(i,:),'s-','MarkerSize',5);
 end
 hold off
 % plot(vector(:,2),vector(:,3));

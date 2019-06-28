@@ -20,8 +20,8 @@ Sz_2 = 0.5.*sigz;
 limit = 100; %set iteration limit
 D = 1; %setting dimensions
 k = 0.0862875; %Boltzmann constant
-minField = -0.25;
-maxField = 0.25;
+minField = -0.5;
+maxField = 0.5;
 fieldStep = 5e-4;
 
 minTemp = 0.01;
@@ -61,14 +61,14 @@ for temp = minTemp:tempStep:maxTemp
     %         temp = temperature;
     hi = 1;
     
-    avSx_1 = 0; %initial guess of average Sx(1)
-    avSx_2 = 0; %initial guess of average Sx(1/2)
+    avSx_1 = 0.05; %initial guess of average Sx(1)
+    avSx_2 = 0.05; %initial guess of average Sx(1/2)
     
-    avSy_1 = 0; %initial guess of average Sy(1)
-    avSy_2 = 0.25; %initial guess of average Sy(1/2)
+    avSy_1 = 0.05; %initial guess of average Sy(1)
+    avSy_2 = 0.05; %initial guess of average Sy(1/2)
     
-    avSz_1 = 1; %initial guess of average Sz(1)
-    avSz_2 = -0.25; %initial guess of average Sz(1/2)
+    avSz_1 = 0.05; %initial guess of average Sz(1)
+    avSz_2 = 0.05; %initial guess of average Sz(1/2)
     
     avSx = avSx_1 + 2*avSx_2;
     avSy = avSx_1 + 2*avSx_2;
@@ -112,7 +112,7 @@ for temp = minTemp:tempStep:maxTemp
             %             diffz_2 = newAvSz_2 - avSz_2;
             
             %             if abs(diffx_1) < delta && abs(diffx_2) < delta && abs(diffy_1) < delta && abs(diffy_2) < delta && abs(diffz_1) < delta && abs(diffz_2) < delta || iterator > limit
-            if abs(diffx) < delta && abs(diffy) < delta && abs(diffz) < delta || iterator > limit
+            if abs(diffx) < delta && abs(diffy) < delta && abs(diffz) < delta
                 break
             else
                 %                 avSx_1 = newAvSx_1;
@@ -194,7 +194,7 @@ for temp = minTemp:tempStep:maxTemp
 %             diffz_2 = newAvSz_2 - avSz_2;
             
 %             if abs(diffx_1) < delta && abs(diffx_2) < delta && abs(diffy_1) < delta && abs(diffy_2) < delta && abs(diffz_1) < delta && abs(diffz_2) < delta || iterator > limit
-            if abs(diffx) < delta && abs(diffy) < delta && abs(diffz) < delta || iterator > limit
+            if abs(diffx) < delta && abs(diffy) < delta && abs(diffz) < delta
                 %             if abs(diffz_1) < delta && abs(diffz_2) < delta || iterator > limit
                 break
             else
