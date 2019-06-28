@@ -37,14 +37,19 @@ delta = 0.0001;
 iterator = 1;
 newAvSx_1 = 0;
 newAvSx_2 = 0;
+avmx_up = zeros(temperature, field);
+avmx_down = zeros(temperature, field);
 
 newAvSy_1 = 0;
 newAvSy_2 = 0;
+avmy_up = zeros(temperature, field);
+avmy_down = zeros(temperature, field);
 
 newAvSz_1 = 0;
 newAvSz_2 = 0;
 avmz_up = zeros(temperature, field);
 avmz_down = zeros(temperature, field);
+
 ti = 1;
 for temp = minTemp:tempStep:maxTemp
 
@@ -52,14 +57,14 @@ for temp = minTemp:tempStep:maxTemp
     factor = 1;
     J_2 = factor * J_1;
     %         temp = temperature;
-    avSx_1 = 0; %initial guess of average Sx(1)
-    avSx_2 = -0.5; %initial guess of average Sx(1/2)
+    avSx_1 = 0.1; %initial guess of average Sx(1)
+    avSx_2 = 0.1; %initial guess of average Sx(1/2)
     
-    avSy_1 = 0; %initial guess of average Sy(1)
-    avSy_2 = -0.5; %initial guess of average Sy(1/2)
+    avSy_1 = 0.1; %initial guess of average Sy(1)
+    avSy_2 = 0.1; %initial guess of average Sy(1/2)
     
-    avSz_1 = 1; %initial guess of average Sz(1)
-    avSz_2 = -0.5; %initial guess of average Sz(1/2)
+    avSz_1 = 0.1; %initial guess of average Sz(1)
+    avSz_2 = 0.1; %initial guess of average Sz(1/2)
     
     hi = 1;
     for hL = minField:fieldStep:maxField
@@ -107,8 +112,10 @@ for temp = minTemp:tempStep:maxTemp
                 avSz_2 = newAvSz_2;
             end
         end
-        %         avm(ti,hi) = newAvSz_1;
+        avmx_up(ti,hi) = newAvSx_1 + 2 * newAvSx_2;
+        avmy_up(ti,hi) = newAvSy_1 + 2 * newAvSy_2;
         avmz_up(ti,hi) = newAvSz_1 + 2 * newAvSz_2;
+  
         %         vector(iterator,:) = [temp, hL, newAvSz_1 + 2 * newAvSz_2];
         %         map(floor(iterator/(temperature+1))+1,rem(iterator,temperature+1)+1) = avm;
         iterator = iterator + 1;
@@ -164,8 +171,11 @@ for temp = minTemp:tempStep:maxTemp
                 avSz_2 = newAvSz_2;
             end
         end
-        %         avm(ti,hi) = newAvSz_1;
+        
+        avmx_down(ti,hi) = newAvSx_1 + 2 * newAvSx_2;
+        avmy_down(ti,hi) = newAvSy_1 + 2 * newAvSy_2;
         avmz_down(ti,hi) = newAvSz_1 + 2 * newAvSz_2;
+        
         %         vector(iterator,:) = [temp, hL, newAvSz_1 + 2 * newAvSz_2];
         %         map(floor(iterator/(temperature+1))+1,rem(iterator,temperature+1)+1) = avm;
         iterator = iterator + 1;
@@ -184,9 +194,34 @@ axis([-0.15 0.15 -2 2]);
 xlabel('External magnetic filed (H)');
 ylabel('Magnetization per unit cell (<m>)');
 for i = 1:temperature
+    plot(minField:fieldStep:maxField, avmx_up(i,:),'o-');
+    plot(maxField:-fieldStep:minField, avmx_down(i,:),'s-');
+end
+hold off
+
+figure
+hold on
+grid on
+axis([-0.15 0.15 -2 2]);
+xlabel('External magnetic filed (H)');
+ylabel('Magnetization per unit cell (<m>)');
+for i = 1:temperature
+    plot(minField:fieldStep:maxField, avmy_up(i,:),'o-');
+    plot(maxField:-fieldStep:minField, avmy_down(i,:),'s-');
+end
+hold off
+
+figure
+hold on
+grid on
+axis([-0.15 0.15 -2 2]);
+xlabel('External magnetic filed (H)');
+ylabel('Magnetization per unit cell (<m>)');
+for i = 1:temperature
     plot(minField:fieldStep:maxField, avmz_up(i,:),'o-');
     plot(maxField:-fieldStep:minField, avmz_down(i,:),'s-');
 end
+hold off
 % plot(vector(:,2),vector(:,3));
 % scatter3(vector(:,1),vector(:,2),vector(:,3),15,vector(:,3),'filled');
 % view([0 90]);
