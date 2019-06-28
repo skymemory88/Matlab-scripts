@@ -1,5 +1,5 @@
 sigx = [0 1; 1 0];
-sigy = [0 1i; -1i 0];
+sigy = [0 -1i; 1i 0];
 sigz = [1 0; 0 -1];
 
 Sx_1 = sigx;
@@ -14,11 +14,10 @@ Sz_2 = 1/2.*sigz;
 limit = 100; %set iteration limit
 D = 1; %setting dimensions
 k = 0.0862875; %Boltzmann constant
-J_1 = 0.5; %coupling strength
-J_2 = 2.0 * J_1;
-minField = -1e-1;
-maxField = 1e-1;
-fieldStep = 1e-4;
+
+minField = -0.25;
+maxField = 0.25;
+fieldStep = 5e-4;
 
 minTemp = 0.01;
 maxTemp = 0.2;
@@ -41,20 +40,22 @@ newAvSy_2 = 0;
 newAvSz_1 = 0;
 newAvSz_2 = 0;
 avm = zeros(temperature, field);
-hi = 1;
-for hL = minField:fieldStep:maxField
-    ti = 1;
-    for temp = minTemp:tempStep:maxTemp
-        %     temp = temperature;
-        avSx_1 = 0; %initial guess of average Sx(1)
-        avSx_2 = -0.5; %initial guess of average Sx(1/2)
-        
-        avSy_1 = 0; %initial guess of average Sy(1)
-        avSy_2 = -0.5; %initial guess of average Sy(1/2)
-        
-        avSz_1 = 1.0; %initial guess of average Sz(1)
-        avSz_2 = -0.5; %initial guess of average Sz(1/2)
-        
+ti = 1;
+for temp = minTemp:tempStep:maxTemp
+    avSx_1 = 0; %initial guess of average Sx(1)
+    avSx_2 = -0.5; %initial guess of average Sx(1/2)
+    
+    avSy_1 = 0; %initial guess of average Sy(1)
+    avSy_2 = -0.5; %initial guess of average Sy(1/2)
+    
+    avSz_1 = 1.0; %initial guess of average Sz(1)
+    avSz_2 = -0.5; %initial guess of average Sz(1/2)
+    
+    hi = 1;
+    for hL = minField:fieldStep:maxField
+        beta = 1/(k*temp);
+        J_1 = 200/beta; %coupling strength
+        J_2 = 2.0 * J_1;       
         while 1
             Hx = J_1*avSx_2*kron(Sx_2,Sx_1) + J_2*avSx_2*kron(Sx_2,Sx_2);
             Hy = J_1*avSy_2*kron(Sy_2,Sy_1) + J_2*avSy_2*kron(Sy_2,Sy_2);
@@ -64,7 +65,6 @@ for hL = minField:fieldStep:maxField
 %             Hamlt = J_1*avSz_2*kron(kron(Sz_2,Sz_2),Sz_1) + J_2*avSz_2*kron(kron(Sz_1,Sz_2),Sz_2) - hL*kron(eye(4),Sz_1) - 2 * hL*kron(eye(4),Sz_2);
 %             Hamlt = 2 * J_1*avSz_2*kron(Sz_2,Sz_1) + J_2*avSz_2*kron(Sz_2,Sz_2) - hL*kron(eye(2),Sz_1) - 2 * hL*kron(eye(2),Sz_2);
             [v, E] = eig(Hamlt);
-            beta = 1/(k*temp);
             Z = trace(exp(-beta.*E));
             
             newAvSx_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(2),Sx_1)*v)/Z;
@@ -103,14 +103,14 @@ for hL = minField:fieldStep:maxField
         %         if mod(iterator, 10) == 0
         %            sprintf('Current iteration: %d, and Current temperature: %d', iterator, temp);
         %         end
-        ti = ti + 1;
+        hi = hi + 1;
     end
-    hi = hi + 1;
+    ti = ti + 1;
 end
 % avm = [nonzeros(avm(1,:)) nonzeros(avm(2,:))];
 figure
 hold on
-axis([-2e-2 2e-2 -2.5 2.5]);
+axis([minField maxField -2.5 2.5]);
 xlabel('External magnetic filed (H)');
 ylabel('Magnetization per site');
 for i = 1:temperature

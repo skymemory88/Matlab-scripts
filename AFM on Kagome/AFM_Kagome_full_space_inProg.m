@@ -55,7 +55,7 @@ ti = 1;
 for temp = minTemp:tempStep:maxTemp
     
     beta = 1/(k*temp);
-    J_1 = 200.0/beta; %coupling strength
+    J_1 = 200/beta; %coupling strength
     factor = 1;
     J_2 = factor * J_1;
     %         temp = temperature;
@@ -65,10 +65,10 @@ for temp = minTemp:tempStep:maxTemp
     avSx_2 = 0; %initial guess of average Sx(1/2)
     
     avSy_1 = 0; %initial guess of average Sy(1)
-    avSy_2 = 0; %initial guess of average Sy(1/2)
+    avSy_2 = 0.25; %initial guess of average Sy(1/2)
     
-    avSz_1 = 0; %initial guess of average Sz(1)
-    avSz_2 = 0; %initial guess of average Sz(1/2)
+    avSz_1 = 1; %initial guess of average Sz(1)
+    avSz_2 = -0.25; %initial guess of average Sz(1/2)
     
     avSx = avSx_1 + 2*avSx_2;
     avSy = avSx_1 + 2*avSx_2;
@@ -88,38 +88,55 @@ for temp = minTemp:tempStep:maxTemp
             %              Hamlt = Hx + Hy + Hz; %without external field
             [v, E] = eig(Hamlt);
             Z = trace(exp(-beta.*E));
-            newAvSx_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sx_1)*v)/Z;
-            newAvSx_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sx_2)*v)/Z;
-            diffx_1 = newAvSx_1 - avSx_1;
-            diffx_2 = newAvSx_2 - avSx_2;
             
-            newAvSy_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sy_1)*v)/Z;
-            newAvSy_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sy_2)*v)/Z;
-            diffy_1 = newAvSy_1 - avSy_1;
-            diffy_2 = newAvSy_2 - avSy_2;
+            newAvSx = diag(exp(-beta*E))'*diag(v'*kron(kron(Sx_2,Sx_2),Sx_1)*v)/Z;
+            newAvSy = diag(exp(-beta*E))'*diag(v'*kron(kron(Sy_2,Sy_2),Sy_1)*v)/Z;
+            newAvSz = diag(exp(-beta*E))'*diag(v'*kron(kron(Sz_2,Sz_2),Sz_1)*v)/Z;
+            diffx = newAvSx - avSx;
+            diffy = newAvSy - avSy;
+            diffz = newAvSz - avSz;
             
-            newAvSz_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sz_1)*v)/Z;
-            newAvSz_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sz_2)*v)/Z;
-            diffz_1 = newAvSz_1 - avSz_1;
-            diffz_2 = newAvSz_2 - avSz_2;
+            %             newAvSx_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sx_1)*v)/Z;
+            %             newAvSx_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sx_2)*v)/Z;
+            %             diffx_1 = newAvSx_1 - avSx_1;
+            %             diffx_2 = newAvSx_2 - avSx_2;
+            %
+            %             newAvSy_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sy_1)*v)/Z;
+            %             newAvSy_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sy_2)*v)/Z;
+            %             diffy_1 = newAvSy_1 - avSy_1;
+            %             diffy_2 = newAvSy_2 - avSy_2;
+            %
+            %             newAvSz_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sz_1)*v)/Z;
+            %             newAvSz_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sz_2)*v)/Z;
+            %             diffz_1 = newAvSz_1 - avSz_1;
+            %             diffz_2 = newAvSz_2 - avSz_2;
             
-            if abs(diffx_1) < delta && abs(diffx_2) < delta && abs(diffy_1) < delta && abs(diffy_2) < delta && abs(diffz_1) < delta && abs(diffz_2) < delta
+            %             if abs(diffx_1) < delta && abs(diffx_2) < delta && abs(diffy_1) < delta && abs(diffy_2) < delta && abs(diffz_1) < delta && abs(diffz_2) < delta || iterator > limit
+            if abs(diffx) < delta && abs(diffy) < delta && abs(diffz) < delta || iterator > limit
                 break
             else
-                avSx_1 = newAvSx_1;
-                avSx_2 = newAvSx_2;
+                %                 avSx_1 = newAvSx_1;
+                %                 avSx_2 = newAvSx_2;
+                %
+                %                 avSy_1 = newAvSy_1;
+                %                 avSy_2 = newAvSy_2;
+                %
+                %                 avSz_1 = newAvSz_1;
+                %                 avSz_2 = newAvSz_2;
                 
-                avSy_1 = newAvSy_1;
-                avSy_2 = newAvSy_2;
-                
-                avSz_1 = newAvSz_1;
-                avSz_2 = newAvSz_2;
+                avSx = newAvSx;
+                avSy = newAvSy;
+                avSz = newAvSz;
             end
         end
-        avmx_up(ti,hi) = avSx_1 + 2 * avSx_2;
-        avmy_up(ti,hi) = avSy_1 + 2 * avSy_2;
-        avmz_up(ti,hi) = avSz_1 + 2 * avSz_2;
-        
+%         avmx_up(ti,hi) = newAvSx_1 + 2 * newAvSx_2;
+%         avmy_up(ti,hi) = newAvSy_1 + 2 * newAvSy_2;
+%         avmz_up(ti,hi) = newAvSz_1 + 2 * newAvSz_2;
+
+        avmx_up(ti,hi) = avSx;
+        avmy_up(ti,hi) = avSy;
+        avmz_up(ti,hi) = avSz;
+
         %         vector(iterator,:) = [temp, hL, newAvSz_1 + 2 * newAvSz_2];
         %         map(floor(iterator/(temperature+1))+1,rem(iterator,temperature+1)+1) = avm;
         iterator = iterator + 1;
@@ -129,15 +146,15 @@ for temp = minTemp:tempStep:maxTemp
         hi = hi + 1;
     end
     
-    avSx_1 = 0; %initial guess of average Sx(1)
-    avSx_2 = 0; %initial guess of average Sx(1/2)
-    
-    avSy_1 = 0; %initial guess of average Sy(1)
-    avSy_2 = 0; %initial guess of average Sy(1/2)
-    
-    avSz_1 = 0; %initial guess of average Sz(1)
-    avSz_2 = 0; %initial guess of average Sz(1/2)
     hi = 1;
+    %     avSx_1 = 0; %initial guess of average Sx(1)
+    %     avSx_2 = 0; %initial guess of average Sx(1/2)
+    %
+    %     avSy_1 = 0; %initial guess of average Sy(1)
+    %     avSy_2 = 0.25; %initial guess of average Sy(1/2)
+    %
+    %     avSz_1 = -1; %initial guess of average Sz(1)
+    %     avSz_2 = 0.25; %initial guess of average Sz(1/2)
     for hL = maxField:-fieldStep:minField
         while 1
             %             Hx = J_1*avSx_2*kron(kron(Sx_2,Sx_1),eye(2)) + J_2*avSx_2*kron(kron(Sx_2,Sx_2),eye(3));
@@ -154,39 +171,54 @@ for temp = minTemp:tempStep:maxTemp
             beta = 1/(k*temp);
             Z = trace(exp(-beta.*E));
             
-            newAvSx_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sx_1)*v)/Z;
-            newAvSx_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sx_2)*v)/Z;
-            diffx_1 = newAvSx_1 - avSx_1;
-            diffx_2 = newAvSx_2 - avSx_2;
+            newAvSx = diag(exp(-beta*E))'*diag(v'*kron(kron(Sx_2,Sx_2),Sx_1)*v)/Z;
+            newAvSy = diag(exp(-beta*E))'*diag(v'*kron(kron(Sy_2,Sy_2),Sy_1)*v)/Z;
+            newAvSz = diag(exp(-beta*E))'*diag(v'*kron(kron(Sz_2,Sz_2),Sz_1)*v)/Z;
+            diffx = newAvSx - avSx;
+            diffy = newAvSy - avSy;
+            diffz = newAvSz - avSz;
             
-            newAvSy_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sy_1)*v)/Z;
-            newAvSy_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sy_2)*v)/Z;
-            diffy_1 = newAvSy_1 - avSy_1;
-            diffy_2 = newAvSy_2 - avSy_2;
+            %             newAvSx_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sx_1)*v)/Z;
+            %             newAvSx_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sx_2)*v)/Z;
+            %             diffx_1 = newAvSx_1 - avSx_1;
+            %             diffx_2 = newAvSx_2 - avSx_2;
+            %
+            %             newAvSy_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sy_1)*v)/Z;
+            %             newAvSy_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sy_2)*v)/Z;
+            %             diffy_1 = newAvSy_1 - avSy_1;
+            %             diffy_2 = newAvSy_2 - avSy_2;
+            %
+            %             newAvSz_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sz_1)*v)/Z;
+            %             newAvSz_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sz_2)*v)/Z;
+%             diffz_1 = newAvSz_1 - avSz_1;
+%             diffz_2 = newAvSz_2 - avSz_2;
             
-            newAvSz_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sz_1)*v)/Z;
-            newAvSz_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sz_2)*v)/Z;
-            diffz_1 = newAvSz_1 - avSz_1;
-            diffz_2 = newAvSz_2 - avSz_2;
-            
-            if abs(diffx_1) < delta && abs(diffx_2) < delta && abs(diffy_1) < delta && abs(diffy_2) < delta && abs(diffz_1) < delta && abs(diffz_2) < delta
+%             if abs(diffx_1) < delta && abs(diffx_2) < delta && abs(diffy_1) < delta && abs(diffy_2) < delta && abs(diffz_1) < delta && abs(diffz_2) < delta || iterator > limit
+            if abs(diffx) < delta && abs(diffy) < delta && abs(diffz) < delta || iterator > limit
                 %             if abs(diffz_1) < delta && abs(diffz_2) < delta || iterator > limit
                 break
             else
-                avSx_1 = newAvSx_1;
-                avSx_2 = newAvSx_2;
-                
-                avSy_1 = newAvSy_1;
-                avSy_2 = newAvSy_2;
-                
-                avSz_1 = newAvSz_1;
-                avSz_2 = newAvSz_2;
+%                 avSx_1 = newAvSx_1;
+%                 avSx_2 = newAvSx_2;
+%                 
+%                 avSy_1 = newAvSy_1;
+%                 avSy_2 = newAvSy_2;
+%                 
+%                 avSz_1 = newAvSz_1;
+%                 avSz_2 = newAvSz_2;
+                avSx = newAvSx;
+                avSy = newAvSy;
+                avSz = newAvSz;
             end
         end
         
-        avmx_down(ti,hi) = avSx_1 + 2 * avSx_2;
-        avmy_down(ti,hi) = avSy_1 + 2 * avSy_2;
-        avmz_down(ti,hi) = avSz_1 + 2 * avSz_2;
+%         avmx_down(ti,hi) = newAvSx_1 + 2 * newAvSx_2;
+%         avmy_down(ti,hi) = newAvSy_1 + 2 * newAvSy_2;
+%         avmz_down(ti,hi) = newAvSz_1 + 2 * newAvSz_2;
+
+        avmx_down(ti,hi) = avSx;
+        avmy_down(ti,hi) = avSy;
+        avmz_down(ti,hi) = avSz;
         
         %         vector(iterator,:) = [temp, hL, newAvSz_1 + 2 * newAvSz_2];
         %         map(floor(iterator/(temperature+1))+1,rem(iterator,temperature+1)+1) = avm;
@@ -198,7 +230,7 @@ for temp = minTemp:tempStep:maxTemp
     end
     ti = ti + 1;
 end
-
+% avm = [nonzeros(avm(1,:)) nonzeros(avm(2,:))];
 figure
 hold on
 grid on
