@@ -1,4 +1,5 @@
 clear
+format long g;
 
 sigx = [0 1; 1 0];
 sigy = [0 -1i; 1i 0];
@@ -20,13 +21,13 @@ Sz_2 = 0.5.*sigz;
 limit = 100; %set iteration limit
 D = 1; %setting dimensions
 k = 0.0862875; %Boltzmann constant
-minField = -0.29;
-maxField = 0.29;
+minField = -0.25;
+maxField = 0.25;
 fieldStep = 5e-4;
 
 minTemp = 0.01;
-maxTemp = 0.22;
-tempStep = 0.1;
+maxTemp = 1.23;
+tempStep = 0.4;
 
 field = int8((maxField-minField)/fieldStep); % discretization of the field
 % temperature = 0.05;
@@ -58,23 +59,21 @@ for temp = minTemp:tempStep:maxTemp
     J_1 = 100.0/beta; %coupling strength
     factor = 1;
     J_2 = factor * J_1;
-    %         temp = temperature;
+    
     hi = 1;
-    
-    avSx_1 = 0; %initial guess of average Sx(1)
-    avSx_2 = 0; %initial guess of average Sx(1/2)
-    
-    avSy_1 = 0; %initial guess of average Sy(1)
-    avSy_2 = 0; %initial guess of average Sy(1/2)
-    
-    avSz_1 = 0; %initial guess of average Sz(1)
-    avSz_2 = 0; %initial guess of average Sz(1/2)
-    
-    avSx = avSx_1 + 2*avSx_2;
-    avSy = avSx_1 + 2*avSx_2;
-    avSz = avSx_1 + 2*avSx_2;
-    
     for hL = minField:fieldStep:maxField
+        avSx_1 = 0; %initial guess of average Sx(1)
+        avSx_2 = 0; %initial guess of average Sx(1/2)
+        
+        avSy_1 = 0; %initial guess of average Sy(1)
+        avSy_2 = 0; %initial guess of average Sy(1/2)
+        
+        avSz_1 = 1.0; %initial guess of average Sz(1)
+        avSz_2 = -0.5; %initial guess of average Sz(1/2)
+        
+        avSx = avSx_1 + 2*avSx_2;
+        avSy = avSx_1 + 2*avSx_2;
+        avSz = avSx_1 + 2*avSx_2;
         while 1
             %             Hx = J_1*avSx_2*kron(kron(Sx_2,Sx_1),eye(2)) + J_2*avSx_2*kron(kron(Sx_2,Sx_2),eye(3));
             %             Hy = J_1*avSy_2*kron(kron(Sy_2,Sy_1),eye(2)) + J_2*avSy_2*kron(kron(Sy_2,Sy_2),eye(3));
@@ -86,7 +85,7 @@ for temp = minTemp:tempStep:maxTemp
             
             Hamlt = Hx + Hy + Hz - hL*kron(eye(4),Sz_1) - hL*kron(eye(6),Sz_2) - hL*kron(eye(6),Sz_2); %with external field
             %              Hamlt = Hx + Hy + Hz; %without external field
-            [v, E] = eig(Hamlt);
+            [v, E] = eig(Hamlt,'nobalance');
             Z = trace(exp(-beta.*E));
             newAvSx_1 = diag(exp(-beta*E))'*diag(v'*kron(eye(4),Sx_1)*v)/Z;
             newAvSx_2 = diag(exp(-beta*E))'*diag(v'*kron(eye(6),Sx_2)*v)/Z;
@@ -150,7 +149,7 @@ for temp = minTemp:tempStep:maxTemp
             
             Hamlt = Hx + Hy + Hz - hL*kron(eye(4),Sz_1) - hL*kron(eye(6),Sz_2) - hL*kron(eye(6),Sz_2); %with external field
             %              Hamlt = Hx + Hy + Hz; %without external field
-            [v, E] = eig(Hamlt);
+            [v, E] = eig(Hamlt,'nobalance');
             beta = 1/(k*temp);
             Z = trace(exp(-beta.*E));
             
@@ -198,30 +197,30 @@ for temp = minTemp:tempStep:maxTemp
     end
     ti = ti + 1;
 end
-
-figure
-hold on
-grid on
-axis([1.2*minField 1.2*maxField -2 2]);
-xlabel('External magnetic filed (H)');
-ylabel('Magnetization per unit cell (<m>)');
-for i = 1:temperature
-    plot(minField:fieldStep:maxField, avmx_up(i,:),'o-','MarkerSize',5);
-    plot(maxField:-fieldStep:minField, avmx_down(i,:),'s-');
-end
-hold off
-
-figure
-hold on
-grid on
-axis([1.2*minField 1.2*maxField -2 2]);
-xlabel('External magnetic filed (H)');
-ylabel('Magnetization per unit cell (<m>)');
-for i = 1:temperature
-    plot(minField:fieldStep:maxField, avmy_up(i,:),'o-','MarkerSize',5);
-    plot(maxField:-fieldStep:minField, avmy_down(i,:),'s-','MarkerSize',5);
-end
-hold off
+% 
+% figure
+% hold on
+% grid on
+% axis([1.2*minField 1.2*maxField -2 2]);
+% xlabel('External magnetic filed (H)');
+% ylabel('Magnetization per unit cell (<m>)');
+% for i = 1:temperature
+%     plot(minField:fieldStep:maxField, avmx_up(i,:),'o-','MarkerSize',5);
+%     plot(maxField:-fieldStep:minField, avmx_down(i,:),'s-');
+% end
+% hold off
+% 
+% figure
+% hold on
+% grid on
+% axis([1.2*minField 1.2*maxField -2 2]);
+% xlabel('External magnetic filed (H)');
+% ylabel('Magnetization per unit cell (<m>)');
+% for i = 1:temperature
+%     plot(minField:fieldStep:maxField, avmy_up(i,:),'o-','MarkerSize',5);
+%     plot(maxField:-fieldStep:minField, avmy_down(i,:),'s-','MarkerSize',5);
+% end
+% hold off
 
 figure
 hold on
@@ -231,8 +230,11 @@ xlabel('External magnetic filed (H)');
 ylabel('Magnetization per unit cell (<m>)');
 for i = 1:temperature
     plot(minField:fieldStep:maxField, avmz_up(i,:),'o-','MarkerSize',5);
-    plot(maxField:-fieldStep:minField, avmz_down(i,:),'s-','MarkerSize',5);
+    %plot(maxField:-fieldStep:minField, avmz_down(i,:),'s-','MarkerSize',5);
 end
+
+lgd = strcat('Coupling (k_BT)= ', string(num2cell(1./(k*(minTemp:tempStep:maxTemp)))));
+legend(lgd);
 hold off
 % plot(vector(:,2),vector(:,3));
 % scatter3(vector(:,1),vector(:,2),vector(:,3),15,vector(:,3),'filled');
