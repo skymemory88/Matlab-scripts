@@ -18,21 +18,26 @@ Sy_2 = 0.5.*sigy;
 Sz_1 = sigz3;
 Sz_2 = 0.5.*sigz;
 
-limit = 100; %set iteration limit
+% limit = 100; %set iteration limit
 D = 1; %setting dimensions
 k = 0.0862875; %Boltzmann constant
-minField = -0.25;
-maxField = 0.25;
+J_T = 20.0;
+J_J = 2.0;
+minField = -0.29;
+maxField = 0.29;
 fieldStep = 5e-4;
 
-minTemp = 0.01;
-maxTemp = 1.23;
-tempStep = 0.4;
+% minTemp = 0.01;
+% maxTemp = 1.51;
+% tempStep = 0.5;
+% temperature = int8((maxTemp-minTemp)/tempStep+1); % discretization of the temperature
+% tempSeries = [minTemp:tempStep:maxTemp];
+
+tempSeries = [0.01, 0.2, 1.5, 4];
+temperature = length(tempSeries);
 
 field = int8((maxField-minField)/fieldStep); % discretization of the field
-% temperature = 0.05;
-temperature = int8((maxTemp-minTemp)/tempStep); % discretization of the temperature
-vector = zeros(int8(field*temperature),3);
+%vector = zeros(int8(field*temperature),3);
 % map = zeros(field, temperature);
 
 delta = 0.0001;
@@ -53,27 +58,28 @@ avmz_up = zeros(temperature, field);
 avmz_down = zeros(temperature, field);
 
 ti = 1;
-for temp = minTemp:tempStep:maxTemp
+for temp = tempSeries
     
     beta = 1/(k*temp);
-    J_1 = 100.0/beta; %coupling strength
+    J_1 = J_T/beta; %coupling strength
     factor = 1;
-    J_2 = factor * J_1;
+    J_2 = J_J * J_1;
+    
+    avSx_1 = 0; %initial guess of average Sx(1)
+    avSx_2 = 0; %initial guess of average Sx(1/2)
+    
+    avSy_1 = 0; %initial guess of average Sy(1)
+    avSy_2 = 0; %initial guess of average Sy(1/2)
+    
+    avSz_1 = 1.0; %initial guess of average Sz(1)
+    avSz_2 = -0.5; %initial guess of average Sz(1/2)
+    
+    avSx = avSx_1 + 2*avSx_2;
+    avSy = avSx_1 + 2*avSx_2;
+    avSz = avSx_1 + 2*avSx_2;
     
     hi = 1;
     for hL = minField:fieldStep:maxField
-        avSx_1 = 0; %initial guess of average Sx(1)
-        avSx_2 = 0; %initial guess of average Sx(1/2)
-        
-        avSy_1 = 0; %initial guess of average Sy(1)
-        avSy_2 = 0; %initial guess of average Sy(1/2)
-        
-        avSz_1 = 1.0; %initial guess of average Sz(1)
-        avSz_2 = -0.5; %initial guess of average Sz(1/2)
-        
-        avSx = avSx_1 + 2*avSx_2;
-        avSy = avSx_1 + 2*avSx_2;
-        avSz = avSx_1 + 2*avSx_2;
         while 1
             %             Hx = J_1*avSx_2*kron(kron(Sx_2,Sx_1),eye(2)) + J_2*avSx_2*kron(kron(Sx_2,Sx_2),eye(3));
             %             Hy = J_1*avSy_2*kron(kron(Sy_2,Sy_1),eye(2)) + J_2*avSy_2*kron(kron(Sy_2,Sy_2),eye(3));
@@ -197,7 +203,7 @@ for temp = minTemp:tempStep:maxTemp
     end
     ti = ti + 1;
 end
-% 
+%
 % figure
 % hold on
 % grid on
@@ -209,7 +215,7 @@ end
 %     plot(maxField:-fieldStep:minField, avmx_down(i,:),'s-');
 % end
 % hold off
-% 
+%
 % figure
 % hold on
 % grid on
@@ -233,7 +239,7 @@ for i = 1:temperature
     %plot(maxField:-fieldStep:minField, avmz_down(i,:),'s-','MarkerSize',5);
 end
 
-lgd = strcat('Coupling (k_BT)= ', string(num2cell(1./(k*(minTemp:tempStep:maxTemp)))));
+lgd = strcat('Temperature: ', string(num2cell((tempSeries))), ' K, J/k_BT = ', num2str(J_T), ', J_2/J_1 = ', num2str(J_J));
 legend(lgd);
 hold off
 % plot(vector(:,2),vector(:,3));
