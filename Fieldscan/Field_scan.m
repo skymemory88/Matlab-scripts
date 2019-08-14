@@ -4,11 +4,12 @@ format long;
 
 %addpath('C:\Users\babkevic\Documents\MATLAB\legendflex')
 
-% curdir = cd;
-addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Fieldscan\functions');
-addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\spec1d--Henrik'));
+% % curdir = cd;
+% addpath('C:\Users\yiyang\Google Drive\File sharing\Programming scripts\Matlab\Fieldscan\functions');
+% addpath(genpath('C:\Users\yiyang\Google Drive\File sharing\Programming scripts\Matlab\spec1d--Henrik'));
 
-%cd('/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4/Data/Matlab/Cavity resonator/D24mm_T5mm_G0.2mm/12.02.2019/functions')
+addpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/Fieldscan/functions')
+addpath(genpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/spec1d--Henrik'));
 %The first line is for windows, the second line is for mac OS
 %% Define input ===========================================================
 % Figure plot options:
@@ -97,16 +98,16 @@ end
 
 function option1(plotopt)
 
-filepath = 'G:\My Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\LiHoF4\10.05.2019';
-%filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4/Data/Matlab/Cavity resonator/D24mm_T5mm_G0.2mm/12.02.2019';
+% filepath = 'C:\Users\yiyang\Google Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\08.08.2019';
+filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/14.08.2019/';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_05_0014';
+filename = '2019_08_0004';
 run = 12;
 out = readdata_v3(filepath,filename,run);
 
 %Set data range and parameters
-freq_l = 3.400; %set frequency range, l: lower limit, h: higher limit
-freq_h = 3.580;
+freq_l = 3.480; %set frequency range, l: lower limit, h: higher limit
+freq_h = 3.600;
 field_l = 0.0;  %set field range, l: lower limit, h: higher limit
 field_h = 9.0;
 nop = 31; % Number of points per segment for the frequency scan according to ZVL network analyzer
@@ -846,8 +847,8 @@ end
 function option7(plotopt)
 
 
-filepath = 'C:\Users\yiyang\Google Drive\File sharing\PhD projects\Transverse Ising model\Data\Experiment\Cavity resonator\D24mm_T5mm_G0.6mm\06.05.2019';
-filename = '2019_05_0008';
+filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/Transverse Ising model/Data/Experiment/LiHoF4/27.07.2019/';
+filename = '2019_07_0102';
 
 ll = 1;
 runs{ll} =  1;   T(ll) = 0.3;
@@ -862,8 +863,8 @@ runs{ll} =  1;   T(ll) = 0.3;
 %% Plot data
 %Set data range and parameters
 fac = 1.0; %unknow factor
-freq_l = 5.025; %set frequency range, l: lower limit, h: higher limit
-freq_h = 5.045;
+freq_l = 3.410; %set frequency range, l: lower limit, h: higher limit
+freq_h = 3.560;
 field_l = 0.0;  %set field range, l: lower limit, h: higher limit
 field_h = 9.0;
 nop = 31; % Number of points per segment for the frequency scan according to ZVL network analyzer
