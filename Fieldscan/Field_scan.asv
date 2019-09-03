@@ -4,12 +4,12 @@ format long;
 
 %addpath('C:\Users\babkevic\Documents\MATLAB\legendflex')
 
-% % curdir = cd;
-% addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Fieldscan\functions');
-% addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\spec1d--Henrik'));
+% curdir = cd;
+addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Fieldscan\functions');
+addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\spec1d--Henrik'));
 
-addpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/Fieldscan/functions')
-addpath(genpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/spec1d--Henrik'));
+% addpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/Fieldscan/functions')
+% addpath(genpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/spec1d--Henrik'));
 %The first line is for windows, the second line is for mac OS
 %% Define input ===========================================================
 % Figure plot options:
@@ -98,8 +98,8 @@ end
 
 function option1(plotopt)
 
-% filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\03.09.2019';
-filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/03.09.2019/';
+filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\03.09.2019';
+% filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/26.08.2019/';
 %The first line is for windows, the second line is for mac OS
 filename = '2019_09_0003';
 run = 12;
@@ -856,13 +856,11 @@ end
 function option7(plotopt)
 
 
-% filepath = 'C:\Users\yiyang\Google Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\31.08.2019';
-filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/26.08.2019/';
-%The first line is for windows, the second line is for mac OS
-filename = '2019_08_0023';
+filepath = 'C:\Users\yiyang\Google Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\17.08.2019';
+filename = '2019_09_0001';
 
 ll = 1;
-runs{ll} =  1;   T(ll) = 0.3;
+runs{ll} =  1;   T(ll) = 0.076;
 % runs{ll} =  264:264;   T(ll) = 0.3;  ll=ll+1;
 % runs{ll} =  243:245;   T(ll) = 1.0;  ll=ll+1;
 % runs{ll} =  248:250;   T(ll) = 1.2;  ll=ll+1;
@@ -874,8 +872,8 @@ runs{ll} =  1;   T(ll) = 0.3;
 %% Plot data
 %Set data range and parameters
 fac = 1e9; %Swtich between "Hz" and "GHz"
-freq_l = 3.630; %set frequency range, l: lower limit, h: higher limit
-freq_h = 3.720;
+freq_l = 3.620; %set frequency range, l: lower limit, h: higher limit
+freq_h = 3.740;
 field_l = 0.0;  %set field range, l: lower limit, h: higher limit
 field_h = 6.0;
 nop = 31; % Number of points per segment for the frequency scan according to ZVL network analyzer
