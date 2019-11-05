@@ -5,12 +5,12 @@ format long;
 %addpath('C:\Users\babkevic\Documents\MATLAB\legendflex')
 
 % % curdir = cd;
-addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
-addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
-
-% addpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/Fieldscan/functions')
-% addpath(genpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/spec1d--Henrik'));
+% addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
+% addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
+addpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
+addpath(genpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
 %The first line is for windows, the second line is for mac OS
+
 %% Define input ===========================================================
 % Figure plot options:
 plotopt.col(1,:) = [0.2 0.2 0.7];
@@ -29,7 +29,7 @@ plotopt.mksz = 5;
 
 %% Read ZVL
 %Set data range and parameters
-opt  = 2;
+opt  = 1;
 
 switch opt
     case 1
@@ -47,20 +47,21 @@ end
 
 function option1(plotopt)
 
-filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\05.09.2019';
-% filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/03.09.2019/';
+% filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\05.11.2019';
+filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/05.11.2019/';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_09_0010';
+filename = '2019_11_0016';
+
 run = 1;
 out = readdata_v3(filepath,filename,run);
 
 %Set data range and parameters
-freq_l = 3.630; %set frequency range, l: lower limit, h: higher limit
-freq_h = 3.690;
+freq_l = 4.06; %set frequency range, l: lower limit, h: higher limit
+freq_h = 4.095;
 field_l = 1.5;  %set field range, l: lower limit, h: higher limit
-field_h = 4.0;
+field_h = 3.0;
 nop = 31; % Number of points per segment for the frequency scan according to ZVL network analyzer
-step = 1e-4; %Scanning step in unit of GHz,default is 1 MHz according to ZVL network analyser
+step = 5e-5; %Scanning step in unit of GHz,default is 1 MHz according to ZVL network analyser
 lineDiv = floor((freq_h-freq_l)/((nop - 1) * step)); %compute how many lines per complete frequency scan.
 
 %% Plot data
@@ -76,7 +77,8 @@ dB = dB(:);
 H = out.data.DCField1;
 T1 = out.data.Temperature1;
 T2 = out.data.Temperature2;
-HH = repmat(H,1,nop); HH = HH(:); %the third argument is the number of frequency points in each line/segment
+HH = repmat(H,1,nop); 
+HH = HH(:); %the third argument is the number of frequency points in each line/segment
 
 % Could use "scatteredInterpolant()" to replace "TriScatteredInterp()" as recommended by MATLAB, but it may generate artifacts
 FdB = TriScatteredInterp(HH,freq,dB);
@@ -183,24 +185,27 @@ set(tt,'fontsize',plotopt.ftsz,'interpreter','none')
 end
 function option2(plotopt)
 
-
-filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\Bulk(6x5x4.5mm)\05.05.2019';
-% filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC107/19.05.2019/';
+% filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\18.08.2019';
+filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/05.11.2019/';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_05_0006';
+filename = '2019_11_0016';
 
-ii = 1;
-runs{ii} =  1;   T(ii) = 0.085;
+ti = 1;
+T(ti) = 0.400;
+runs{ti} =  1; 
 %% Plot data
 %Set data range and parameters
 fac = 1e9; %Swtich between "Hz" and "GHz"
-freq_l = 3.400; %set frequency range, l: lower limit, h: higher limit
-freq_h = 3.580;
-field_l = 0.0;  %set field range, l: lower limit, h: higher limit
-field_h = 9.0;
+freq_l = 4.06; % set frequency range, l: lower limit, h: higher limit
+freq_h = 4.095;
+direction = 'Up_'; % Specify field scan direction
+excitation = '_-20dBm';
+field_l = 1.5;  %set field range, l: lower limit, h: higher limit
+field_h = 3.0;
 nop = 31; % Number of points per segment of the frequency scan according to ZVL network analyzer
-step = 1e-4; %Scanning step in unit of GHz, default is 1 MHz according to ZVL network analyser
+step = 1e-5; %Scanning step in unit of GHz, default is 1 MHz according to ZVL network analyser
 lineDiv = floor((freq_h-freq_l)/((nop - 1) * step)); %compute how many lines per complete frequency scan.
+FWHM = 0.0; % Define full-width-half-max for calculation of quality factors
 
 for n = 1:length(T)
     [xq,yq] = meshgrid(linspace(field_l,field_h,501),linspace(freq_l,freq_h,310));
@@ -213,8 +218,12 @@ for n = 1:length(T)
     S11 = out(n).data.ZVLreal + 1i*out(n).data.ZVLimag;
     H = out(n).data.DCField1;
     %     T1 = out(n).data.Temperature1;
-    N = size(freq,2);   % Option_1 Number of elements of the measured frequency data
-    %     N = length(yq(:,1));  % Option_2 Number of elements of the interpolated frequency data
+    
+    % Option_1 Number of elements of the measured frequency data
+    N = size(freq,2);   
+    % Option_2 Number of elements of the interpolated frequency data
+%     N = length(yq(:,1));
+    
     dB = mag2db(abs(S11));
     HH = repmat(H,1,N); %populate the magnetic field to match the dimension of S11 matrix
     %reshape the matrices into single column vectors
@@ -226,7 +235,7 @@ for n = 1:length(T)
     
     trunc = mod(numel(dB),(lineDiv*nop)); %compute the number of complete frequency scans
    
-    dB_temp = dB_temp(1:end-trunc); %discard the (last) incomplete frequency scan
+    dB_temp = medfilt1(dB_temp(1:end-trunc)); %discard the last frequency scan if incomplete and apply median filter to reduce the noise level
     freq_temp = freq_temp(1:end-trunc);
     HH_temp = HH_temp(1:end-trunc);
     
@@ -234,26 +243,53 @@ for n = 1:length(T)
     freq_temp = reshape(freq_temp,lineDiv*nop,[]);
     HH_temp = reshape(HH_temp,lineDiv*nop,[]);
     
-    f0 = zeros(length(dB_temp),1);
-    H0 = zeros(length(dB_temp),1);
-    
+    f0 = zeros(size(dB_temp,2),1);
+    H0 = zeros(size(dB_temp,2),1);
+    Q0 = zeros(size(dB_temp,2),1);
+    dB0 = zeros(size(dB_temp,2),1);
 %find the indices to the minima (resonant frequency) of each complete frequency scan until the end of the data
-    for i = 1:size(dB_temp,2) %Searching column minima (fixed field) is better than searching row minima (fixed frequency)
-        [~,idx] = min( dB_temp(:,i) );
-%         [value,idx] = min( dB_temp(:,i) );
-%         H0(i) = HH(dB==value);    %use value matching to find the corresponding magnetic field from the original dataset (slow method)
-        f0(i) = freq_temp(idx,i);
-        H0(i) = HH_temp(idx,i);
+    for ii = 1:size(dB_temp,2) %Searching column minima (fixed field) is better than searching row minima (fixed frequency)
+        [~,idx] = min( dB_temp(:,ii) );
+        if(length(idx)>1)
+            disp('multiple minima found')
+        end
+        f0(ii) = freq_temp(idx,ii);
+        H0(ii) = HH_temp(idx,ii); 
+        dB0(ii) = dB_temp(idx,ii);
+        % Calculate quality factor using f0/FWHM
+        if isnan(1/range(freq_temp(dB_temp(:,ii) <= FWHM)))
+           Q0(ii) = 0;
+        elseif isempty(range(freq_temp(dB_temp(:,ii) <= FWHM)))
+           Q0(ii) = 0;
+        else
+        Q0(ii) = freq_temp(idx,ii)/range(freq_temp(dB_temp(:,ii) <= FWHM));
+        end
+        Q0(isnan(Q0)) = 0; % Cut out NaN from the array
+        Q0(isinf(Q0)) = 0; % Cut out inf from the array
+        Q0(Q0>4000) = 0; % Cut out unrealistic quality factor from noise data
     end
-
-    %plot the resonant frequency versus DC magnetic field
+    
+    % Store amplitude vs field data for hysteresis plot
+    cd(filepath);
+    tit=[direction,num2str(T(ti),'%3.3f'), excitation,'.mat'];
+    save(tit,'H0','dB0');
+    
+    % Plot the resonant frequency versus DC magnetic field
     figure
-    hfig(1) = plot(H0,f0,'o','MarkerSize',2);
+    hfig1 = plot(H0,f0,'o','MarkerSize',2);
     xlabel('Field (T)');
     ylabel('Resonant frequency (GHz)');
-    title(num2str(T(n),'Resonant frequency from raw data at T = %3.3f K'));
+    title(num2str(T(n),'Minimal S11 at T = %3.3f K'));
     axis([field_l field_h freq_l freq_h]);
-    clear dB_temp HH_temp freq_temp;
+    clear *_temp;
+    
+    % Plot the peak amplitude vs. magnetic field
+    figure
+    dB0 = medfilt1(dB0,10);
+    nfig2 = plot(H0, dB0, 'o', 'MarkerSize', 2);
+    xlabel('Field(T)');
+    ylabel('S11 amplitute');
+    title(num2str(T(n),'Minimal S11 at T = %3.3f K'));
     
     freq = freq(:)/fac;
     dB = dB(:);
@@ -262,9 +298,8 @@ for n = 1:length(T)
     mag = (1- out(n).data.ZVLreal.^2 -out(n).data.ZVLimag.^2)./((1- out(n).data.ZVLreal).^2 + out(n).data.ZVLimag.^2);
     mag = mag(:); %Unsure what these two lines are meant to do
     
-    switch 2 %choose data interpolation method
-        case 1
-            % Option_1 Interpolate data along only the frequency axis.
+    switch 2 %choose data interpolation method and plot the color map of S11 response
+        case 1 % Option_1 Interpolate data along only the frequency axis.
             interp_dB = zeros(length(H),N);
             for i = 1:length(H)
                 interp_dB(i,:) = interp1(freq(i,:),dB(i,:),yq(:,1));
@@ -277,38 +312,39 @@ for n = 1:length(T)
             TT1 = repmat(T1,1,N);  %populate the temperature to match the dimension of S11 matrix
             TT1 = TT1(:);
             TT2 = repmat(T2,1,N); TT2 = TT2(:);
-        case 2
-            % Option_2 Interpolate the data along all (two) axis.
-            FdB  = TriScatteredInterp(HH,freq,dB);
+            
+            switch 1 % Choose plotting option
+                case 1
+                %     plot single-direction interpolated data using pseudo-colormap
+                cmap = pcolor(H,yq(:,1),interp_dB');
+                set(cmap, 'edgeColor','none')
+                shading interp;
+                colorbar
+                case 2
+                %     plot single-direction interpolated data using scatter plot
+                C = linspace(min(interp_dB),max(interp_dB),length(HH));
+                smap = scatter3(HH,yy,interp_dB,2,C,'o','filled','MarkerEdgeColor','none');
+                colormap(hsv);
+            end
+        case 2 % Option_2 Interpolate the data along both axis.
+            
+%             FdB  = TriScatteredInterp(HH,freq,dB);
+            FdB = scatteredInterpolant(HH, freq, dB);
             Fmag  = scatteredInterpolant(HH,freq,mag);
             %     FrS  = TriScatteredInterp(HH,freq*fac,real(S11));
             %     FiS  = TriScatteredInterp(HH,freq*fac,imag(S11));
             %     FTT1 = TriScatteredInterp(HH,freq*fac,TT1);
             %     FTT2 = TriScatteredInterp(HH,freq*fac,TT2);
-    end
-    
-    %plot the color map of S11 response
-    switch 1 %choose colormap method
-        case 1
-            %option_1 plot surface interpolated data using pseudo-colormap
             figure
             hold on
             box on
             zq = FdB(xq,yq);
             cmap = pcolor(xq,yq,zq);
-        case 2
-    %     option_2.1 plot single-direction interpolated data using pseudo-colormap
-            cmap = pcolor(H,yq(:,1),interp_dB');
-        case 3
-    %     option_2.2 plot single-direction interpolated data using scatter plot
-            C = linspace(min(interp_dB),max(interp_dB),length(HH));
-            cmap = scatter3(HH,yy,interp_dB,2,C,'o','filled','MarkerEdgeColor','none');
-            colormap(hsv);
+            set(cmap, 'edgeColor','none')
+            shading interp;
+            colorbar
     end
 
-    set(cmap, 'edgeColor','none')
-    shading interp;
-    colorbar
     set(gca,'fontsize',plotopt.ftsz)
     axis([field_l field_h freq_l freq_h]);
     tx(n+4) = xlabel('Field (T)');
@@ -318,33 +354,41 @@ for n = 1:length(T)
     %Fit each frequency scan to Lorentzian form to extract the quality factor
 %     figure
     disp(num2str(T(n),'Fitting: T = %3.3f K'))
-    % Extract frequency cuts
-    Hx = field_l:0.1:field_h;
     
+%   Extract frequency cuts
+    Hx = field_l:0.1:field_h;
 %   For noisy data, we need to remove duplicates of minima
-    [H0,ia,~] = unique(H0,'last');
-    f0 = f0(ia);
-    ff0 = interp1(H0,f0,Hx,'spline','extrap'); %Create an interpolation of the resonant frequency along the DC magnetic field (Hx) axis
+    [H0,ia,~] = unique(H0,'stable');
+
+% %     Alernatively use the raw data for fitting    
 %     Hx = H0;
-%     ff0 = f0; %Alernatively use the raw data for fitting
+%     ff0 = f0; 
+
+%   Create an interpolation of the resonant frequency along the DC magnetic field (Hx) axis
+    f0 = f0(ia);
+    Q0 = Q0(ia);
+    ff0 = interp1(H0,f0,Hx,'spline','extrap'); 
+    
+    
     ii = 1;
     for m = Hx
         xq = xq.*0 + m;
-        zq = Fmag(xq,yq);
-        zqf = medfilt1(zq(:,1),10);
-        s = spec1d(yq(:,1),zqf,zqf.*0 + 0.05);
+        zq = Fmag(xq,yq); 
+        zqf = medfilt1(zq(:,1)); %Apply median filter to remove some noises
+        s = spec1d(yq(:,1), zqf, zqf.*0 + 0.05);
         p = [-1 ff0(ii) 0.001 2];
         %starting point for the (Lorentzian) fitting parameters(p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor?)
-        
+
         fix = [1 1 1 1];
-        [fQ, fbck]=fits(s,'lorz',p,fix);
-        Q(ii) = fbck.pvals(2)/fbck.pvals(3); %Calculate the quality factor
-        chi(ii) = 1/Q(ii);
+        [fQ, fbck]=fits(s, 'lorz', p, fix);
+        Qf(ii) = fbck.pvals(2)/fbck.pvals(3); %Calculate the quality factor
+        chi(ii) = 1/Qf(ii);
         ii = ii + 1;
         disp(num2str(m,'Current magnetic field: %3.1f.'));
     end
+            
         figure
-        freqPlot = plot(Hx,ff0,'or','MarkerSize',2)
+        freqPlot = plot(Hx,ff0,'or','MarkerSize',2);
         xlabel('Field (T)');
         ylabel('Frequency (GHz)');
         title(num2str(T(n),'Resonant frequency from fitted data at T = %3.3f K'));
@@ -357,10 +401,17 @@ for n = 1:length(T)
     %     plot(xq(1,:),zq);
 %         col = setcolours(n/length(T),'jet');
         figure
-        Qplot = plot(Hx,Q,'o-','MarkerSize',4);
+        Hx = Hx(Qf >=0);
+        Qf = Qf(Qf >= 0); %Remove unphysical points
+        Qplot1 = plot(Hx,Qf,'o-','MarkerSize',4);
+        hold on
+        H0 = H0(f0 >=0);
+        Q0 = Q0(Q0 >=0);
+        Qplot2 = plot(H0,Q0,'s-','MarkerSize',4);
         gca;
         xlabel('Field (T)');
         ylabel('Q factor');
+        legend('Quality factor from Lorentzian fit', 'Quality factor from FWHM');
         title('Quality factor');
 %         set(hk(n),'color',col,'linewidth',plotopt.lnwd);
 end
@@ -377,8 +428,7 @@ end
 
 
 end
-%% ------------------------------------------------------------------------
-
+%% --------------------------------------------------------------------------------
 function hfig = setfig(nfig)
 
 hfig = figure(nfig);
@@ -414,5 +464,3 @@ disp(['Figure ' figname ' saved to '])
 disp(cd)
 cd(curdir)
 end
-
-
