@@ -5,10 +5,10 @@ format long;
 %addpath('C:\Users\babkevic\Documents\MATLAB\legendflex')
 
 % % curdir = cd;
-addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
-addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
-% addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
-% addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
+% addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
+% addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
+addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
+addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
 %The first line is for windows, the second line is for mac OS
 
 %% Define input ===========================================================
@@ -188,8 +188,8 @@ set(tt,'fontsize',plotopt.ftsz,'interpreter','none')
 end
 function option2(plotopt)
 
-filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm)\05.11.2019';
-% filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/06.11.2019/';
+% filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm)\05.11.2019';
+filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/SC127_2 (2.5 x 1 x 0.5 mm)/05.11.2019/';
 %The first line is for windows, the second line is for mac OS
 filename = '2019_11_0014';
 
@@ -205,26 +205,43 @@ base = 2; % Manually define the noise floor
 
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
+% extract data from raw data file
 out = readdata_v3(filepath,filename,1);
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
+mag = (1- out.data.ZVLreal.^2 -out.data.ZVLimag.^2)./((1- out.data.ZVLreal).^2 + out.data.ZVLimag.^2);    
 H = out.data.DCField1;
 T1 = out.data.Temperature1;
 
-freq_l = min(freq,[],'All'); %set frequency range, l: lower limit, h: higher limit
-freq_h = max(freq,[],'All');
+% make a field matrix to match the frequency and signal data
+HH = repmat(H,1,size(freq,2)); 
+
+freq = freq';
+freq = freq(:);
+S11 = S11';
+S11 = S11(:);
+HH = HH';
+HH = HH(:);
+mag = mag';
+mag = mag(:);
+
+freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
+freq_h = max(freq);
 field_l = min(H);  %set field range, l: lower limit, h: higher limit
 field_h = max(H);
-[r,c] = find(freq == freq_l,1,'first');
-step = freq(r,c+1)-freq(r,c); %Scanning step in unit of GHz, default is 1 MHz according to ZVL network analyser
+
+dif = nonzeros(diff(freq));
+dif = dif(dif>0);
+step = mean(dif);
+% step = freq(r,c+1)-freq(r,c); %Scanning step in unit of GHz, default is 1 MHz according to ZVL network analyser
 nop = ceil((freq_h-freq_l)/step); %compute how many points pers complete frequency scan.
-lineDiv = (freq_h-freq_l)/step/(out.nop-1); %number of lines per complete frequency scan in the raw data file
+% lineDiv = (freq_h-freq_l)/step/(out.nop-1); %number of lines per complete frequency scan in the raw data file
 
-clearvars r c
-
-N = size(freq,2);   
-HH = repmat(H,1,N)'; %populate the magnetic field to match the dimension of S11 matrix
-
+clearvars dif
+% 
+% N = size(freq,2);   
+% HH = repmat(H,1,N)'; %populate the magnetic field to match the dimension of S11 matrix
+% 
 
 % 
 % %Plot the temperature vs magnetic field to check the temperature variation
@@ -234,62 +251,49 @@ HH = repmat(H,1,N)'; %populate the magnetic field to match the dimension of S11 
 % ylabel('Temperature')
 % title('Magnetic field vs Temperature')
 
-%Clean up the raw data by removing incomplete scans (step 1) and duplicate
-%glitch points from instruments (step 2)
+%Clean up the raw data by removing incomplete scans (step 1) and duplicates
+%(step 2)
 % step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
-freq_temp = freq';
-freq_temp = freq_temp(:);
-S11_temp = S11';
-S11_temp = S11_temp(:);
-
 trunc1 = find(freq==freq_l,1,'first'); 
 trunc2 = find(freq==freq_h,1,'last'); 
-S11_temp = S11_temp(trunc1:trunc2);
+S11_temp = S11(trunc1:trunc2);
 dB_temp = mag2db(abs(S11_temp));
-freq_temp = freq_temp(trunc1:trunc2);
+freq_temp = freq(trunc1:trunc2);
 HH_temp = HH(trunc1:trunc2);
+mag_temp = mag(trunc1:trunc2);
 
-%step 2: remove duplicates from ZVL (it appears that every 20380 data
-%points, there will be a duplicate of a few datapoints, reason unknown
-dif =[step; diff(freq_temp)]; %calculate subsequent differences among adjacent elements
-cind = find(dif <= 0); %pick out the negative differences that are either beginnings of a scan or duplicates
-dind = cind(find(diff(cind)~=nop)+1); %locate the indices of the anomalies and map back to the correct indices of the raw data
-dind = dind(1:2:end);
-segLen = floor((freq_temp(dind)-freq_temp(dind-1))/step); %calculate the length of the duplicated datapoints
+% Step 2: remove duplicates
+dupl = find(diff(freq_temp) == 0);
+freq_temp(dupl)=[];
+dB_temp(dupl)=[];
+HH_temp(dupl)=[];
+mag_temp(dupl)=[];
 
-for ii = 1:length(dind)
-    rmInd(ii,:) = dind(ii)+segLen:1:dind(ii); 
-end
-rmInd = rmInd(:);
-freq_temp(rmInd)=[];
-dB_temp(rmInd)=[];
-HH_temp(rmInd)=[];
-clearvars dif cind dind segLen rmInd;
+dB = reshape(dB_temp,nop,[]);  %reshape the matrix so that each complete frequency scan occupy one column
+freq = reshape(freq_temp,nop,[]);
+HH = reshape(HH_temp,nop,[]);
 
-dB_temp = reshape(dB_temp,nop,[]);  %reshape the matrix so that each complete frequency scan occupy one column
-freq_temp = reshape(freq_temp,nop,[]);
-HH_temp = reshape(HH_temp,nop,[]);
 %Find all the resonant peaks
-f0 = zeros(size(dB_temp,2),1);
-H0 = zeros(size(dB_temp,2),1);
-Q0 = zeros(size(dB_temp,2),1);
-dB0 = zeros(size(dB_temp,2),1);
+f0 = zeros(size(dB,2),1);
+H0 = zeros(size(dB,2),1);
+Q0 = zeros(size(dB,2),1);
+dB0 = zeros(size(dB,2),1);
 %find the indices to the minima (resonant frequency) of each complete frequency scan until the end of the data
-for ii = 1:size(dB_temp,2) %Searching column minima (fixed field) is better than searching row minima (fixed frequency)
-[~,idx] = min( dB_temp(:,ii) );
+for ii = 1:size(dB,2) %Searching column minima (fixed field) is better than searching row minima (fixed frequency)
+[~,idx] = min( dB(:,ii) );
 if(length(idx)>1)
     disp(num2str(H0(ii),'multiple minima found at H = %.3f'))
 end
-f0(ii) = freq_temp(idx,ii);
-H0(ii) = HH_temp(idx,ii); 
-dB0(ii) = dB_temp(idx,ii);
+f0(ii) = freq(idx,ii);
+H0(ii) = HH(idx,ii); 
+dB0(ii) = dB(idx,ii);
 % Calculate quality factor using f0/FWHM
-if isnan(1/range(freq_temp(dB_temp(:,ii) <= FWHM)))
+if isnan(1/range(freq(dB(:,ii) <= FWHM)))
    Q0(ii) = 0;
-elseif isempty(range(freq_temp(dB_temp(:,ii) <= FWHM)))
+elseif isempty(range(freq(dB(:,ii) <= FWHM)))
    Q0(ii) = 0;
 else
-Q0(ii) = freq_temp(idx,ii)/range(freq_temp(dB_temp(:,ii) <= FWHM));
+Q0(ii) = freq(idx,ii)/range(freq(dB(:,ii) <= FWHM));
 end
 Q0(isnan(Q0)) = 0; % Cut out NaN from the array
 Q0(isinf(Q0)) = 0; % Cut out inf from the array
@@ -313,7 +317,7 @@ xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
 axis([field_l field_h freq_l freq_h]);
-clearvars *_temp;
+% clearvars *_temp;
 
 % Plot the peak amplitude vs. magnetic field
 figure
@@ -322,9 +326,6 @@ nfig2 = plot(H0, dB0, 'o', 'MarkerSize', 2);
 xlabel('Field(T)');
 ylabel('S11 amplitute');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
-
-
-mag = (1- out.data.ZVLreal.^2 -out.data.ZVLimag.^2)./((1- out.data.ZVLreal).^2 + out.data.ZVLimag.^2);    
 
 [xq,yq] = meshgrid(linspace(field_l,field_h,301),linspace(freq_l,freq_h,310));
 
@@ -359,10 +360,10 @@ case 1 % Option_1 Interpolate data along only the frequency axis.
     end
 case 2 % Option_2 Interpolate the data along both axis.
 %             S11 = S11(:);
-    mag = mag(:);
-    freq = freq(:);
-    dB = dB(:);
-    HH = HH(:); 
+    mag = mag_temp;
+    freq = freq_temp;
+    dB = dB_temp;
+    HH = HH_temp; 
 %             FdB  = TriScatteredInterp(HH,freq,dB);
     FdB = scatteredInterpolant(HH, freq, dB);
     Fmag  = scatteredInterpolant(HH,freq, mag);
