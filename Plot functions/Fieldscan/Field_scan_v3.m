@@ -6,7 +6,7 @@ format long;
 
 % % curdir = cd;
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
-addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
+addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik');
 % addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
 % addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
 %The first line is for windows, the second line is for mac OS
@@ -20,7 +20,6 @@ filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment
 % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC147/16.11.2019/';
 %The first line is for windows, the second line is for mac OS
 filename = '2019_11_0050';
-Temperature = 0.09;
 
 %% Read ZVL
 %Set data range and parameters
@@ -32,10 +31,10 @@ switch opt
         option1(filepath, filename, plotopt)
     case 2
         % Analyse the fieldscan data and display plots
-        option2(filepath, filename, plotopt, Temperature)
+        option2(filepath, filename, plotopt)
     case 3
         % Use routine to analyze the fieldscan data and save to files
-        option3(filepath, filename, Temperature)
+        option3(filepath, filename)
 end
 % matlabpool close
 
@@ -80,7 +79,6 @@ FdB = TriScatteredInterp(HH,freq,dB);
 zq = FdB(xq,yq);
 
 % Plot the interpolated frequency response data in a field scan using color map
-% hfig1 = setfig(11);
 figure
 cmap = pcolor(xq,yq,zq);
 set(cmap, 'edgeColor','none')
@@ -173,11 +171,9 @@ set(tt,'fontsize',plotopt.ftsz,'interpreter','none')
 % saveplots(hfig6,[figname '_field_T'])
 
 end
-function option2(filepath,filename, plotopt, Temperature)
+function option2(filepath,filename, plotopt)
 %Set data range and parameters
 order = 4; % set to what order the median filters is applied
-base = 5.0; % Manually define the noise floor
-
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
 % extract data from raw data file
@@ -186,6 +182,7 @@ freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;  
 H = out.data.DCField1;
 T1 = out.data.Temperature1;
+Temperature = T1(H == min(H)); %Extract the measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
 HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
 
 freq = freq';
@@ -260,15 +257,20 @@ for ii = 1:size(dB,2) %Searching column minima (fixed field)
     FWHM(ii) = range(freq(dB(:,ii) <= HM));
     end
 end
-Q0(isnan(Q0)) = 0; % Cut out NaN from the array
-Q0(isinf(Q0)) = 0; % Cut out inf from the array
-%     Q0(Q0>4000) = 0; % Cut out unrealistic quality factor from noise data
+Q0(isinf(Q0)) = NaN; % Cut out inf from the array
+[Q0,c] = rmmissing(Q0); % Cut out NaN from the array
+H0 = H0(~c); % Remove corresponding elements in H0 array as well
+f0 = f0(~c);
+dB0 = dB0(~c);
+FWHM = FWHM(~c);
 
 %   For noisy data, we need to remove duplicates of minima
 [H0,ia,~] = unique(H0,'stable');
 f0 = f0(ia);
 Q0 = Q0(ia);
 dB0 = dB0(ia);
+FWHM = FWHM(ia);
+
 clearvars idx ia ii HM
 
 % Plot the resonant frequency versus DC magnetic field
@@ -332,7 +334,6 @@ case 2 % Option_2 Interpolate the data along both axis.
     shading interp;
     colorbar
     caxis([max([min(dB_temp), -30]) 5]);
-    zq = FdB(xq,yq); % For later use in lorentzian fitting
 end
     clearvars *_temp;
 
@@ -346,47 +347,64 @@ tt(4) = title(num2str(Temperature,'S11 response at T = %3.3f K'));
 %     figure
 disp(num2str(Temperature,'Fitting: T = %3.3f K'))
 
-Hx = xq(1,:);
-ff0 = spline(H0,f0,Hx);
-for ii = 1:length(Hx)
-    xq = xq.*0 + Hx(ii);
-    zqf = -zq(:,ii); % zq was defined in the 'switch' section regarding interpolation direction 
-    s = spec1d(yq(:,ii), zqf, max(zqf)*0.001);
-    p = [-1 ff0(ii) mean(FWHM) base];
-    %starting point for the (Lorentzian) fitting parameters(p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
-    fix = [1 1 1 1];
-    [~, fbck]=fits(s, 'lorz', p, fix);
-    ff0(ii) = fbck.pvals(2); % Retrieve the resonant frequency from fitted data
-    Qf(ii) = fbck.pvals(2)/fbck.pvals(3)/2; %Calculate the quality factor
-    chi(ii) = 1/Qf(ii);
-    if mod(ii,20) == 0
-        disp(num2str(Hx(ii),'Current magnetic field: %3.2f.'));
-    end
+switch 2 % Use interpolated data or raw data to extract quality factor
+    case 1 % Use raw data
+        Hx = H0;
+        yq = freq;
+        zq = dB;
+        ff0 = f0;
+        Qf = double.empty(length(Hx),0);
+    case 2 % Use interpolated data
+        Hx = xq(1,:);
+        ff0 = interp1(H0,f0,Hx,'pchip'); % Using spline interpolation to smooth the resonant frequency trace
+        Qf = double.empty(length(Hx),0);
 end
 
+switch 2 % Pick Lorentzian fit function from either custom function of spec1d
+    case 1 %Option 1: Custom function
+        for ii = 1:10:length(Hx)
+            param = [FWHM(ii) ff0(ii) 5 1];
+            % Param = [1.Bandwidth 2.Resonant frequency 3.Noise floor 4.Scaling factor]
+            fit = Lorentz_fit(yq(:,ii),-zq(:,ii),param);
+            param = coeffvalues(fit);
+            ff0(ii) = param(2);
+            Qf(ii) = param(2)/param(1);
+        end
+    case 2 %Option 2: spec1d package
+        for ii = 1:length(Hx)
+            xq = xq.*0 + Hx(ii);
+            s = spec1d(yq(:,ii), -zq(:,ii), max(zq(:,ii))*0.001); %starting point for the (Lorentzian) fitting parameters(p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
+%             %Additional parameters for lorentzian fitting
+%             fix = [1 1 1 1];
+%             p = [-1 ff0(ii) mean(FWHM) base];
+%             [~, fbck] = fits(s, 'lorz', p, fix);
+            [~, fbck] = fits(s, 'lorz');
+            ff0(ii) = fbck.pvals(2); % Retrieve the resonant frequency from fitted data
+            Qf(ii) = abs(fbck.pvals(2)/fbck.pvals(3)/2); %Calculate the quality factor
+%             chi(ii) = 1/Qf(ii);
+            if mod(ii,20) == 0
+                disp(num2str(Hx(ii),'Current magnetic field: %3.2f.'));
+            end
+        end
+end
 figure
-freqPlot = plot(Hx(1:10:end),ff0(1:10:end),'or','MarkerSize',2);
+hold on
+freqPlot = plot(Hx(1:10:end),ff0(1:10:end),'or','MarkerSize',4,'MarkerFaceColor','red');
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
 title(num2str(Temperature,'Resonant frequency from fitted data at T = %3.3f K'));
 axis([field_l field_h freq_l freq_h]);
 
-%     yq = yq.*0 + 3.49;
-%     zq = Fmag(xq,yq);
-%     h1(n) = plot(xq(1,:),zq); Error: the indices on the left side are not compatible with the size of the right side.
-%     hk = plot(xq(1,:),Q);
-%     plot(xq(1,:),zq);
-%         col = setcolours(n/length(T),'jet');
 figure
-Hx = Hx(Qf >=0);
-Qf = Qf(Qf >=0); %Remove unphysical points
-Qf = medfilt1(Qf, order);
-Qplot1 = plot(Hx, Qf,'o-','MarkerSize',4);
+% Hx = Hx(Qf >=0);
+% Qf = Qf(Qf >=0); %Remove unphysical points
+% Qf = medfilt1(Qf, order);
+Qplot1 = plot(Hx(1:10:end), Qf(1:10:end),'o-','MarkerSize',4);
 hold on
 H0 = H0(Q0 >=0);
 Q0 = Q0(Q0 >=0);
-Q0 = medfilt1(Q0, order);
-Qplot2 = plot(H0(1:20:end), Q0(1:20:end),'s-','MarkerSize',4);
+Q0 = medfilt1(Q0, 10);
+Qplot2 = plot(H0(1:15:end), Q0(1:15:end),'s-','MarkerSize',4);
 gca;
 xlabel('Field (T)');
 ylabel('Q factor');
@@ -403,7 +421,7 @@ title('Quality factor');
 
 % saveplots(hfig(2),'7-Temperature_field-S_-16dBm_Q')
 end
-function option3(filepath, filename, Temperature)
+function option3(filepath, filename)
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
 %% Plot data
@@ -419,6 +437,8 @@ freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;  
 H = out.data.DCField1;
 HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
+T1 = out.data.Temperature1;
+Temperature = T1(H==min(H));
 
 % Determing the fieldscan direction
 if H(end)-H(1)>0
@@ -487,15 +507,18 @@ for ii = 1:size(dB,2) %Searching column minima (fixed field) is better than sear
     else
     Q0(ii) = freq(idx,ii)/range(freq(dB(:,ii) <= HM));
     end
-    Q0(isnan(Q0)) = 0; % Cut out NaN from the array
-    Q0(isinf(Q0)) = 0; % Cut out inf from the array
-    Q0(Q0>4000) = 0; % Cut out unrealistic quality factor from noise data
 end
+Q0(isinf(Q0)) = NaN; % Cut out inf from the array
+[Q0,c] = rmmissing(Q0); % Cut out NaN from the array
+H0 = H0(~c); % Remove corresponding elements in H0 array as well
+f0 = f0(~c);
+dB0 = dB0(~c);
 
 %   For noisy data, we need to remove duplicates of minima
 [H0,ia,~] = unique(H0,'stable');
+f0 = f0(ia);
+Q0 = Q0(ia);
 dB0 = dB0(ia);
-clearvars ia ii idx
 
 figure
 dB0 = medfilt1(dB0); % apply median filter to remove some noise
