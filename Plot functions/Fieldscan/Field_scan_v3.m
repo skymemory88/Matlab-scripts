@@ -6,7 +6,7 @@ format long;
 
 % % curdir = cd;
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
-addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik');
+addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
 % addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
 % addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
 %The first line is for windows, the second line is for mac OS
@@ -16,10 +16,10 @@ plotopt.lnwd = 2;
 plotopt.ftsz = 12;
 plotopt.mksz = 5;
 
-filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm, triangle)\22.11.2019';
+filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm, triangle)\23.11.2019';
 % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC147/16.11.2019/';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_11_0050';
+filename = '2019_11_0051';
 
 %% Read ZVL
 %Set data range and parameters
@@ -171,6 +171,8 @@ set(tt,'fontsize',plotopt.ftsz,'interpreter','none')
 % saveplots(hfig6,[figname '_field_T'])
 
 end
+
+
 function option2(filepath,filename, plotopt)
 %Set data range and parameters
 order = 4; % set to what order the median filters is applied
@@ -206,7 +208,7 @@ clearvars dif
 
 %Plot the temperature vs magnetic field to check the temperature variation
 figure
-plot(H(1:100:end),T1(1:100:end),'o-')
+plot(H(1:length(T1)/100:end),T1(1:length(T1)/100:end),'o-')
 xlabel('DC Magnetic field')
 ylabel('Temperature')
 title('Magnetic field vs Temperature')
@@ -273,23 +275,7 @@ FWHM = FWHM(ia);
 
 clearvars idx ia ii HM
 
-% Plot the resonant frequency versus DC magnetic field
-figure
-f0 = medfilt1(f0,order); % apply median filter to remove some noise
-hfig1 = plot(H0,f0,'o','MarkerSize',2);
-xlabel('Field (T)');
-ylabel('Resonant frequency (GHz)');
-title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
-axis([field_l field_h freq_l freq_h]);
-
-% Plot the peak amplitude vs. magnetic field
-figure
-dB0 = medfilt1(dB0, order); % apply median filter to remove some noise
-nfig2 = plot(H0, dB0, 'o', 'MarkerSize', 2);
-xlabel('Field(T)');
-ylabel('S11 amplitute');
-title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
-
+% Interpolate the data on a 2D grid for the colormap
 [xq,yq] = meshgrid(linspace(field_l,field_h,301),linspace(freq_l,freq_h,310));
 
 switch 2 %choose data interpolation method and plot the color map of S11 response
@@ -315,7 +301,7 @@ case 1 % Option_1 Interpolate data along only the frequency axis.
             interp_dB = interp_dB(:);
             HH = HH';
             HH = HH(:);
-            smap = scatter3(HH,yy,interp_dB,2,interp_dB,'o','filled','MarkerEdgeColor','none');
+            cmap = scatter3(HH,yy,interp_dB,2,interp_dB,'o','filled','MarkerEdgeColor','none');
             colormap(hsv);
     end
 case 2 % Option_2 Interpolate the data along both axis.
@@ -333,7 +319,7 @@ case 2 % Option_2 Interpolate the data along both axis.
     set(cmap, 'edgeColor','none')
     shading interp;
     colorbar
-    caxis([max([min(dB_temp), -30]) 5]);
+    caxis([max([min(dB0), -30]) 5]);
 end
     clearvars *_temp;
 
@@ -356,17 +342,31 @@ switch 2 % Use interpolated data or raw data to extract quality factor
         Qf = double.empty(length(Hx),0);
     case 2 % Use interpolated data
         Hx = xq(1,:);
-        ff0 = interp1(H0,f0,Hx,'pchip'); % Using spline interpolation to smooth the resonant frequency trace
+        ff0 = interp1(H0,f0,Hx,'pchip','extrap'); % Using spline interpolation to smooth the resonant frequency trace
         Qf = double.empty(length(Hx),0);
 end
 
-switch 2 % Pick Lorentzian fit function from either custom function of spec1d
+switch 1 % Pick Lorentzian fit function from either custom function of spec1d
     case 1 %Option 1: Custom function
-        for ii = 1:10:length(Hx)
-            param = [FWHM(ii) ff0(ii) 5 1];
+%         ff0_2 = double.empty(length(ff0),0);
+        for ii = 1:length(Hx)
+            % Single Lorentzian function fit
+            param = [FWHM(ii) ff0(ii) 0 1]; % Fitting parameter starting point
             % Param = [1.Bandwidth 2.Resonant frequency 3.Noise floor 4.Scaling factor]
-            fit = Lorentz_fit(yq(:,ii),-zq(:,ii),param);
+            bound = [1e-4 freq_l -5 0 1 freq_h 0 -min(dB0)];
+            % Set up boundaries for the fitting parameters
+            fit = Lorentz_fit(yq(:,ii), -zq(:,ii),param, bound);
+            if mod(ii,20) == 0
+                disp(num2str(Hx(ii),'Current magnetic field: %3.2f.'));
+            end
+%             % Double Lorentzian function fit
+%             param = [FWHM(ii) ff0(ii) 0 1 FWHM(ii) freq_l+freq_h-ff0(ii) 0 1];
+%             fit = Dbl_Lortz(yq(:,ii), -zq(:,ii), param);
+            
             param = coeffvalues(fit);
+            
+%             ff0_2(ii) = param(6);            
+%             Qf_2(ii) = param(6)/param(5);    
             ff0(ii) = param(2);
             Qf(ii) = param(2)/param(1);
         end
@@ -387,24 +387,57 @@ switch 2 % Pick Lorentzian fit function from either custom function of spec1d
             end
         end
 end
-figure
+
+% Plot the resonant frequency from Lorentzian fit versus DC magnetic field
+% figure
 hold on
-freqPlot = plot(Hx(1:10:end),ff0(1:10:end),'or','MarkerSize',4,'MarkerFaceColor','red');
+freqPlot = plot(Hx(1:round(length(Hx)/100):end),ff0(1:round(length(Hx)/100):end),'or','MarkerSize',2,'MarkerFaceColor','red');
+% freqPlot2 = plot(Hx(1:length(Hx)/100:end),ff0_2(1:length(Hx)/100:end),'sk','MarkerSize',2,'MarkerFaceColor','black');
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
 title(num2str(Temperature,'Resonant frequency from fitted data at T = %3.3f K'));
 axis([field_l field_h freq_l freq_h]);
 
 figure
-% Hx = Hx(Qf >=0);
-% Qf = Qf(Qf >=0); %Remove unphysical points
-% Qf = medfilt1(Qf, order);
-Qplot1 = plot(Hx(1:10:end), Qf(1:10:end),'o-','MarkerSize',4);
+cmap2 = copyobj(cmap, gca);
+set(cmap2, 'edgeColor','none');
+shading interp;
+colorbar
+caxis([max([min(dB0), -30]) 5]);
+axis([field_l field_h freq_l freq_h]);
+
+% Plot the resonant frequency from minimum search versus DC magnetic field
+% figure
 hold on
+f0 = medfilt1(f0,order); % apply median filter to remove some noise
+hfig1 = plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
+% hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
+xlabel('Field (T)');
+ylabel('Resonant frequency (GHz)');
+title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
+axis([field_l field_h freq_l freq_h]);
+
+% Plot the peak amplitude from minimum search vs. magnetic field
+figure
+dB0 = medfilt1(dB0, order); % apply median filter to remove some noise
+nfig2 = plot(H0, dB0, 'o', 'MarkerSize', 2);
+xlabel('Field(T)');
+ylabel('S11 amplitute');
+title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
+
+%Plot Quality factor from minimum search vs magnetic field
+figure
 H0 = H0(Q0 >=0);
 Q0 = Q0(Q0 >=0);
 Q0 = medfilt1(Q0, 10);
-Qplot2 = plot(H0(1:15:end), Q0(1:15:end),'s-','MarkerSize',4);
+Qplot2 = plot(H0(1:round(length(H0)/100):end), Q0(1:round(length(Q0)/100):end),'s-','MarkerSize',2);
+
+%Plot Quality factor from Lorentzian fit vs magnetic field
+hold on
+Hx = Hx(Qf >=0);
+Qf = Qf(Qf >=0); %Remove unphysical points
+Qf = medfilt1(Qf, order);
+Qplot1 = plot(Hx(1:round(length(Hx)/100):end), Qf(1:round(length(Qf)/100):end),'o-','MarkerSize',2);
 gca;
 xlabel('Field (T)');
 ylabel('Q factor');
@@ -420,15 +453,16 @@ title('Quality factor');
 %     tt(2) = title([filename num2str(runs(n)) ', f = 3.437 GHz']);
 
 % saveplots(hfig(2),'7-Temperature_field-S_-16dBm_Q')
+cd(filepath);
 end
+
+
 function option3(filepath, filename)
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
 %% Plot data
 
 %Set data range and parameters
-HM = -3.0; % Define full-width-half-max for calculation of quality factors
-
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
 % extract data from raw data file
@@ -499,6 +533,7 @@ for ii = 1:size(dB,2) %Searching column minima (fixed field) is better than sear
     f0(ii) = freq(idx,ii);
     H0(ii) = HH(idx,ii); 
     dB0(ii) = dB(idx,ii);
+    HM = dB(idx,ii)*0.3; % Define full-width-half-max position
     % Calculate quality factor using f0/FWHM
     if isnan(1/range(freq(dB(:,ii) <= HM)))
        Q0(ii) = 0;
@@ -522,7 +557,7 @@ dB0 = dB0(ia);
 
 figure
 dB0 = medfilt1(dB0); % apply median filter to remove some noise
-nfig2 = plot(H0, dB0, 'o', 'MarkerSize', 2);
+nfig2 = plot(H0(1:length(Hx)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
 xlabel('Field(T)');
 ylabel('S11 amplitute');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
