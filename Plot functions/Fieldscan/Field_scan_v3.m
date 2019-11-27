@@ -1,10 +1,5 @@
 function Field_scan
 format long;  
-% matlabpool open
-
-%addpath('C:\Users\babkevic\Documents\MATLAB\legendflex')
-
-% % curdir = cd;
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
 addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
 % addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
@@ -19,7 +14,7 @@ plotopt.mksz = 5;
 filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm, triangle)\23.11.2019';
 % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC147/16.11.2019/';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_11_0051';
+filename = '2019_11_0052';
 
 %% Read ZVL
 %Set data range and parameters
@@ -175,6 +170,7 @@ end
 
 function option2(filepath,filename, plotopt)
 %Set data range and parameters
+p = gcp;
 order = 4; % set to what order the median filters is applied
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
@@ -281,7 +277,7 @@ clearvars idx ia ii HM
 switch 2 %choose data interpolation method and plot the color map of S11 response
 case 1 % Option_1 Interpolate data along only the frequency axis.
     interp_dB = zeros(size(yq,1),size(HH,2));
-    for ii = 1:size(HH,2)
+    parfor ii = 1:size(HH,2)
         interp_dB(:,ii) = interp1(freq(:,ii),dB(:,ii),yq(:,1));
     end
     zq = interp_dB'; % For later use in lorentzian fitting
@@ -349,7 +345,7 @@ end
 switch 1 % Pick Lorentzian fit function from either custom function of spec1d
     case 1 %Option 1: Custom function
 %         ff0_2 = double.empty(length(ff0),0);
-        for ii = 1:length(Hx)
+        parfor ii = 1:length(Hx)
             % Single Lorentzian function fit
             param = [FWHM(ii) ff0(ii) 0 1]; % Fitting parameter starting point
             % Param = [1.Bandwidth 2.Resonant frequency 3.Noise floor 4.Scaling factor]
@@ -357,7 +353,7 @@ switch 1 % Pick Lorentzian fit function from either custom function of spec1d
             % Set up boundaries for the fitting parameters
             fit = Lorentz_fit(yq(:,ii), -zq(:,ii),param, bound);
             if mod(ii,20) == 0
-                disp(num2str(Hx(ii),'Current magnetic field: %3.2f.'));
+                fprintf('Current magnetic field: %3.2f. on core %u.\n', Hx(ii), labindex);
             end
 %             % Double Lorentzian function fit
 %             param = [FWHM(ii) ff0(ii) 0 1 FWHM(ii) freq_l+freq_h-ff0(ii) 0 1];
@@ -371,8 +367,7 @@ switch 1 % Pick Lorentzian fit function from either custom function of spec1d
             Qf(ii) = param(2)/param(1);
         end
     case 2 %Option 2: spec1d package
-        for ii = 1:length(Hx)
-            xq = xq.*0 + Hx(ii);
+        parfor ii = 1:length(Hx)
             s = spec1d(yq(:,ii), -zq(:,ii), max(zq(:,ii))*0.001); %starting point for the (Lorentzian) fitting parameters(p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
 %             %Additional parameters for lorentzian fitting
 %             fix = [1 1 1 1];
@@ -383,7 +378,7 @@ switch 1 % Pick Lorentzian fit function from either custom function of spec1d
             Qf(ii) = abs(fbck.pvals(2)/fbck.pvals(3)/2); %Calculate the quality factor
 %             chi(ii) = 1/Qf(ii);
             if mod(ii,20) == 0
-                disp(num2str(Hx(ii),'Current magnetic field: %3.2f.'));
+                fprintf('Current magnetic field: %3.2f. on core %u.\n', Hx(ii), labindex);
             end
         end
 end

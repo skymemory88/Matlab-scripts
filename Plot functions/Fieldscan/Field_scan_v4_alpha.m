@@ -1,10 +1,5 @@
 function Field_scan
 format long;  
-% matlabpool open
-
-%addpath('C:\Users\babkevic\Documents\MATLAB\legendflex')
-
-% % curdir = cd;
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
 addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
 % addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
@@ -16,10 +11,10 @@ plotopt.lnwd = 2;
 plotopt.ftsz = 12;
 plotopt.mksz = 5;
 
-filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm, triangle)\23.11.2019';
+filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm, triangle)\27.11.2019';
 % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC147/16.11.2019/';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_11_0052';
+filename = '2019_11_0060';
 
 %% Read ZVL
 %Set data range and parameters
@@ -34,7 +29,7 @@ switch opt
         option2(filepath, filename, plotopt)
     case 3
         % Use routine to analyze the fieldscan data and save to files
-        option3(filepath, filename)
+        option3(filepath, filename, plotopt)
 end
 % matlabpool close
 
@@ -54,6 +49,7 @@ H = out.data.DCField1;
 HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
 T1 = out.data.Temperature1;
 % T2 = out.data.Temperature2;
+Temperature = T1(H == min(H));
 
 S11 = S11';
 S11 = S11(:);
@@ -87,7 +83,7 @@ colorbar
 set(gca,'fontsize',plotopt.ftsz)
 t(1) = xlabel('Field (T)');
 t(2) = ylabel('Frequency (GHz)');
-tt(1) = title([filename num2str(run)]);
+tt(1) = title(num2str(Temperature,'S11 response at T = %3.3f K'));
 
 % Plot the temperature profile against magnetic field
 % hfig2 = setfig(12);
@@ -138,7 +134,8 @@ title('Magnetic field vs Temperature')
 % zq4 = FdB(xq4,yq);
 % xq5 = xq.*0 + 5;
 % zq5 = FdB(xq5,yq);
-%
+% 
+% figure
 % hfig6 = setfig(15);
 % h = plot(yq(:,1),zq1(:,1),yq(:,1),zq2(:,1),yq(:,1),zq3(:,1),yq(:,1),zq4(:,1),yq(:,1),zq5(:,1));
 % xlim([3.2 3.7])
@@ -147,7 +144,7 @@ title('Magnetic field vs Temperature')
 % t(10) = ylabel('S11 (dB)');
 % tt(5) = title([filename num2str(run)]);
 % t(11) = legend(h,'0','2','3.612','3.685','5');
-
+% 
 % hfig7 = setfig(16); % Plot field-temperature
 % h = plot(H,T1,H,T2);
 % xlim([0 9])
@@ -170,11 +167,13 @@ set(tt,'fontsize',plotopt.ftsz,'interpreter','none')
 % saveplots(hfig5,[figname '_freq_dB_H'])
 % saveplots(hfig6,[figname '_field_T'])
 
+cd(filepath);
 end
 
 
 function option2(filepath,filename, plotopt)
 %Set data range and parameters
+% parpool; % Create parallel computing pool
 order = 4; % set to what order the median filters is applied
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
@@ -281,7 +280,7 @@ clearvars idx ia ii HM
 switch 2 %choose data interpolation method and plot the color map of S11 response
 case 1 % Option_1 Interpolate data along only the frequency axis.
     interp_dB = zeros(size(yq,1),size(HH,2));
-    for ii = 1:size(HH,2)
+    parfor ii = 1:size(HH,2)
         interp_dB(:,ii) = interp1(freq(:,ii),dB(:,ii),yq(:,1));
     end
     zq = interp_dB'; % For later use in lorentzian fitting
@@ -346,10 +345,10 @@ switch 2 % Use interpolated data or raw data to extract quality factor
         Qf = double.empty(length(Hx),0);
 end
 
-switch 1 % Pick Lorentzian fit function from either custom function of spec1d
+switch 2 % Pick Lorentzian fit function from either custom function of spec1d
     case 1 %Option 1: Custom function
 %         ff0_2 = double.empty(length(ff0),0);
-        for ii = 1:length(Hx)
+        parfor ii = 1:length(Hx)
             % Single Lorentzian function fit
             param = [FWHM(ii) ff0(ii) 0 1]; % Fitting parameter starting point
             % Param = [1.Bandwidth 2.Resonant frequency 3.Noise floor 4.Scaling factor]
@@ -357,7 +356,7 @@ switch 1 % Pick Lorentzian fit function from either custom function of spec1d
             % Set up boundaries for the fitting parameters
             fit = Lorentz_fit(yq(:,ii), -zq(:,ii),param, bound);
             if mod(ii,20) == 0
-                disp(num2str(Hx(ii),'Current magnetic field: %3.2f.'));
+                fprintf('Current magnetic field: %3.2f. on core %u.\n', Hx(ii), labindex);
             end
 %             % Double Lorentzian function fit
 %             param = [FWHM(ii) ff0(ii) 0 1 FWHM(ii) freq_l+freq_h-ff0(ii) 0 1];
@@ -371,8 +370,7 @@ switch 1 % Pick Lorentzian fit function from either custom function of spec1d
             Qf(ii) = param(2)/param(1);
         end
     case 2 %Option 2: spec1d package
-        for ii = 1:length(Hx)
-            xq = xq.*0 + Hx(ii);
+        parfor ii = 1:length(Hx)
             s = spec1d(yq(:,ii), -zq(:,ii), max(zq(:,ii))*0.001); %starting point for the (Lorentzian) fitting parameters(p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
 %             %Additional parameters for lorentzian fitting
 %             fix = [1 1 1 1];
@@ -383,14 +381,13 @@ switch 1 % Pick Lorentzian fit function from either custom function of spec1d
             Qf(ii) = abs(fbck.pvals(2)/fbck.pvals(3)/2); %Calculate the quality factor
 %             chi(ii) = 1/Qf(ii);
             if mod(ii,20) == 0
-                disp(num2str(Hx(ii),'Current magnetic field: %3.2f.'));
+                fprintf('Current magnetic field: %3.2f. on core %u.\n', Hx(ii), labindex);
             end
         end
 end
 
 % Plot the resonant frequency from Lorentzian fit versus DC magnetic field
 % figure
-hold on
 freqPlot = plot(Hx(1:round(length(Hx)/100):end),ff0(1:round(length(Hx)/100):end),'or','MarkerSize',2,'MarkerFaceColor','red');
 % freqPlot2 = plot(Hx(1:length(Hx)/100:end),ff0_2(1:length(Hx)/100:end),'sk','MarkerSize',2,'MarkerFaceColor','black');
 xlabel('Field (T)');
@@ -398,6 +395,7 @@ ylabel('Frequency (GHz)');
 title(num2str(Temperature,'Resonant frequency from fitted data at T = %3.3f K'));
 axis([field_l field_h freq_l freq_h]);
 
+%copy over the colormap of the raw data as the background of the next plot
 figure
 cmap2 = copyobj(cmap, gca);
 set(cmap2, 'edgeColor','none');
@@ -457,7 +455,7 @@ cd(filepath);
 end
 
 
-function option3(filepath, filename)
+function option3(filepath, filename, plotopt)
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
 %% Plot data
@@ -561,6 +559,7 @@ nfig2 = plot(H0(1:length(Hx)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerS
 xlabel('Field(T)');
 ylabel('S11 amplitute');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
+set(gca,'fontsize',plotopt.ftsz)
 
 cd(filepath);
 tit=[direction,num2str(Temperature,'%3.3f'), excitation,'.mat'];
