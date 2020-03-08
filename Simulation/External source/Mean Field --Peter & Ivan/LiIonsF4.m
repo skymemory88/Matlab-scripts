@@ -185,6 +185,7 @@ for k=1:size(ion.name,1)
     ion.altJmom_hyp(:,:,:,k)=squeeze(ion.altJmom_hyp(:,:,:,k));
     
     ion.Js(:,:,:,:,k)=squeeze(ion.Js(:,:,:,:,k));
+    ion.Js_hyp(:,:,:,:,k)=squeeze(ion.Js_hyp(:,:,:,:,k));
     
     ion.altJs(:,:,:,:,k)=squeeze(ion.altJs(:,:,:,:,k));
     ion.altJs_hyp(:,:,:,:,k)=squeeze(ion.altJs_hyp(:,:,:,:,k));
