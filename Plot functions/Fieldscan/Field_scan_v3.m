@@ -11,14 +11,14 @@ plotopt.lnwd = 2;
 plotopt.ftsz = 12;
 plotopt.mksz = 5;
 
-filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm, triangle)\23.11.2019';
+filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC107 (4x5x2mm)\17.05.2019';
 % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC147/16.11.2019/';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_11_0052';
+filename = '2019_05_0022';
 
 %% Read ZVL
 %Set data range and parameters
-opt  = 2;
+opt  = 3;
 
 switch opt
     case 1
@@ -409,7 +409,7 @@ hfig1 = plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok
 % hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
-title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
+title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
 axis([field_l field_h freq_l freq_h]);
 
 % Plot the peak amplitude from minimum search vs. magnetic field
@@ -459,6 +459,7 @@ clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
 %Set data range and parameters
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
+order = 4; % set to what order the median filters is applied
 
 % extract data from raw data file
 out = readdata_v3(filepath,filename,1);
@@ -487,13 +488,15 @@ HH = HH';
 HH = HH(:);
 freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
 freq_h = max(freq);
+field_l = min(HH);
+field_h = max(HH);
 
 % Use the average of the subsequent difference to caculate frequency scan
 % step
 dif = nonzeros(diff(freq));
 dif = dif(dif>0);
 step = mean(dif);
-nop = ceil((freq_h-freq_l)/step); %compute how many points pers complete frequency scan.
+nop = ceil((freq_h-freq_l)/step)+1; %compute how many points pers complete frequency scan.
 clearvars dif
 
 %Clean up the raw data by removing incomplete scans (step 1) and duplicates
@@ -552,14 +555,23 @@ dB0 = dB0(ia);
 
 figure
 dB0 = medfilt1(dB0); % apply median filter to remove some noise
-nfig2 = plot(H0(1:length(Hx)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
+nfig1 = plot(H0(1:length(H0)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
 xlabel('Field(T)');
 ylabel('S11 amplitute');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
 
+figure
+f0 = medfilt1(f0,order); % apply median filter to remove some noise
+hfig2 = plot(H0(1:round(length(H0)/100):end),f0(1:round(length(f0)/100):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
+% hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
+xlabel('Field (T)');
+ylabel('Resonant frequency (GHz)');
+title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
+axis([field_l field_h freq_l freq_h]);
+
 cd(filepath);
 tit=[direction,num2str(Temperature,'%3.3f'), excitation,'.mat'];
-save(tit,'H0','dB0');
+save(tit,'H0','f0','dB0');
 end
 %% --------------------------------------------------------------------------------
 function hfig = setfig(nfig)

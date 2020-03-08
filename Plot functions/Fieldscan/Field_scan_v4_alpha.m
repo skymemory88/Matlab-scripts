@@ -1,7 +1,7 @@
 function Field_scan
 format long;  
-addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
-addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
+addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions\');
+addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik\'));
 % addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
 % addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
 %The first line is for windows, the second line is for mac OS
@@ -11,14 +11,14 @@ plotopt.lnwd = 2;
 plotopt.ftsz = 12;
 plotopt.mksz = 5;
 
-filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm, triangle)\27.11.2019';
-% filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC147/16.11.2019/';
+filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC138 (2x1.8x1mm)\2020.03.05';
+% filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC138 (2x1.8x1mm)/2020.03.05';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_11_0060';
+filename = '2020_03_0002';
 
 %% Read ZVL
 %Set data range and parameters
-opt  = 2;
+opt  = 1;
 
 switch opt
     case 1
@@ -40,7 +40,7 @@ end
 function option1(filepath,filename, plotopt)
 
 run = 1;
-out = readdata_v3(filepath,filename,run);
+out = readdata_v4(filepath,filename,run);
 
 %% Read & Plot data
 freq = out.data.ZVLfreq/1e9;
@@ -49,7 +49,8 @@ H = out.data.DCField1;
 HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
 T1 = out.data.Temperature1;
 % T2 = out.data.Temperature2;
-Temperature = T1(H == min(H));
+lck = out.data.lockin1;
+Temperature = mean(T1(H == min(H)));
 
 S11 = S11';
 S11 = S11(:);
@@ -75,7 +76,7 @@ FdB = TriScatteredInterp(HH,freq,dB);
 zq = FdB(xq,yq);
 
 % Plot the interpolated frequency response data in a field scan using color map
-figure
+% figure
 cmap = pcolor(xq,yq,zq);
 set(cmap, 'edgeColor','none')
 shading interp;
@@ -88,10 +89,17 @@ tt(1) = title(num2str(Temperature,'S11 response at T = %3.3f K'));
 % Plot the temperature profile against magnetic field
 % hfig2 = setfig(12);
 figure
+plot(H(1:100:end),lck(1:100:end),'s-')
+xlabel('DC Magnetic field')
+ylabel('Temperature')
+title('Magnetic field vs Temperature')
+
+figure
 plot(H(1:100:end),T1(1:100:end),'o-')
 xlabel('DC Magnetic field')
 ylabel('Temperature')
 title('Magnetic field vs Temperature')
+
 %
 % yq = yq.*0 + 3.200; % Plot field scan cut at 3.200 GHz (H vs dB)
 % hfig3 = setfig(12);
@@ -170,20 +178,18 @@ set(tt,'fontsize',plotopt.ftsz,'interpreter','none')
 cd(filepath);
 end
 
-
 function option2(filepath,filename, plotopt)
 %Set data range and parameters
-% parpool; % Create parallel computing pool
 order = 4; % set to what order the median filters is applied
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
 % extract data from raw data file
-out = readdata_v3(filepath,filename,1);
+out = readdata_v4(filepath,filename,1);
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;  
 H = out.data.DCField1;
 T1 = out.data.Temperature1;
-Temperature = T1(H == min(H)); %Extract the measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
+Temperature = mean(T1(H == min(H))); %Extract the measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
 HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
 
 freq = freq';
@@ -195,13 +201,14 @@ HH = HH(:);
 
 freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
 freq_h = max(freq);
-field_l = min(H);  %set field range, l: lower limit, h: higher limit
+% freq_h = 2.503; % Manually set the upper limit of frequency scan when ZVL fails
+field_l = min(H);  % set field range, l: lower limit, h: higher limit
 field_h = max(H);
 
 dif = nonzeros(diff(freq)); % Extract from raw data the step size in frequency scan
 dif = dif(dif>0); % Keep only positive steps
-step = mean(dif); % Calculate the mean value of the frequency scan step
-nop = ceil((freq_h-freq_l)/step)+1; %compute how many points pers complete frequency scan.
+step = min (dif); % Calculate the value of the frequency scan step
+nop = ceil(abs(freq_h-freq_l)/step); %compute how many points pers complete frequency scan.
 
 clearvars dif
 
@@ -265,7 +272,7 @@ f0 = f0(~c);
 dB0 = dB0(~c);
 FWHM = FWHM(~c);
 
-%   For noisy data, we need to remove duplicates of minima
+% For noisy data, we need to remove duplicates of minima
 [H0,ia,~] = unique(H0,'stable');
 f0 = f0(ia);
 Q0 = Q0(ia);
@@ -388,7 +395,7 @@ end
 
 % Plot the resonant frequency from Lorentzian fit versus DC magnetic field
 % figure
-freqPlot = plot(Hx(1:round(length(Hx)/100):end),ff0(1:round(length(Hx)/100):end),'or','MarkerSize',2,'MarkerFaceColor','red');
+freqPlot = plot(Hx(1:round(length(Hx)/200):end),ff0(1:round(length(Hx)/200):end),'or','MarkerSize',2,'MarkerFaceColor','red');
 % freqPlot2 = plot(Hx(1:length(Hx)/100:end),ff0_2(1:length(Hx)/100:end),'sk','MarkerSize',2,'MarkerFaceColor','black');
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
@@ -408,11 +415,11 @@ axis([field_l field_h freq_l freq_h]);
 % figure
 hold on
 f0 = medfilt1(f0,order); % apply median filter to remove some noise
-hfig1 = plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
-% hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
+% hfig1 = plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
+hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
-title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
+title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
 axis([field_l field_h freq_l freq_h]);
 
 % Plot the peak amplitude from minimum search vs. magnetic field
@@ -428,19 +435,21 @@ figure
 H0 = H0(Q0 >=0);
 Q0 = Q0(Q0 >=0);
 Q0 = medfilt1(Q0, 10);
-Qplot2 = plot(H0(1:round(length(H0)/100):end), Q0(1:round(length(Q0)/100):end),'s-','MarkerSize',2);
+% Qplot2 = plot(H0(1:round(length(H0)/100):end), Q0(1:round(length(Q0)/100):end),'s-','MarkerSize',2);
+Qplot2 = plot(H0, Q0,'s-','MarkerSize',2);
 
 %Plot Quality factor from Lorentzian fit vs magnetic field
 hold on
 Hx = Hx(Qf >=0);
 Qf = Qf(Qf >=0); %Remove unphysical points
 Qf = medfilt1(Qf, order);
-Qplot1 = plot(Hx(1:round(length(Hx)/100):end), Qf(1:round(length(Qf)/100):end),'o-','MarkerSize',2);
+% Qplot1 = plot(Hx(1:round(length(Hx)/100):end), Qf(1:round(length(Qf)/100):end),'o-','MarkerSize',2);
+Qplot1 = plot(Hx, Qf,'o-','MarkerSize',2);
 gca;
 xlabel('Field (T)');
 ylabel('Q factor');
 legend('Quality factor from Lorentzian fit', 'Quality factor from FWHM');
-title('Quality factor');
+title(num2str(Temperature,'Quality factor, T= %.3f'));
 %         set(hk(n),'color',col,'linewidth',plotopt.lnwd);
 
 % set(ax,'fontsize',plotopt.ftsz,'xlim',[field_l field_h])
@@ -454,14 +463,11 @@ title('Quality factor');
 cd(filepath);
 end
 
-
 function option3(filepath, filename, plotopt)
-clear freq S11 dB N FdB FrS FiS FTT1 FTT2
-
 %% Plot data
-
 %Set data range and parameters
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
+order = 4; % set to what order the median filters is applied
 
 % extract data from raw data file
 out = readdata_v3(filepath,filename,1);
@@ -490,13 +496,15 @@ HH = HH';
 HH = HH(:);
 freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
 freq_h = max(freq);
+field_l = min(H);  %set field range, l: lower limit, h: higher limit
+field_h = max(H);
 
 % Use the average of the subsequent difference to caculate frequency scan
 % step
 dif = nonzeros(diff(freq));
 dif = dif(dif>0);
 step = mean(dif);
-nop = ceil((freq_h-freq_l)/step); %compute how many points pers complete frequency scan.
+nop = ceil((freq_h-freq_l)/step)+1; %compute how many points pers complete frequency scan.
 clearvars dif
 
 %Clean up the raw data by removing incomplete scans (step 1) and duplicates
@@ -555,15 +563,24 @@ dB0 = dB0(ia);
 
 figure
 dB0 = medfilt1(dB0); % apply median filter to remove some noise
-nfig2 = plot(H0(1:length(Hx)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
+nfig2 = plot(H0(1:length(H0)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
 xlabel('Field(T)');
 ylabel('S11 amplitute');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
 set(gca,'fontsize',plotopt.ftsz)
 
+figure
+f0 = medfilt1(f0,order); % apply median filter to remove some noise
+hfig2 = plot(H0(1:round(length(H0)/100):end),f0(1:round(length(f0)/100):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
+% hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
+xlabel('Field (T)');
+ylabel('Resonant frequency (GHz)');
+title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
+axis([field_l field_h freq_l freq_h]);
+
 cd(filepath);
 tit=[direction,num2str(Temperature,'%3.3f'), excitation,'.mat'];
-save(tit,'H0','dB0');
+save(tit,'H0','f0','dB0');
 end
 %% --------------------------------------------------------------------------------
 function hfig = setfig(nfig)
