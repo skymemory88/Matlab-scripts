@@ -1,0 +1,3 @@
+set(gca,'position',[.2 .15 .7 .7],...
+        'fontname','times','fontsize',20)
+set(gcf,'paperposition',[.5 .5 6 4.5])

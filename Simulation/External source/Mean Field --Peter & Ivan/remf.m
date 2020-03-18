@@ -27,19 +27,17 @@ if rundipole == true
     rundipole = false;
 end
 
-
 hvec=h;
 momente_mean=0;
 
 if ~isfield(ion,'mom_hyp')
   ion.mom_hyp=ion.mom;
 end
-%%%
+%%
 for i=1:size(ion.name,1)
 %    ion.mom_hyp(:,:,i)=ion.mom(:,:,i); %we will apply the virtual crystal approximation for the isotops of LiErF4
      momente_mean=momente_mean+ion.prop(i)*ion.mom(:,:,i);
 end
-
 
 %Lorenzterm = N/V * mu_0/4pi * (mu_b)^2 * 4pi/3
 Lorenz=3.124032/1000; %Ho
@@ -73,7 +71,6 @@ alt=[1  1  1
     -1 -1  1
      1 -1  1];
 
-
 % set convergence criteria. Convergence is accepted when either:
 % (Difference < ConvMin) or (Difference < ConvMax and Niter>NiterMin) or (Niter>NiterMax)
 % This ensures very good convergence when no problem, and decent
@@ -87,88 +84,87 @@ ion.mom_old=zeros([4,3,size(ion.name,1)]);
 ion.mom_old_hyp=zeros([4,3,size(ion.name,1)]);
 
 for iterations=1:NiterMax
- % iterations 
- for i=1:size(ion.name,1)
-     ion.mom_old(:,:,i)=ion.mom(:,:,i);
-     ion.mom_old_hyp(:,:,i)=ion.mom_hyp(:,:,i);
- end
- momente_old=momente_mean;
-%  E=zeros(1,length(energies(1,:)));
- for ionn=1:4 % each Ho3+ ion in the unit cell
-     %calculate meanfield
-     h_dipol=zeros([size(ion.name,1),3]);
-     h_dipol_hyp=zeros([size(ion.name,1),3]);
-     h_ex=zeros([size(ion.name,1),3]);
-     h_ex_hyp=zeros([size(ion.name,1),3]);
-     for ionm=1:4 
-         for i=1:size(ion.name,1)
-             h_dipol(i,:)=h_dipol(i,:)+ion.mom_old(ionm,:,i)*diag(ion.renorm(i,:))*ion.d(:,:,ionm,ionn,i)';
-             h_ex(i,:)=h_ex(i,:)+ion.mom_old(ionm,:,i)*diag(ion.renorm(i,:))*ion.d_ex(:,:,ionm,ionn,i)';
-             h_dipol_hyp(i,:)=h_dipol_hyp(i,:)+ion.mom_old_hyp(ionm,:,i)*diag(ion.renorm(i,:))*ion.d(:,:,ionm,ionn,i)';
-             h_ex_hyp(i,:)=h_ex_hyp(i,:)+ion.mom_old_hyp(ionm,:,i)*diag(ion.renorm(i,:))*ion.d_ex(:,:,ionm,ionn,i)';
-         end
-     end
-     
-     %Virtual meanfield
-     h_mf=zeros([size(ion.name,1),3]);
-     for i=1:size(ion.name,1)
-         h_mf(i,:)=ion.prop(i)*((1-ion.hyp(i))*(ion.gLande(i)*h_dipol(i,:)+h_ex(i,:)) + ion.hyp(i)*(ion.gLande(i)*h_dipol_hyp(i,:)+h_ex_hyp(i,:)));
-         for j=1:size(ion.name,1)-1
-             k=(i+j>size(ion.name,1))*size(ion.name,1);
-             h_mf(i,:)=h_mf(i,:)+ion.prop(i+j-k)*((1-ion.hyp(i+j-k))*ion.gLande(i)*h_dipol(i+j-k,:)+ion.hyp(i+j-k)*ion.gLande(i)*h_dipol_hyp(i+j-k,:));%other kinds of ions
-         end
-     end
+    for i=1:size(ion.name,1)
+        ion.mom_old(:,:,i)=ion.mom(:,:,i);
+        ion.mom_old_hyp(:,:,i)=ion.mom_hyp(:,:,i);
+    end
+    momente_old=momente_mean;
+    %  E=zeros(1,length(energies(1,:)));
+    for ionn=1:4 % each Ho3+ ion in the unit cell
+        %calculate meanfield
+        h_dipol=zeros([size(ion.name,1),3]);
+        h_dipol_hyp=zeros([size(ion.name,1),3]);
+        h_ex=zeros([size(ion.name,1),3]);
+        h_ex_hyp=zeros([size(ion.name,1),3]);
+        for ionm=1:4 
+            for i=1:size(ion.name,1)
+                h_dipol(i,:)=h_dipol(i,:)+ion.mom_old(ionm,:,i)*diag(ion.renorm(i,:))*ion.d(:,:,ionm,ionn,i)';
+                h_ex(i,:)=h_ex(i,:)+ion.mom_old(ionm,:,i)*diag(ion.renorm(i,:))*ion.d_ex(:,:,ionm,ionn,i)';
+                h_dipol_hyp(i,:)=h_dipol_hyp(i,:)+ion.mom_old_hyp(ionm,:,i)*diag(ion.renorm(i,:))*ion.d(:,:,ionm,ionn,i)';
+                h_ex_hyp(i,:)=h_ex_hyp(i,:)+ion.mom_old_hyp(ionm,:,i)*diag(ion.renorm(i,:))*ion.d_ex(:,:,ionm,ionn,i)';
+            end
+        end
 
-     %calculate moments of ions in a meanfield (ie diagonnalize the hamiltonian)
-%      energies=zeros(4,size(ion.name,1));
-     for i=1:size(ion.name,1)
-         if ion.prop(i)>0
-             if ion.hyp(i)
-%                  junk=[];
+        %Virtual meanfield
+        h_mf=zeros([size(ion.name,1),3]);
+        for i=1:size(ion.name,1)
+            h_mf(i,:)=ion.prop(i)*((1-ion.hyp(i))*(ion.gLande(i)*h_dipol(i,:)+h_ex(i,:)) + ion.hyp(i)*(ion.gLande(i)*h_dipol_hyp(i,:)+h_ex_hyp(i,:)));
+            for j=1:size(ion.name,1)-1
+                k=(i+j>size(ion.name,1))*size(ion.name,1);
+                h_mf(i,:)=h_mf(i,:)+ion.prop(i+j-k)*((1-ion.hyp(i+j-k))*ion.gLande(i)*h_dipol(i+j-k,:)+ion.hyp(i+j-k)*ion.gLande(i)*h_dipol_hyp(i+j-k,:));%other kinds of ions
+            end
+        end
+
+        %calculate moments of ions in a meanfield (ie diagonnalize the hamiltonian)
+        %      energies=zeros(4,size(ion.name,1));
+        for i=1:size(ion.name,1)
+            if ion.prop(i)>0
+                if ion.hyp(i)
+                %junk=[];
                  [jx,jy,jz,energies(ionn,:),v]=MF_moments_hyper(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i},ion.A(i),ion.I(i));
                  ion.mom_hyp(ionn,:,i)=update_moments([jx,jy,jz],evolution.(ion.name_hyp{i}),ionn,iterations);
-             else
-%                  junk=[];
+                else
+                %junk=[];
                  [jx,jy,jz,energies(ionn,:)]=MF_moments(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i});
                  ion.mom(ionn,:,i)=update_moments([jx,jy,jz],evolution.(ion.name{i}),ionn,iterations);
-             end
-%               energies(ionn,:)=junk;
-         end
-     end
-%      E(ionn)=mean(energies(ionn,:)); % Why does it take an arithmetic average of all the energy levels? --Yikai (12.02.2020)
-     
-     symm_equal = 1; % HMR: hack to calc only one ion per unit cell and copy to others (equivalent by symmetry) --Yikai (10.02.2020)
-     if symm_equal 
-         for ionn=2:4 % sets ionn=4 to end loop over ions.
-            energies(ionn,:)=energies(1,:);
-            for i=1:size(ion.name,1)
-               ion.mom_hyp(ionn,:,i)=ion.mom_hyp(1,:,i);
-               ion.mom(ionn,:,i)=ion.mom(1,:,i);
+                end
+                %               energies(ionn,:)=junk;
             end
-         end
-         break % exits the for ionn=1:4 loop
-     end % hack by HMR
- end
- 
- momente_mean=0;
-for i=1:size(ion.name,1)
-    momente_mean=momente_mean+ion.prop(i)*((1-ion.hyp(i))*ion.mom(:,:,i)+ion.hyp(i)*ion.mom_hyp(:,:,i));
-    evolution.(ion.name{i})(size(evolution.(ion.name{i}),1)+1,:,:)=ion.mom(:,:,i);
-    evolution.(ion.name_hyp{i})(size(evolution.(ion.name_hyp{i}),1)+1,:,:)=ion.mom_hyp(:,:,i);
-end
+        end
+        %      E(ionn)=mean(energies(ionn,:)); % Why does it take an arithmetic average of all the energy levels? --Yikai (12.02.2020)
 
-  
- % Iterate untill convergence criterion reached
-  Diff=sum(sum(abs(momente_old-momente_mean)));
-  if (Diff<ConvMin) || (Diff<ConvMax && iterations>NiterMin) 
+        symm_equal = 1; % HMR: hack to calc only one ion per unit cell and copy to others (equivalent by symmetry) --Yikai (10.02.2020)
+        if symm_equal 
+            for ionn=2:4 % sets ionn=4 to end loop over ions.
+                energies(ionn,:)=energies(1,:);
+                for i=1:size(ion.name,1)
+                   ion.mom_hyp(ionn,:,i)=ion.mom_hyp(1,:,i);
+                   ion.mom(ionn,:,i)=ion.mom(1,:,i);
+                end
+            end
+        break % exits the for ionn=1:4 loop
+        end % hack by HMR
+    end
+
+    momente_mean=0;
+    for i=1:size(ion.name,1)
+        momente_mean=momente_mean+ion.prop(i)*((1-ion.hyp(i))*ion.mom(:,:,i)+ion.hyp(i)*ion.mom_hyp(:,:,i));
+        evolution.(ion.name{i})(size(evolution.(ion.name{i}),1)+1,:,:)=ion.mom(:,:,i);
+        evolution.(ion.name_hyp{i})(size(evolution.(ion.name_hyp{i}),1)+1,:,:)=ion.mom_hyp(:,:,i);
+    end
+
+
+    % Iterate untill convergence criterion reached
+    Diff=sum(sum(abs(momente_old-momente_mean)));
+    if (Diff<ConvMin) || (Diff<ConvMax && iterations>NiterMin) 
         E=energies(1,:);
         V = v;
         h_mf1 = h_mf;
-    disp(num2str([t,h,iterations,mean(momente_mean)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <J>=(%3.3f,%3.3f,%3.3f)'))
-%     disp(num2str([t,h,iterations,h_mf(2,:)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <(-1)^(i+j)J>=(%3.3f,%3.3f,%3.3f)'))
-    evolution.iterations=iterations;
-    return
-  end
+        disp(num2str([t,h,iterations,mean(momente_mean)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <J>=(%3.3f,%3.3f,%3.3f)'))
+        %disp(num2str([t,h,iterations,h_mf(2,:)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <(-1)^(i+j)J>=(%3.3f,%3.3f,%3.3f)'))
+        evolution.iterations=iterations;
+        return
+    end
 end
 
 E=energies(1,:);
@@ -177,7 +173,6 @@ h_mf1 = h_mf;
 disp(num2str([t,h,iterations,mean(momente_mean)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <J>=(%3.3f,%3.3f,%3.3f)'))
 evolution.iterations=iterations;
 return
-
 
 function J=update_moments(Jnew,evolution,ionn,iterations)
 global strategies;

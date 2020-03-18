@@ -208,9 +208,6 @@ end
 %         box on
 % %         sname=num2str(t,'Imaginary %3.3f K');
 %         saveplotsT(hfig3,tit1)
-
-
-
 end
 end
 

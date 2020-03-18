@@ -1,0 +1,281 @@
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d
+END
+fold.m
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/fold.m
+END
+cuty.m
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/cuty.m
+END
+criticalexponents_neda.m
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/criticalexponents_neda.m
+END
+ploth.m
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/ploth.m
+END
+rdivide.m
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/rdivide.m
+END
+fits_2005dec.m
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/fits_2005dec.m
+END
+normalise.m
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/normalise.m
+END
+minus.m
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/minus.m
+END
+cut.m
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/cut.m
+END
+mtimes.m
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/mtimes.m
+END
+mrdivide.m
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/mrdivide.m
+END
+abs.m
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/abs.m
+END
+fits.m
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/fits.m
+END
+replot.m
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/replot.m
+END
+vertcat.m
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/vertcat.m
+END
+dydx.m
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/dydx.m
+END
+horzcat.m
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/horzcat.m
+END
+mapplot.m
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/mapplot.m
+END
+combine.m
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/combine.m
+END
+rebin2.m
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/rebin2.m
+END
+mapplotmodifiziert.m
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/mapplotmodifiziert.m
+END
+getfield.m
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/getfield.m
+END
+replot_fancy.m
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/replot_fancy.m
+END
+interpolate.m
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/interpolate.m
+END
+plothorizontal.m
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/spec1d/!svn/ver/4/trunk/spec1d/@spec1d/plothorizontal.m
+END
+cakh.txt
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/cakh.txt
+END
+plot.m.old
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/plot.m.old
+END
+peakm.m
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/peakm.m
+END
+mapplot2.m
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/mapplot2.m
+END
+disp.m
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/disp.m
+END
+rebin.m
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/rebin.m
+END
+mapplots.m
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/mapplots.m
+END
+setfield.m
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/setfield.m
+END
+cp file.m
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/cp%20file.m
+END
+peakt.m
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/peakt.m
+END
+combine_ebar.m
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/combine_ebar.m
+END
+LiErF4_c_0t.dat
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/LiErF4_c_0t.dat
+END
+smooth.m
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/smooth.m
+END
+extract.m
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/extract.m
+END
+transform.m
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/transform.m
+END
+plot.m
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/spec1d/!svn/ver/4/trunk/spec1d/@spec1d/plot.m
+END
+spec1d.m
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/spec1d.m
+END
+times.m
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/times.m
+END
+fits_win.m
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/fits_win.m
+END
+LiErF42.dat
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/spec1d/!svn/ver/3/trunk/spec1d/@spec1d/LiErF42.dat
+END
+plus.m
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/spec1d/!svn/ver/4/trunk/spec1d/@spec1d/plus.m
+END

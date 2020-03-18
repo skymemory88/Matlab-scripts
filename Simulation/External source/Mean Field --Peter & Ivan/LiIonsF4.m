@@ -1,20 +1,23 @@
 function [ion,history,E,V]=LiIonsF4(ion,temp,field,demagn,alpha)
-%Compute the magnetization and the alternated magnetization for a range of temperatures and
-%fields. (1-x) is the dilution. temp and h are the temperature and field
-%arrays. xHypIso is the proportion of nuclear moments isotops for Er. alpha
-%is, in the case the sample is an ellipsiod (a,c,c), the ratio a/c (for
-%demagnetization tensor.
+%Compute the magnetization and the alternated magnetization for a range
+%of temperatures and fields. (1-x) is the dilution. temp and h are the 
+%temperature and field arrays. xHypIso is the proportion of nuclear moments
+%isotops for Er. alpha is, in the case the sample is an ellipsiod (a,c,c),
+%the ratio a/c (for demagnetization tensor).
 
 global strategies;
 global rundipole
 
 t=tic;
     
+% Matrix used to calculate order parameters from (alternating) moments
 alt=[1  1  1
     -1  1  1
     -1 -1  1
-     1 -1  1];  % Matrix used to calculate order parameters from (alternating) moments
+     1 -1  1];  
 
+ion_mom_init = ion.mom;
+ 
 ion.Jmom=zeros([3,length(temp),size(field,2),size(ion.name,1)]);
 ion.Jmom_norm=zeros([length(temp),size(field,2),size(ion.name,1)]);
 ion.Jmom_hyp=zeros([3,length(temp),size(field,2),size(ion.name,1)]);
@@ -29,29 +32,25 @@ ion.altJs=zeros([4,3,length(temp),size(field,2),size(ion.name,1)]);
 ion.altJs_hyp=zeros([4,3,length(temp),size(field,2),size(ion.name,1)]);
 
 history=cell([length(temp),size(field,2)]);
-
+ 
+%%
 % if length(temp) > size(field,2)
-%% 
 % for i = 1:size(field,2)
 %     
-% %     if length(temp) > 1
-% %Ions' initial moments
-% ion.mom(:,:,1)=[1 0 0; 1 0 0; -1 0 0; -1 0 0];      %Er
-% % ion.mom(:,:,1)=[0 1 0; 0 1 0; 0 -1 0; 0 -1 0];      %Er
-% ion.mom(:,:,2)=[0 0 1;  0 0 1;  0 0 1; 0 0 1]*2.6;  %Ho
-% % ion.mom(:,:,2)=[3.473 -0.045 0.1;  3.473 -0.045 0.1;  3.473 -0.045 0.1; 3.473 -0.045 0.1];  %Ho
-% ion.mom(:,:,3)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Yb
-% ion.mom(:,:,4)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Tm
-% ion.mom(:,:,5)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Gd
-% ion.mom(:,:,6)=[0 0 0; 0 0 0; 0 0 0; 0 0 0];      %Y
-% ion.mom_hyp=ion.mom;
+%     if length(temp) > 1 %Ions' initial moments ion.mom(:,:,1)=[1 0 0; 1
+% 0 0; -1 0 0; -1 0 0];      %Er % ion.mom(:,:,1)=[0 1 0; 0 1 0; 0 -1 0; 0
+% -1 0];      %Er ion.mom(:,:,2)=[0 0 1;  0 0 1;  0 0 1; 0 0 1]*2.6;  %Ho %
+% ion.mom(:,:,2)=[3.473 -0.045 0.1;  3.473 -0.045 0.1;  3.473 -0.045 0.1;
+% 3.473 -0.045 0.1];  %Ho ion.mom(:,:,3)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];
+% Yb ion.mom(:,:,4)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Tm
+% ion.mom(:,:,5)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Gd ion.mom(:,:,6)=[0
+% 0 0; 0 0 0; 0 0 0; 0 0 0];      %Y ion.mom_hyp=ion.mom;
 %         rundipole = true;
-% %     end
+%     end
 % 
 %     for j = 1:length(temp)
 %         [ion,evolution,energy,v]=remf(ion,field(:,i)',temp(j),demagn,alpha);
-%         E(i,j,:)=energy;
-%         V(i,j,:,:)=v;
+%         E(i,j,:)=energy; V(i,j,:,:)=v;
 % 
 % 
 %         for k=1:size(ion.name,1)
@@ -67,22 +66,25 @@ history=cell([length(temp),size(field,2)]);
 %             history{j,i}=evolution;
 %         end
 %         
-%         if strategies.powerlaw && j>3 && j<length(temp) % Guess starting values for next temperature using powerlaw
-%             beta=0.5; % assume exponent 1/2. Could generalize to use more points and flexible exponent
-%             ibeta=1/beta;
+%         if strategies.powerlaw && j>3 && j<length(temp) % Guess starting
+%         values for next temperature using powerlaw
+%             beta=0.5; % assume exponent 1/2. Could generalize to use more
+%             points and flexible exponent ibeta=1/beta;
 %             
 %             J1=zeros([4,3,size(ion.name,1)]);
 %             J2=zeros([4,3,size(ion.name,1)]);
 %             Tc=zeros([4,3,size(ion.name,1)]);
 %             Aa=zeros([4,3,size(ion.name,1)]);
-%             Jnew=zeros([4,3,size(ion.name,1)]);
-%             for k=1:size(ion.name,1)
+%             Jnew=zeros([4,3,size(ion.name,1)]); for k=1:size(ion.name,1)
 %                 J1(:,:,k)=squeeze(history{j,i}.(ion.name{k})(end,:,:));
 %                 J2(:,:,k)=squeeze(history{j-1,i}.(ion.name{k})(end,:,:));
-%                 Tc(:,:,k)=((J1(:,:,k)./J2(:,:,k)).^ibeta*temp(j-1)-temp(j))./((J1(:,:,k)./J2(:,:,k)).^ibeta-1); % can generalize to use more points
-%                 if isempty(find(((Tc(:,:,k)<=0) + (Tc(:,:,k) > temp(end))),1)) % only do this if Tc guess is reasonable
-%                     Aa(:,:,k)=J2(:,:,k).^ibeta./(Tc(:,:,k)-temp(j-1));
-%                     if isempty(find(~isfinite(Aa(:,:,k))+isnan(Aa(:,:,k)),1)) % problem if Tc happens to be equal temp(j-1)
+%                 Tc(:,:,k)=((J1(:,:,k)./J2(:,:,k)).^ibeta*temp(j-1)-temp(j))./((J1(:,:,k)./J2(:,:,k)).^ibeta-1);
+%                 can generalize to use more points if
+%                 isempty(find(((Tc(:,:,k)<=0) + (Tc(:,:,k) >
+%                 temp(end))),1)) % only do this if Tc guess is reasonable
+%                     Aa(:,:,k)=J2(:,:,k).^ibeta./(Tc(:,:,k)-temp(j-1)); if
+%                     isempty(find(~isfinite(Aa(:,:,k))+isnan(Aa(:,:,k)),1))
+%                     problem if Tc happens to be equal temp(j-1)
 %                         Jnew(:,:,k)=real((Aa(:,:,k).*(Tc(:,:,k)-temp(j+1))).^beta).*(temp(j+1)<Tc(:,:,k));
 %                         ion.mom(:,:,k)=Jnew(:,:,k);
 %                     end
@@ -97,22 +99,24 @@ history=cell([length(temp),size(field,2)]);
 % 
 % else % length(temp) < size(field,2)
 %%
-
 for j = 1:length(temp)
-    
     % Reinitiate the angular moments at each temperature step (2020.01.02)
     if size(field,2) > 1
-        %Ions' initial moments
-        ion.mom(:,:,1)=[1 0 0; 1 0 0; -1 0 0; -1 0 0];      %Er
-        % ion.mom(:,:,1)=[0 1 0; 0 1 0; 0 -1 0; 0 -1 0];      %Er
-        ion.mom(:,:,2)=[0 0 1;  0 0 1;  0 0 1; 0 0 1]*2.6;  %Ho %Why multiply by 2.6 (Yikai)?
-        % ion.mom(:,:,2)=[3.473 -0.045 0.1;  3.473 -0.045 0.1;  3.473 -0.045 0.1; 3.473 -0.045 0.1];  %Ho
-        ion.mom(:,:,3)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Yb
-        ion.mom(:,:,4)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Tm
-        ion.mom(:,:,5)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Gd
-        ion.mom(:,:,6)=[0 0 0; 0 0 0; 0 0 0; 0 0 0];      %Y
-
-        ion.mom_hyp=ion.mom;
+        %% 
+        % Following code is commented out with the introduction of internal temporary
+        % variable 'ion_mom_init'
+%         %Ions' initial moments
+%         ion.mom(:,:,1)=[1 0 0; 1 0 0; -1 0 0; -1 0 0];      %Er
+%         % ion.mom(:,:,1)=[0 1 0; 0 1 0; 0 -1 0; 0 -1 0];      %Er
+%         ion.mom(:,:,2)=[0 0 1;  0 0 1;  0 0 1; 0 0 1]*2.6;  %Ho %Why multiply by 2.6 (Yikai)?
+%         % ion.mom(:,:,2)=[3.473 -0.045 0.1;  3.473 -0.045 0.1;  3.473 -0.045 0.1; 3.473 -0.045 0.1];  %Ho
+%         ion.mom(:,:,3)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Yb
+%         ion.mom(:,:,4)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Tm
+%         ion.mom(:,:,5)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Gd
+%         ion.mom(:,:,6)=[0 0 0; 0 0 0; 0 0 0; 0 0 0];      %Y
+%% 
+        ion.mom = ion_mom_init; %Reinitialize the spin moments at each field
+        ion.mom_hyp=ion.mom; %Is this necessary? it is reassigned inside 'remf()' (Yikai)
         rundipole = true;
     end
 
@@ -121,7 +125,6 @@ for j = 1:length(temp)
         E(i,j,:)=energy;
         V(i,j,:,:)=v;
         h_mf2(i,:)=h_mf1(2,:);
-
 
         for k=1:size(ion.name,1)
             ion.altJmom(:,j,i,k)=mean(alt.*ion.mom(:,:,k));
@@ -164,12 +167,12 @@ for j = 1:length(temp)
         eee(i,1,:)=energy;
         vvv(i,1,:,:)=v;
     end
-%     fff = field;
-%     ttt = temp(j);
-%         cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-%         tit=[num2str(temp(j),'%3.3f'),'.mat'];
-%         save(tit,'ttt','fff','eee','vvv','h_mf2','-v7.3')
-%         cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan')
+    fff = field;
+    ttt = temp(j);
+        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
+        tit=[num2str(temp(j),'%3.3f'),'.mat'];
+        save(tit,'ttt','fff','eee','vvv','h_mf2','-v7.3')
+        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan')
 end
 
 % end

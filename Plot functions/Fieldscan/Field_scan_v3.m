@@ -18,7 +18,7 @@ filename = '2019_05_0022';
 
 %% Read ZVL
 %Set data range and parameters
-opt  = 3;
+opt  = 2;
 
 switch opt
     case 1

@@ -5,13 +5,13 @@ format long;
 %addpath('C:\Users\babkevic\Documents\MATLAB\legendflex')
 
 % % curdir = cd;
-% addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
-% addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
-addpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
-addpath(genpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
+addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
+addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
+% addpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
+% addpath(genpath('/Users/yikaiyang/Google Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
 %The first line is for windows, the second line is for mac OS
 
-%% Define input ===========================================================
+% % Define input ===========================================================
 % Figure plot options:
 plotopt.col(1,:) = [0.2 0.2 0.7];
 plotopt.col(2,:) = [0.7 0.2 0.7];
@@ -47,21 +47,21 @@ end
 
 function option1(plotopt)
 
-% filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\05.11.2019';
-filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/05.11.2019/';
+filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC147\14.11.2019/';
+% filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/05.11.2019/';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_11_0016';
+filename = '2019_11_0033';
 
 run = 1;
 out = readdata_v3(filepath,filename,run);
 
 %Set data range and parameters
-freq_l = 4.06; %set frequency range, l: lower limit, h: higher limit
-freq_h = 4.095;
-field_l = 1.5;  %set field range, l: lower limit, h: higher limit
-field_h = 3.0;
+freq_l = 3.71; %set frequency range, l: lower limit, h: higher limit
+freq_h = 3.83;
+field_l = 0.0;  %set field range, l: lower limit, h: higher limit
+field_h = 9.0;
 nop = 31; % Number of points per segment for the frequency scan according to ZVL network analyzer
-step = 5e-5; %Scanning step in unit of GHz,default is 1 MHz according to ZVL network analyser
+step = 1e-4; %Scanning step in unit of GHz,default is 1 MHz according to ZVL network analyser
 lineDiv = floor((freq_h-freq_l)/((nop - 1) * step)); %compute how many lines per complete frequency scan.
 
 %% Plot data
@@ -185,27 +185,27 @@ set(tt,'fontsize',plotopt.ftsz,'interpreter','none')
 end
 function option2(plotopt)
 
-% filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\18.08.2019';
-filepath = '/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/05.11.2019/';
+filepath = 'G:\My Drive\File sharing\PhD projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm)\05.11.2019';
+% filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/06.11.2019/';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_11_0016';
+filename = '2019_11_0014';
 
 ti = 1;
-T(ti) = 0.400;
+T(ti) = 0.250;
 runs{ti} =  1; 
 %% Plot data
 %Set data range and parameters
 fac = 1e9; %Swtich between "Hz" and "GHz"
-freq_l = 4.06; % set frequency range, l: lower limit, h: higher limit
+freq_l = 4.060; % set frequency range, l: lower limit, h: higher limit
 freq_h = 4.095;
 direction = 'Up_'; % Specify field scan direction
-excitation = '_-20dBm';
+excitation = '_-10dBm';
 field_l = 1.5;  %set field range, l: lower limit, h: higher limit
 field_h = 3.0;
 nop = 31; % Number of points per segment of the frequency scan according to ZVL network analyzer
-step = 1e-5; %Scanning step in unit of GHz, default is 1 MHz according to ZVL network analyser
+step = 5e-5; %Scanning step in unit of GHz, default is 1 MHz according to ZVL network analyser
 lineDiv = floor((freq_h-freq_l)/((nop - 1) * step)); %compute how many lines per complete frequency scan.
-FWHM = 0.0; % Define full-width-half-max for calculation of quality factors
+FWHM = 2.0; % Define full-width-half-max for calculation of quality factors
 
 for n = 1:length(T)
     [xq,yq] = meshgrid(linspace(field_l,field_h,501),linspace(freq_l,freq_h,310));
@@ -268,11 +268,6 @@ for n = 1:length(T)
         Q0(isinf(Q0)) = 0; % Cut out inf from the array
         Q0(Q0>4000) = 0; % Cut out unrealistic quality factor from noise data
     end
-    
-    % Store amplitude vs field data for hysteresis plot
-    cd(filepath);
-    tit=[direction,num2str(T(ti),'%3.3f'), excitation,'.mat'];
-    save(tit,'H0','dB0');
     
     % Plot the resonant frequency versus DC magnetic field
     figure
@@ -359,20 +354,13 @@ for n = 1:length(T)
     Hx = field_l:0.1:field_h;
 %   For noisy data, we need to remove duplicates of minima
     [H0,ia,~] = unique(H0,'stable');
-
-% %     Alernatively use the raw data for fitting    
-%     Hx = H0;
-%     ff0 = f0; 
-
 %   Create an interpolation of the resonant frequency along the DC magnetic field (Hx) axis
     f0 = f0(ia);
     Q0 = Q0(ia);
     ff0 = interp1(H0,f0,Hx,'spline','extrap'); 
     
-    
-    ii = 1;
-    for m = Hx
-        xq = xq.*0 + m;
+    for ii = 1:length(Hx)
+        xq = xq.*0 + Hx(ii);
         zq = Fmag(xq,yq); 
         zqf = medfilt1(zq(:,1)); %Apply median filter to remove some noises
         s = spec1d(yq(:,1), zqf, zqf.*0 + 0.05);
@@ -383,8 +371,7 @@ for n = 1:length(T)
         [fQ, fbck]=fits(s, 'lorz', p, fix);
         Qf(ii) = fbck.pvals(2)/fbck.pvals(3); %Calculate the quality factor
         chi(ii) = 1/Qf(ii);
-        ii = ii + 1;
-        disp(num2str(m,'Current magnetic field: %3.1f.'));
+        disp(num2str(Hx(ii),'Current magnetic field: %3.1f.'));
     end
             
         figure
@@ -405,8 +392,8 @@ for n = 1:length(T)
         Qf = Qf(Qf >= 0); %Remove unphysical points
         Qplot1 = plot(Hx,Qf,'o-','MarkerSize',4);
         hold on
-        H0 = H0(f0 >=0);
-        Q0 = Q0(Q0 >=0);
+        H0 = H0(Q0 >0);
+        Q0 = Q0(Q0 >0);
         Qplot2 = plot(H0,Q0,'s-','MarkerSize',4);
         gca;
         xlabel('Field (T)');

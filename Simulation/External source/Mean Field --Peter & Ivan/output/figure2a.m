@@ -1,9 +1,10 @@
 function figure2a
 % close all
 % temp=[0.100, 0.300, 0.500, 0.800, 1.3];
-temp = [0.085];
+temp = [0.200];
 color = ["black","red","blue","magenta","green","yellow","cyan"];
-theta = [0 90]; % Angle between the transverse field and a-axis
+theta = [90]; % Angle between the transverse field and a-axis
+marker = [":","-.","--","-"];
 % theta = 0;
 % color = {[255 127 0], [255 0 127], [127 0 255], [0 127 255], [0 255 127]} ;
 lg = strings(1,2); % Create an empty array for legends
@@ -11,17 +12,19 @@ figs = gobjects(7,numel(temp));
 
     for iter = 1:numel(temp)
         for iter2 = 1:numel(theta)
-%             cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output\A=1.0_angles_Peter');
 %             cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output\A=1.0_angles_Yikai');
+            cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output\');
 %             cd('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Simulation/External source/Mean Field --Peter & Ivan/output/A=1.0_angles_Peter')
-            lname=[num2str(temp(iter),'%3.3f'),num2str(theta(iter2),'_%u'),'.mat']; 
-%             lname=[num2str(temp(iter),'%3.3f'),'.mat']; 
+%             lname=[num2str(temp(iter),'%3.3f'),num2str(theta(iter2),'_%u'),'.mat']; 
+            lname=[num2str(temp(iter),'%3.3f'),'.mat']; 
             
-            load(lname)
+            load(lname,'-mat','eee','fff','h_mf2');
             fields = vecnorm(fff);
             hmf=h_mf2(:,3);
             E2f = 241.8; % Convert Energy to frequency
-            E(:,:)=eee(:,1,:)*E2f;
+            E(:,:)=squeeze(eee)*E2f;
+            %E(:,:) = eee(:,1,:)*E2F;
+            Ediff = double.empty(0,size(E,1));
 
             % Calcuate average and deviation of the energy difference along the
     %         E8=E(:,1:8);
@@ -31,7 +34,7 @@ figs = gobjects(7,numel(temp));
     %         for j=1:8
     %         E8(:,j)=E8(:,j)-aver(:);
     %         end
-
+%%
     %         % Plot the lowest eight energy levels
     %         figure
     %         hold on
@@ -48,17 +51,18 @@ figs = gobjects(7,numel(temp));
     %         tit1='Energy levels';         
     %         title(tit1,'FontSize',15)
     %         legend(num2str(temp(iter),'T = %.2f K,  A = A_{th}'))
-
+%%
             % Calculate the energy difference bewteen neighbour levels
             for i=1:7
                 Ediff(i,:)=E(:,i+1)-E(:,i);
             end
     %         % Plot the lowest energy difference between the 8 levels
-    %         figure
-            hold on
+%             figure
             % frequency = { '1.682 GHz', '3.436 GHz', '3.924 GHz', '4.449 GHz', '5.604 GHz' } ;
-            figs(:, iter2) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle','-', 'Color',color(iter2),'LineWidth',2);
-            lg(iter, iter2) = [num2str(temp(iter),"T = %.2f K, A = A_{th}"),num2str(theta(iter2),", theta = %u")];
+%             figure
+            figs(:, iter2) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle',marker(1), 'Color',color(iter2),'LineWidth',2);
+            hold on
+            lg(iter, iter2) = [num2str(temp(iter),"T = %.3f K, A = A_{th}"),num2str(theta(iter2),", theta = %u")];
 
 
 %             hpcfr1 = plot(fields, Ediff,'Color','blue','linewidth',2);
@@ -84,11 +88,11 @@ figs = gobjects(7,numel(temp));
             ylabel('Energy difference (GHz)','FontSize',15);
             grid off
             box on;  
-            xlim([0 17]);
-            ylim([2 5]);
+            xlim([min(fields) max(fields)]);
+            ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
             tit4='Difference between energy levels';         
             title(tit4,'FontSize',15)
-
+            hold on
 %             % Calculate the frequency range that the transition energy covers at each field
 %             Erange = double.empty(0,length(Ediff));
 %             for i=1:size(Ediff,2)
@@ -116,7 +120,6 @@ end
 
 function saveplots(hfig,figname)
 % if strcmpi(input(['Save plot ' num2str(hfig) ' {' figname '}? Y/[N]: '],'s'),'y')
-% cd('W:\MATLAB\data\3.924GHz 0.010K')
 cd('D:\Projects\LiHoF4_Network_Analyzer\plots\new_analysis\figure2a')
 saveas(figure(hfig),[figname '.fig'],'fig');
 print(figure(hfig),[figname  '.jpg'],'-djpeg','-r600');

@@ -2,7 +2,8 @@ function linear_response_theory
 cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
 % Temperatures = [0.080, 0.160, 0.200, 0.300, 0.500];
 % filenames = num2str(Temperatures,'.mat')
-load('0.085.mat') % loads variables "fields", "temp", "E" and "V" 
+clearvars;
+load('0.200.mat','-mat','eee','fff','ttt','vvv'); % loads variables "fields", "temp", "E" and "V" 
 % which are eigenstates and eigenvalues calculated in the mean-field model 
 % as a function of transverse field and temperature
 
@@ -10,7 +11,7 @@ E = eee;
 V = vvv;
 temp = ttt;
 fields = vecnorm(fff);
-freq_total = (1:0.05:5);
+freq_total = (1:0.02:5);
 
 for l = 1:length(temp(1,:)) % calculate susceptibility for all temperatures
     t = temp(1,l);
@@ -22,18 +23,18 @@ for l = 1:length(temp(1,:)) % calculate susceptibility for all temperatures
         % gLande_Ho=1.25;
 
         %Initiate J operators
-        Jz=diag(J:-1:-J);
-        Jzh=kron(Jz,eye(2*I+1));
-        Jp=diag(sqrt((J-((J-1):-1:-J) ).*(J+1+( (J-1):-1:-J) )),1);
+        Jz=diag(J:-1:-J); % Jz = -J, -J+1,...,J-1,J
+        Jzh=kron(Jz,eye(2*I+1)); % Expand Jz space to include nuclear degree of freedom
+        Jp=diag(sqrt((J-((J-1):-1:-J) ).*(J+1+( (J-1):-1:-J) )),1); % <J> = sqrt( J(J+1) )
         Jm=Jp';
-        Jph=kron(Jp,eye(2*I+1));
-        Jmh=kron(Jm,eye(2*I+1));
+        Jph=kron(Jp,eye(2*I+1)); % Expand Hilbert space
+        Jmh=kron(Jm,eye(2*I+1)); % Expand Hilbert space
         Jxh=(Jph+Jmh)/2;
         Jyh=(Jph-Jmh)/2i;
         %tensor product of cristal field to include nuclear moments
         %Initiate I operators
-        Iz=diag(I:-1:-I);
-        Izh=kron(eye(2*J+1),Iz);
+        Iz=diag(I:-1:-I); %Iz = -I, -I+1,...,I-1,I
+        Izh=kron(eye(2*J+1),Iz); % Expand Hilbert space
         Ip=diag(sqrt((I-[(I-1):-1:-I]).*(I+1+[(I-1):-1:-I])),1);
         Im=Ip';
         Iph=kron(eye(2*J+1),Ip);
@@ -43,17 +44,17 @@ for l = 1:length(temp(1,:)) % calculate susceptibility for all temperatures
 
         ghztomeV = 1/241.8;
         omega = freq*ghztomeV;     % define frequency sweep range (meV)
-        gama = 0.0001; % define lifetime (meV)
+        gama = 0.00005; % define lifetime (meV)
 
-        for k = 1:length(fields(1,:)) % calculate susceptibility for all fields
+        parfor k = 1:length(fields(1,:)) % calculate susceptibility for all fields
             v = squeeze ( V(k,l,:,:) ); % Obtain the corresponding eigen vectors
             en = squeeze ( E(k,l,:) ); % Obtain the corresponding eigen energies
             field = fields(1,k); % Obtain the corresponding field
 
             N = length(en);
             chi_t = zeros(1,N^2);
-%             ll = 1;
-            zz = zeros(1,N);
+            %ll = 1;
+            zz = double.empty(0,N);
             beta = 1/(t/11.6);
             z=sum(exp(-beta*en));
             zz=exp(-beta*en)/z;
@@ -74,8 +75,8 @@ for l = 1:length(temp(1,:)) % calculate susceptibility for all temperatures
             IyhT = Iyh * NUCf;
             JzhT = Jzh * ELEf;
             IzhT = Izh * NUCf;
-            
-%           Calculate susceptibilities along a(b)-axis
+
+            %           Calculate susceptibilities along a(b)-axis
             tty  = v'  * (JyhT+IyhT) * v; 
             chi_ty  = (tty) .* (tty.') .* NN .* G;
             chi_t1y = (tty) .* (tty.') .* NN .* G1;
@@ -83,9 +84,9 @@ for l = 1:length(temp(1,:)) % calculate susceptibility for all temperatures
             sss1=sum(sum(chi_t1y));
             imchiy  (l,m,k) =  real(sss)   ;
             rechi1y (l,m,k) =  real(sss1)  ;   
-%             titttz = 'S(Jyy+Iyy)';
+            %             titttz = 'S(Jyy+Iyy)';
 
-%           Calculate susceptibilities along c-axis
+            %           Calculate susceptibilities along c-axis
             ttz  = v'  * (JyhT+IyhT) * v;
             chi_tz  = (ttz) .* (ttz.') .* NN .* G;
             chi_t1z = (ttz) .* (ttz.') .* NN .* G1;
@@ -93,8 +94,7 @@ for l = 1:length(temp(1,:)) % calculate susceptibility for all temperatures
             sss1=sum(sum(chi_t1z));
             imchiz  (l,m,k) =  real(sss)   ;
             rechi1z (l,m,k) =  real(sss1)  ;
-%             titttz = 'S(Jzz+Izz)';
-
+            %titttz = 'S(Jzz+Izz)';
         end
         %         hfig1 = figure (1);
         %         clf

@@ -1,5 +1,5 @@
 function ik_LiHoF4_mf_sim
-clear all
+clearvars
 
 %% Setup parameters.
 global strategies; % global convergence strategies switches

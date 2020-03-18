@@ -13,7 +13,6 @@ strategies.expfit_deltaN=5; % The exponential fit points distance. Three points 
 global rundipole
 rundipole = true;
 
-
 %% define temp / field scan
 
 Q=1; %<J> as a function of H (Q=1) or T (Q=0) ?
@@ -21,11 +20,11 @@ Q=1; %<J> as a function of H (Q=1) or T (Q=0) ?
 if Q == 1
 
 % temp = [0.001 0.05 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2 2.5 3 0.15 0.25 0.35 0.45 0.55 0.65 0.75 0.85 0.95 1.05 1.15 1.25 1.35 1.45 1.55 1.65 1.75 1.85 1.95 4];
-%         temp = [0.1 0.150 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.8];
-        temp = 0.300;
+        temp = [0.1 0.15 0.2 0.25 0.35 0.4 0.45 0.5 0.8 1.2];
+%         temp = 0.300;
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
-        Hmax = 6.0; % Maximum magnetic field
+        Hmax = 9.0; % Maximum magnetic field
         phi = 0; % phi=0 means H along x (in radian)
         theta = 0; % theta indicates a transverse magnetic field
 
@@ -113,8 +112,6 @@ ex.Ho = -0.0001; %0.1 microeV from Henrik and Jens PRB
 
 ion.ex=[0; ex.Ho; 0; 0; 0; 0];
 
-
-
 %Ions' initial moments
 ion.mom(:,:,1)=[1 0 0; 1 0 0; -1 0 0; -1 0 0];      %Er
 % ion.mom(:,:,1)=[0 1 0; 0 1 0; 0 -1 0; 0 -1 0];      %Er
@@ -133,61 +130,54 @@ alpha=0; % shape is a needle. IT WONT CONVERGE FOR SPHERE!!!
 
 
 %% Calculate and save results inside the LiIonsF4 function
-[ion,~,~,~]=LiIonsF4(ion,temp,fields,demagn,alpha);
+[ion,history,E,V]=LiIonsF4(ion,temp,fields,demagn,alpha);
 %% Plot data
 n = find(ion.prop~=0);
-    J_H=zeros([3,size(fields,2),size(ion.name,1)]);  
-    Jnorm_H=zeros([size(fields,2),size(ion.name,1)]);
-    for i=1:size(ion.name,1)
-        J_H(:,:,i)=squeeze(mean(ion.Js_hyp(:,:,:,:,i),1)); % With hyperfine
+J_H=zeros([3,size(fields,2),size(ion.name,1)]);  
+Jnorm_H=zeros([size(fields,2),size(ion.name,1)]);
+for i=1:size(ion.name,1)
+    J_H(:,:,i)=squeeze(mean(ion.Js_hyp(:,:,:,:,i),1)); % With hyperfine
 %         J_H(:,:,i)=squeeze(mean(ion.Js(:,:,:,:,i),1)); % Without
 %         hyperfine 
 
-%         Jnorm_H(:,i)=squeeze(mean(ion.Jmom_hyp_norm(:,:,i),1)); % with hyperfine
+    Jnorm_H(:,i)=squeeze(mean(ion.Jmom_hyp_norm(:,:,i),1)); % with hyperfine
 %         Jnorm_H(:,i)=squeeze(mean(ion.Jmom_norm(:,:,i),1)); % Without hyperfine
-    end
+end
 
-    HH = zeros(1,size(fields,2)); % Calculate the norm of the applied magnetic field
-    for ii = 1:size(fields,2)
-        HH(ii) = norm(fields(:,ii));
-    end
-    
-    p1 = plot(HH,Jnorm_H(:,1));
-    hold on
-    p2 = plot(HH,J_H(:,:,n),'-','LineWidth', 4);
-    p22 = plot(HH(1:10:end), J_H(:,1:10:end,n),'o','MarkerSize',8); % Add spaced markers to the <J> curves
-    legend('<J_x>','<J_y>','<J_z>');
-    title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
-%     title(sprintf('LiGdF_4'))
-    xlabel('Magnetic field (|B| [T])');
-    ylabel('Spin moment <J>');
-    
-    % Plot susceptibility from Jz component using first order Finite difference 
-    figure
-    x_z = -diff(J_H(3,:,2))./diff(HH);
-    plot(HH(1:end-1),x_z,'-s','Color','black');
-    xlabel('Magnetic field (|B| [T])');
-    ylabel('Susceptibility');
-    title('susceptibility (Jz contribution)');
-    
-    % Plot susceptibility from all three J components using first order Finite difference 
-    JJ = sqrt(J_H(1,:,2).^2 + J_H(2,:,2).^2 + J_H(3,:,2).^2);
-    figure
-    x_z = -diff(JJ)./diff(HH);
-    plot(HH(1:end-1),x_z,'-s','Color','black');
-    xlabel('Magnetic field (|B| [T])');
-    ylabel('Susceptibility');
-    title('susceptibility (uni-directional)');
-    
-%% Save additional results
-% if Q == 1
-%     cd('C:\Users\yiyang\Google Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-%     save('fieldscan094_all_.mat','temp','fields','ion','history','E','V','-v7.3')
-% else
-%     cd('C:\Users\yiyang\Google Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-%     save('tempscan.mat','temp','fields','ion','history','E','V','-v7.3')
-% end
-% cd('C:\Users\yiyang\Google Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan')
+HH = zeros(1,size(fields,2)); % Calculate the norm of the applied magnetic field
+for ii = 1:size(fields,2)
+    HH(ii) = norm(fields(:,ii));
+end
 
+% %% %Plot spin moments
+% figure
+% hold on
+% p1 = plot(HH(1:10:end),Jnorm_H(1:10:end,n),'-o','Color', 'black', 'LineWidth', 2, 'MarkerSize',4);
+% title(sprintf('Norm of spin moments for %s', char(ion.name(n))));
+% xlabel('Magnetic field (|B| [T])');
+% ylabel('Spin moment norm <J_n>');
+% 
+% figure
+% hold on
+% p2_1 = plot(HH,J_H(:,:,n),'-','LineWidth', 4);
+% p2_2 = plot(HH(1:10:end), J_H(:,1:10:end,n),'o','MarkerSize',8); % Add spaced markers to the <J> curves
+% title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
+% legend('<J_{norm}>','<J_x>','<J_y>','<J_z>');
+% xlabel('Magnetic field (|B| [T])');
+% ylabel('Spin moment <J>');
 
+%%
+% Save additional results
+if Q == 1
+    elem = [ion.name(n)];  
+    tit = strcat('fieldscan_',num2str(hypFr*100,3),'%_Li',elem(1:end),'F4.mat');
+    cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
+    save(char(tit),'fields','ion','history','E','V')
+else
+    cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
+    elem = [ion.name(n)];  
+    tit = strcat('tempscan_',num2str(hypFr*100,3),'%_Li',elem(1:end),'F4.mat');
+    save(char(tit),'temp','fields','ion','history','E','V')
+end
+cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan')
 end
