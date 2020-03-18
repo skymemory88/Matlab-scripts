@@ -11,24 +11,24 @@ plotopt.lnwd = 2;
 plotopt.ftsz = 12;
 plotopt.mksz = 5;
 
-filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC138 (2x1.8x1mm)\2020.03.05';
+filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC163 (3x2x1 mm)\2020.03.17';
 % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC138 (2x1.8x1mm)/2020.03.05';
 %The first line is for windows, the second line is for mac OS
-filename = '2020_03_0002';
+filename = '2020_03_0009';
 
 %% Read ZVL
 %Set data range and parameters
-opt  = 1;
+opt  = 2;
 
 switch opt
     case 1
-        % Test of frequency scans using ZVL as a function of field
+        % Simple color plot of minimally processed raw data
         option1(filepath, filename, plotopt)
     case 2
-        % Analyse the fieldscan data and display plots
+        % Color plot + Data fitting
         option2(filepath, filename, plotopt)
     case 3
-        % Use routine to analyze the fieldscan data and save to files
+        % Data fitting and file saving (w/o plots)
         option3(filepath, filename, plotopt)
 end
 % matlabpool close
@@ -91,7 +91,7 @@ tt(1) = title(num2str(Temperature,'S11 response at T = %3.3f K'));
 figure
 plot(H(1:100:end),lck(1:100:end),'s-')
 xlabel('DC Magnetic field')
-ylabel('Temperature')
+ylabel('Hall resistance')
 title('Magnetic field vs Temperature')
 
 figure
