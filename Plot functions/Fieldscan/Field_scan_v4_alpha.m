@@ -1,48 +1,41 @@
 function Field_scan
-format long;  
-addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions\');
-addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik\'));
-% addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
-% addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
-%The first line is for windows, the second line is for mac OS
-%% Define input ===========================================================
-% Figure plot options:
-plotopt.lnwd = 2;
-plotopt.ftsz = 12;
-plotopt.mksz = 5;
+    format long;  
+    addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions\');
+    addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik\'));
+    % addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
+    % addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
+    %The first line is for windows, the second line is for mac OS
 
-filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC163 (3x2x1 mm)\2020.03.17';
-% filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC138 (2x1.8x1mm)/2020.03.05';
-%The first line is for windows, the second line is for mac OS
-filename = '2020_03_0009';
+    % Figure plot options:
+    plotopt.lnwd = 2;
+    plotopt.ftsz = 12;
+    plotopt.mksz = 5;
 
-%% Read ZVL
-%Set data range and parameters
-opt  = 2;
+    filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC163 (3x2x1 mm)\2020.03.17';
+    % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC138 (2x1.8x1mm)/2020.03.05';
+    %The first line is for windows, the second line is for mac OS
+    filename = '2020_03_0009';
 
-switch opt
-    case 1
-        % Simple color plot of minimally processed raw data
-        option1(filepath, filename, plotopt)
-    case 2
-        % Color plot + Data fitting
-        option2(filepath, filename, plotopt)
-    case 3
-        % Data fitting and file saving (w/o plots)
-        option3(filepath, filename, plotopt)
+    %% Read ZVL
+    %Set data range and parameters
+    opt  = 2;
+
+    switch opt
+        case 1
+            % Simple color plot of minimally processed raw data
+            option1(filepath, filename, plotopt)
+        case 2
+            % Color plot + Data fitting
+            option2(filepath, filename, plotopt)
+        case 3
+            % Data fitting and file saving (w/o plots)
+            option3(filepath, filename, plotopt)
+    end
 end
-% matlabpool close
-
-end
-
-%% ------------------------------------------------------------------------
 
 function option1(filepath,filename, plotopt)
 
-run = 1;
-out = readdata_v4(filepath,filename,run);
-
-%% Read & Plot data
+out = readdata_v4(filepath,filename);
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
 H = out.data.DCField1;
@@ -100,81 +93,6 @@ xlabel('DC Magnetic field')
 ylabel('Temperature')
 title('Magnetic field vs Temperature')
 
-%
-% yq = yq.*0 + 3.200; % Plot field scan cut at 3.200 GHz (H vs dB)
-% hfig3 = setfig(12);
-% zq = FdB(xq,yq);
-% h = plot(xq(1,:),zq(1,:));
-% xlim([0 9])
-% set(gca,'fontsize',plotopt.ftsz)
-% t(3) = xlabel('Field (T)');
-% t(4) = ylabel('S11 (dB)');
-% tt(2) = title([filename num2str(run) ', f = 3.200 GHz']);
-
-% hfig4 = setfig(13); % Plot field scan cut at 3.200 GHz (H vs real(S))
-% zq = FrS(xq,yq);
-% h = plot(xq(1,:),zq(1,:));
-% xlim([0 9])
-% set(gca,'fontsize',plotopt.ftsz)
-% t(5) = xlabel('Field (T)');
-% t(6) = ylabel('Re{S11}');
-% tt(3) = title([filename num2str(run) ', f = 3.200 GHz']);
-%
-% hfig5 = setfig(14); % Plot field scan cut at 3.200 GHz (H vs real(S))
-% zq = FiS(xq,yq);
-% h = plot(xq(1,:),zq(1,:));
-% xlim([0 9])
-% set(gca,'fontsize',plotopt.ftsz)
-% t(7) = xlabel('Field (T)');
-% t(8) = ylabel('Im{S11}');
-% tt(4) = title([filename num2str(run) ', f = 3.200 GHz']);
-%
-%
-% % Plot frequency scans at H (f vs dB)
-% [xq,yq] = meshgrid(linspace(0,9,501),linspace(3.2,3.7,101));
-% xq1 = xq.*0 + 0;
-% zq1 = FdB(xq1,yq);
-% xq2 = xq.*0 + 2;
-% zq2 = FdB(xq2,yq);
-% xq3 = xq.*0 + 3.612;
-% zq3 = FdB(xq3,yq);
-% xq4 = xq.*0 + 3.685;
-% zq4 = FdB(xq4,yq);
-% xq5 = xq.*0 + 5;
-% zq5 = FdB(xq5,yq);
-% 
-% figure
-% hfig6 = setfig(15);
-% h = plot(yq(:,1),zq1(:,1),yq(:,1),zq2(:,1),yq(:,1),zq3(:,1),yq(:,1),zq4(:,1),yq(:,1),zq5(:,1));
-% xlim([3.2 3.7])
-% set(gca,'fontsize',plotopt.ftsz)
-% t(9) = xlabel('Frequency (GHz)');
-% t(10) = ylabel('S11 (dB)');
-% tt(5) = title([filename num2str(run)]);
-% t(11) = legend(h,'0','2','3.612','3.685','5');
-% 
-% hfig7 = setfig(16); % Plot field-temperature
-% h = plot(H,T1,H,T2);
-% xlim([0 9])
-% set(gca,'fontsize',plotopt.ftsz)
-% t(12) = xlabel('Field (T)');
-% t(13) = ylabel('Temperature (K)');
-% tt(6) = title([filename num2str(run)]);
-% t(14) = legend(h,'MC','Sample');
-
-
-set(t,'fontsize',plotopt.ftsz,'interpreter','latex')
-set(tt,'fontsize',plotopt.ftsz,'interpreter','none')
-
-% Save plots
-%figname = [filename num2str(run)];
-%saveplots(hfig1,[figname '_field-freq_dB_map'])
-% saveplots(hfig2,[figname '_field-dB_3.200GHz'])
-% saveplots(hfig3,[figname '_field-rS_3.200GHz'])
-% saveplots(hfig4,[figname '_field-iS_3.200GHz'])
-% saveplots(hfig5,[figname '_freq_dB_H'])
-% saveplots(hfig6,[figname '_field_T'])
-
 cd(filepath);
 end
 
@@ -184,7 +102,7 @@ order = 4; % set to what order the median filters is applied
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
 % extract data from raw data file
-out = readdata_v4(filepath,filename,1);
+out = readdata_v4(filepath,filename);
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;  
 H = out.data.DCField1;
@@ -278,6 +196,14 @@ f0 = f0(ia);
 Q0 = Q0(ia);
 dB0 = dB0(ia);
 FWHM = FWHM(ia);
+[~,Hpos] = max(dB0); % find the line crossing position on field axis
+
+% Plot frequency scan at line crossing
+figure
+plot(freq(1:10:end,Hpos),dB(1:10:end,Hpos),'-o');
+xlabel('Frequency (GHz)');
+ylabel('S11 (dB)');
+title('Frequency scan at line crossing');
 
 clearvars idx ia ii HM
 
@@ -331,9 +257,9 @@ end
 
 set(gca,'fontsize',plotopt.ftsz)
 axis([field_l field_h freq_l freq_h]);
-tx(4) = xlabel('Field (T)');
-ty(4) = ylabel('Frequency (GHz)');
-tt(4) = title(num2str(Temperature,'S11 response at T = %3.3f K'));
+xlabel('Field (T)');
+ylabel('Frequency (GHz)');
+title(num2str(Temperature,'S11 response at T = %3.3f K'));
 
 %Fit each frequency scan to Lorentzian form to extract the quality factor
 %     figure
@@ -395,8 +321,8 @@ end
 
 % Plot the resonant frequency from Lorentzian fit versus DC magnetic field
 % figure
-freqPlot = plot(Hx(1:round(length(Hx)/200):end),ff0(1:round(length(Hx)/200):end),'or','MarkerSize',2,'MarkerFaceColor','red');
-% freqPlot2 = plot(Hx(1:length(Hx)/100:end),ff0_2(1:length(Hx)/100:end),'sk','MarkerSize',2,'MarkerFaceColor','black');
+plot(Hx(1:round(length(Hx)/200):end),ff0(1:round(length(Hx)/200):end),'or','MarkerSize',2,'MarkerFaceColor','red');
+% plot(Hx(1:length(Hx)/100:end),ff0_2(1:length(Hx)/100:end),'sk','MarkerSize',2,'MarkerFaceColor','black');
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
 title(num2str(Temperature,'Resonant frequency from fitted data at T = %3.3f K'));
@@ -416,7 +342,7 @@ axis([field_l field_h freq_l freq_h]);
 hold on
 f0 = medfilt1(f0,order); % apply median filter to remove some noise
 % hfig1 = plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
-hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
+plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
 title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
@@ -425,7 +351,7 @@ axis([field_l field_h freq_l freq_h]);
 % Plot the peak amplitude from minimum search vs. magnetic field
 figure
 dB0 = medfilt1(dB0, order); % apply median filter to remove some noise
-nfig2 = plot(H0, dB0, 'o', 'MarkerSize', 2);
+plot(H0, dB0, 'o', 'MarkerSize', 2);
 xlabel('Field(T)');
 ylabel('S11 amplitute');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
@@ -436,7 +362,7 @@ H0 = H0(Q0 >=0);
 Q0 = Q0(Q0 >=0);
 Q0 = medfilt1(Q0, 10);
 % Qplot2 = plot(H0(1:round(length(H0)/100):end), Q0(1:round(length(Q0)/100):end),'s-','MarkerSize',2);
-Qplot2 = plot(H0, Q0,'s-','MarkerSize',2);
+plot(H0, Q0,'s-','MarkerSize',2);
 
 %Plot Quality factor from Lorentzian fit vs magnetic field
 hold on
@@ -444,22 +370,12 @@ Hx = Hx(Qf >=0);
 Qf = Qf(Qf >=0); %Remove unphysical points
 Qf = medfilt1(Qf, order);
 % Qplot1 = plot(Hx(1:round(length(Hx)/100):end), Qf(1:round(length(Qf)/100):end),'o-','MarkerSize',2);
-Qplot1 = plot(Hx, Qf,'o-','MarkerSize',2);
+plot(Hx, Qf,'o-','MarkerSize',2);
 gca;
 xlabel('Field (T)');
 ylabel('Q factor');
 legend('Quality factor from Lorentzian fit', 'Quality factor from FWHM');
 title(num2str(Temperature,'Quality factor, T= %.3f'));
-%         set(hk(n),'color',col,'linewidth',plotopt.lnwd);
-
-% set(ax,'fontsize',plotopt.ftsz,'xlim',[field_l field_h])
-%
-% set(ax(2),'ylim',[0.2 0.6])
-% tl = legend(h1,num2str(T(:),'%3.1f K'),'location','se');
-% set([tx ty tl tt],'fontsize',plotopt.ftsz,'interpreter','latex')
-%     tt(2) = title([filename num2str(runs(n)) ', f = 3.437 GHz']);
-
-% saveplots(hfig(2),'7-Temperature_field-S_-16dBm_Q')
 cd(filepath);
 end
 
@@ -470,7 +386,7 @@ clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 order = 4; % set to what order the median filters is applied
 
 % extract data from raw data file
-out = readdata_v3(filepath,filename,1);
+out = readdata_v3(filepath,filename);
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;  
 H = out.data.DCField1;
@@ -563,7 +479,7 @@ dB0 = dB0(ia);
 
 figure
 dB0 = medfilt1(dB0); % apply median filter to remove some noise
-nfig2 = plot(H0(1:length(H0)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
+plot(H0(1:length(H0)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
 xlabel('Field(T)');
 ylabel('S11 amplitute');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
@@ -571,7 +487,7 @@ set(gca,'fontsize',plotopt.ftsz)
 
 figure
 f0 = medfilt1(f0,order); % apply median filter to remove some noise
-hfig2 = plot(H0(1:round(length(H0)/100):end),f0(1:round(length(f0)/100):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
+plot(H0(1:round(length(H0)/100):end),f0(1:round(length(f0)/100):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
 % hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
@@ -581,21 +497,6 @@ axis([field_l field_h freq_l freq_h]);
 cd(filepath);
 tit=[direction,num2str(Temperature,'%3.3f'), excitation,'.mat'];
 save(tit,'H0','f0','dB0');
-end
-%% --------------------------------------------------------------------------------
-function hfig = setfig(nfig)
-
-hfig = figure(nfig);
-clf
-pos = get(hfig,'position');
-set(hfig,'position',[pos(1:2) 700 500])
-
-ha = get(hfig,'currentAxes');
-if isempty(ha)
-    ha = axes('position',[0.15 0.15 0.7 0.7]);
-else
-    set(ha,'position',[0.15 0.15 0.7 0.7])
-end
 end
 
 function saveplots(hfig,figname)
