@@ -1,9 +1,10 @@
-function linear_response_theory
+function linear_response_theory_publish
 cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-% Temperatures = [0.080, 0.160, 0.200, 0.300, 0.500];
-% filenames = num2str(Temperatures,'.mat')
 clearvars;
-load('0.200.mat','-mat','eee','fff','ttt','vvv'); % loads variables "fields", "temp", "E" and "V" 
+% Temperatures = [0.080, 0.160, 0.200, 0.300, 0.500];
+Temperatures=[0.150];
+filenames = strcat(num2str(Temperatures(:),'%.3f'),'.mat');
+load(filenames,'-mat','eee','fff','ttt','vvv'); % loads variables "fields", "temp", "E" and "V" 
 % which are eigenstates and eigenvalues calculated in the mean-field model 
 % as a function of transverse field and temperature
 
@@ -96,36 +97,17 @@ for l = 1:length(temp(1,:)) % calculate susceptibility for all temperatures
             rechi1z (l,m,k) =  real(sss1)  ;
             %titttz = 'S(Jzz+Izz)';
         end
-        %         hfig1 = figure (1);
-        %         clf
-        %         set(hfig1,'position',[50 100 600 400])
-        %         h1=plot (fields(1,:), imchi ,'r','LineWidth',2); 
-        %         set(gca,'XTick',[0,1,2,3,4,5,6,7,8,9]);
-        %         set(gca,'fontsize',15)
-        %         xlim([0 9]);
-        %         xlabel('Magnetic field (T)','FontSize',15)
-        %         ylabel('\chi'''' (arb. u.)','FontSize',15)
-        % 
-        %         hfig2 = figure (2);
-        %         clf
-        %         set(hfig2,'position',[680 100 600 400])
-        %         h2=plot (fields(1,:), rechi1 ,'r','LineWidth',2); 
-        %         set(gca,'XTick',[0,1,2,3,4,5,6,7,8,9]);
-        %         set(gca,'fontsize',15)
-        %         xlim([0 9]);
-        %         xlabel('Magnetic field (T)','FontSize',15)
-        %         ylabel('\chi'' (arb. u.)','FontSize',15)
     end
 end
 
 % % Save the susceptibilities
 x1y = squeeze(rechi1y); 
 x2y = squeeze(imchiy);
-save('x1y_x2y_85mK','fields','freq_total','x1y','x2y')
+save(strcat('x1y_x2y_',num2str(Temperatures(:)*1000),'mK'),'fields','freq_total','x1y','x2y')
 
 x1z = squeeze(rechi1z); 
 x2z = squeeze(imchiz);
-save('x1z_x2z_85mK','fields','freq_total','x1z','x2z')
+save(strcat('x1z_x2z_',num2str(Temperatures(:)*1000),'mK'),'fields','freq_total','x1z','x2z')
 
 % Color plot the susceptibilities
     hfig1 = figure (3);
