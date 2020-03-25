@@ -1,38 +1,36 @@
 function Field_scan
-format long;  
-addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
-addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
-% addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
-% addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
-%The first line is for windows, the second line is for mac OS
+    format long;  
+    addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
+    addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
+    % addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
+    % addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
+    %The first line is for windows, the second line is for mac OS
 
-% Figure plot options:
-plotopt.lnwd = 2;
-plotopt.ftsz = 12;
-plotopt.mksz = 5;
+    % Figure plot options:
+    plotopt.lnwd = 2;
+    plotopt.ftsz = 12;
+    plotopt.mksz = 5;
 %% Read ZVL
-% set the path to the data file
-filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC127\17.08.2019\';
-% filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC127/17.08.2019/';
-% The first line is for windows, the second line is for mac OS
-filename = '2019_08_0006';
+    % set the path to the data file
+    filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC127\17.08.2019\';
+    % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC127/17.08.2019/';
+    % The first line is for windows, the second line is for mac OS
+    filename = '2019_08_0006';
 
-%Choose desired operation on the data
-opt  = 2;
+    %Choose desired operation on the data
+    opt  = 2;
 
-switch opt
-    case 1
-        % Quick plot of the S11 color map and temperture vs. Magnetic field
-        option1(filepath, filename, plotopt)
-    case 2
-        % Analysis and parameter extraction from the fieldscan data with plots displayed
-        option2(filepath, filename, plotopt)
-    case 3
-        % Analysis and parameter extraction from the fieldscan data (without plots)
-        option3(filepath, filename)
-end
-% matlabpool close
-
+    switch opt
+        case 1
+            % Quick plot of the S11 color map and temperture vs. Magnetic field
+            option1(filepath, filename, plotopt)
+        case 2
+            % Analysis and parameter extraction from the fieldscan data with plots displayed
+            option2(filepath, filename, plotopt)
+        case 3
+            % Analysis and parameter extraction from the fieldscan data (without plots)
+            option3(filepath, filename)
+    end
 end
 
 function option1(filepath,filename, plotopt)
@@ -121,7 +119,7 @@ dif = dif(dif>0); % Keep only positive steps
 step = mean(dif); % Calculate the mean value of the frequency scan step
 nop = ceil((freq_h-freq_l)/step)+1; %compute how many points pers complete frequency scan.
 
-clearvars dif
+clearvars dif out step
 
 %Plot the temperature vs magnetic field to check the temperature variation
 figure
@@ -196,6 +194,8 @@ H0 = H0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 Q0 = Q0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 dB0 = dB0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 
+clearvars c idx ia ii HM T1 trunc1 trunc2 dupl nop
+
 % Fit the field dependent resonant frequency data with weak coupling function
 hPara = [H0(Hpos), field_l, field_h];
 fPara = [(freq_l+freq_h)/2, freq_l, freq_h];
@@ -225,7 +225,7 @@ xlabel('Frequency (GHz)');
 ylabel('S11 (dB)');
 title('Frequency scan at line crossing');
 
-clearvars idx ia ii HM Delt hPara fPara wp wm spin
+clearvars B Delt hPara fPara wp wm spin fitPara H_res f_res Hpos gc
 
 % Interpolate the data on a 2D grid for the colormap
 [xq,yq] = meshgrid(linspace(field_l,field_h,301),linspace(freq_l,freq_h,310));
@@ -535,10 +535,10 @@ cd('G:\My Drive\File sharing\PhD projects\LiHoF4\Data\Matlab\Cavity resonator\D2
 %cd('/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4/Data/Matlab/Cavity resonator/D24mm_T5mm_G0.2mm/12.02.2019')
 
 saveas(figure(hfig),[figname '.fig'],'fig');
-    print(figure(hfig),[figname  '.jpg'],'-djpeg','-r600');
+%     print(figure(hfig),[figname  '.jpg'],'-djpeg','-r600');
     print(figure(hfig),[figname  '.png'],'-dpng','-r600');
 print2eps(figname,hfig)
-[~,~] = eps2xxx([figname '.eps'],{'jpeg','pdf'});
+[~,~] = eps2xxx([figname '.eps'],{'png','pdf'});
 
 disp(['Figure ' figname ' saved to '])
 disp(cd)

@@ -128,7 +128,7 @@ dif = dif(dif>0); % Keep only positive steps
 step = min (dif); % Calculate the value of the frequency scan step
 nop = ceil(abs(freq_h-freq_l)/step); %compute how many points pers complete frequency scan.
 
-clearvars dif
+clearvars dif out step
 
 %Plot the temperature vs magnetic field to check the temperature variation
 figure
@@ -204,6 +204,8 @@ H0 = H0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 Q0 = Q0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 dB0 = dB0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 
+clearvars c idx ia ii HM T1 trunc1 trunc2 dupl nop
+
 % Fit the field dependent resonant frequency data with weak coupling function
 hPara = [H0(Hpos), field_l, field_h];
 fPara = [(freq_l+freq_h)/2, freq_l, freq_h];
@@ -233,7 +235,7 @@ xlabel('Frequency (GHz)');
 ylabel('S11 (dB)');
 title('Frequency scan at line crossing');
 
-clearvars idx ia ii HM Delt hPara fPara wp wm spin
+clearvars B Delt hPara fPara wp wm spin fitPara H_res f_res Hpos gc
 
 % Interpolate the data on a 2D grid for the colormap
 [xq,yq] = meshgrid(linspace(field_l,field_h,301),linspace(freq_l,freq_h,310));
