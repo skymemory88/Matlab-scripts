@@ -191,10 +191,10 @@ f0 = f0(ia);
 Q0 = Q0(ia);
 dB0 = dB0(ia);
 FWHM = FWHM(ia);
-resp_H = find(dB0 == max(dB0));
+Hpos = find(dB0 == max(dB0));
 
 figure
-plot(
+plot(f0(Hpos),dB0(Hpos),'-o');
 
 clearvars idx ia ii HM
 
