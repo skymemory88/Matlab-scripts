@@ -198,6 +198,34 @@ dB0 = dB0(ia);
 FWHM = FWHM(ia);
 [~,Hpos] = max(dB0); % find the line crossing position on field axis
 
+f0 = medfilt1(f0,order); % apply median filter to remove some noise
+f0 = f0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+H0 = H0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+Q0 = Q0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+dB0 = dB0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+
+% Fit the field dependent resonant frequency data with weak coupling function
+hPara = [H0(Hpos), field_l, field_h];
+fPara = [(freq_l+freq_h)/2, freq_l, freq_h];
+[fitP,~] = wk_cpl_fit(H0,f0,hPara,fPara);
+H_res = fitP.x0;
+f_res = fitP.wc;
+gc = fitP.g;
+
+B = linspace(field_l,field_h,100);
+spin = 7/2;
+Delt = -spin*(B-H_res);
+plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',4);
+hold on
+wp = f_res + Delt./2 + sqrt(Delt.^2+4*gc^2)/2;
+wm = f_res + Delt./2 - sqrt(Delt.^2+4*gc^2)/2;
+plot(B,wm,'-r',B,wp,'-r','LineWidth',2);
+% hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
+xlabel('Field (T)');
+ylabel('Resonant frequency (GHz)');
+title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
+axis([field_l field_h freq_l freq_h]);
+
 % Plot frequency scan at line crossing
 figure
 plot(freq(1:10:end,Hpos),dB(1:10:end,Hpos),'-o');
@@ -205,7 +233,7 @@ xlabel('Frequency (GHz)');
 ylabel('S11 (dB)');
 title('Frequency scan at line crossing');
 
-clearvars idx ia ii HM
+clearvars idx ia ii HM Delt hPara fPara wp wm spin
 
 % Interpolate the data on a 2D grid for the colormap
 [xq,yq] = meshgrid(linspace(field_l,field_h,301),linspace(freq_l,freq_h,310));
