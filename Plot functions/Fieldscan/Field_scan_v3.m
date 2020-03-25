@@ -5,7 +5,7 @@ addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functi
 % addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
 % addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
 %The first line is for windows, the second line is for mac OS
-%% Define input ===========================================================
+
 % Figure plot options:
 plotopt.lnwd = 2;
 plotopt.ftsz = 12;
@@ -18,7 +18,7 @@ filename = '2019_08_0006';
 
 %% Read ZVL
 %Set data range and parameters
-opt  = 1;
+opt  = 2;
 
 switch opt
     case 1
@@ -36,11 +36,10 @@ end
 end
 
 function option1(filepath,filename, plotopt)
-
+% Read & Plot data
 run = 1;
 out = readdata_v3(filepath,filename,run);
 
-%% Read & Plot data
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
 H = out.data.DCField1;
@@ -93,7 +92,6 @@ end
 
 function option2(filepath,filename, plotopt)
 %Set data range and parameters
-p = gcp;
 order = 4; % set to what order the median filters is applied
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
@@ -191,10 +189,14 @@ f0 = f0(ia);
 Q0 = Q0(ia);
 dB0 = dB0(ia);
 FWHM = FWHM(ia);
-Hpos = find(dB0 == max(dB0));
+[~,Hpos] = max(dB0); % find the line crossing position on field axis
 
+% Plot frequency scan at line crossing
 figure
-plot(f0(Hpos),dB0(Hpos),'-o');
+plot(freq(1:10:end,Hpos),dB(1:10:end,Hpos),'-o');
+xlabel('Frequency (GHz)');
+ylabel('S11 (dB)');
+title('Frequency scan at line crossing');
 
 clearvars idx ia ii HM
 
@@ -472,14 +474,14 @@ dB0 = dB0(ia);
 
 figure
 dB0 = medfilt1(dB0); % apply median filter to remove some noise
-nfig1 = plot(H0(1:length(H0)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
+plot(H0(1:length(H0)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
 xlabel('Field(T)');
 ylabel('S11 amplitute');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
 
 figure
 f0 = medfilt1(f0,order); % apply median filter to remove some noise
-hfig2 = plot(H0(1:round(length(H0)/100):end),f0(1:round(length(f0)/100):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
+plot(H0(1:round(length(H0)/100):end),f0(1:round(length(f0)/100):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
 % hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
