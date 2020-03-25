@@ -11,31 +11,29 @@ plotopt.lnwd = 2;
 plotopt.ftsz = 12;
 plotopt.mksz = 5;
 
-filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC107 (4x5x2mm)\17.05.2019';
-% filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiHoF4 project/Data/Experiment/LiHoF4/SC147/16.11.2019/';
+filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC127\17.08.2019\';
+% filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC127/17.08.2019/';
 %The first line is for windows, the second line is for mac OS
-filename = '2019_05_0022';
+filename = '2019_08_0006';
 
 %% Read ZVL
 %Set data range and parameters
-opt  = 2;
+opt  = 1;
 
 switch opt
     case 1
-        % Test of frequency scans using ZVL as a function of field
+        % Quick plot of the S11 color map and temperture vs. Magnetic field
         option1(filepath, filename, plotopt)
     case 2
-        % Analyse the fieldscan data and display plots
+        % Analysis and parameter extraction from the fieldscan data with plots displayed
         option2(filepath, filename, plotopt)
     case 3
-        % Use routine to analyze the fieldscan data and save to files
+        % Analysis and parameter extraction from the fieldscan data (without plots)
         option3(filepath, filename)
 end
 % matlabpool close
 
 end
-
-%% ------------------------------------------------------------------------
 
 function option1(filepath,filename, plotopt)
 
@@ -49,6 +47,7 @@ H = out.data.DCField1;
 HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
 T1 = out.data.Temperature1;
 % T2 = out.data.Temperature2;
+Temperature = mean(T1(H == min(H)));
 
 S11 = S11';
 S11 = S11(:);
@@ -82,91 +81,15 @@ colorbar
 set(gca,'fontsize',plotopt.ftsz)
 t(1) = xlabel('Field (T)');
 t(2) = ylabel('Frequency (GHz)');
-tt(1) = title([filename num2str(run)]);
+tt(1) = title(num2str(Temperature,'S11 response at T = %3.3f K'));
 
 % Plot the temperature profile against magnetic field
-% hfig2 = setfig(12);
 figure
 plot(H(1:100:end),T1(1:100:end),'o-')
 xlabel('DC Magnetic field')
 ylabel('Temperature')
 title('Magnetic field vs Temperature')
-%
-% yq = yq.*0 + 3.200; % Plot field scan cut at 3.200 GHz (H vs dB)
-% hfig3 = setfig(12);
-% zq = FdB(xq,yq);
-% h = plot(xq(1,:),zq(1,:));
-% xlim([0 9])
-% set(gca,'fontsize',plotopt.ftsz)
-% t(3) = xlabel('Field (T)');
-% t(4) = ylabel('S11 (dB)');
-% tt(2) = title([filename num2str(run) ', f = 3.200 GHz']);
-
-% hfig4 = setfig(13); % Plot field scan cut at 3.200 GHz (H vs real(S))
-% zq = FrS(xq,yq);
-% h = plot(xq(1,:),zq(1,:));
-% xlim([0 9])
-% set(gca,'fontsize',plotopt.ftsz)
-% t(5) = xlabel('Field (T)');
-% t(6) = ylabel('Re{S11}');
-% tt(3) = title([filename num2str(run) ', f = 3.200 GHz']);
-%
-% hfig5 = setfig(14); % Plot field scan cut at 3.200 GHz (H vs real(S))
-% zq = FiS(xq,yq);
-% h = plot(xq(1,:),zq(1,:));
-% xlim([0 9])
-% set(gca,'fontsize',plotopt.ftsz)
-% t(7) = xlabel('Field (T)');
-% t(8) = ylabel('Im{S11}');
-% tt(4) = title([filename num2str(run) ', f = 3.200 GHz']);
-%
-%
-% % Plot frequency scans at H (f vs dB)
-% [xq,yq] = meshgrid(linspace(0,9,501),linspace(3.2,3.7,101));
-% xq1 = xq.*0 + 0;
-% zq1 = FdB(xq1,yq);
-% xq2 = xq.*0 + 2;
-% zq2 = FdB(xq2,yq);
-% xq3 = xq.*0 + 3.612;
-% zq3 = FdB(xq3,yq);
-% xq4 = xq.*0 + 3.685;
-% zq4 = FdB(xq4,yq);
-% xq5 = xq.*0 + 5;
-% zq5 = FdB(xq5,yq);
-%
-% hfig6 = setfig(15);
-% h = plot(yq(:,1),zq1(:,1),yq(:,1),zq2(:,1),yq(:,1),zq3(:,1),yq(:,1),zq4(:,1),yq(:,1),zq5(:,1));
-% xlim([3.2 3.7])
-% set(gca,'fontsize',plotopt.ftsz)
-% t(9) = xlabel('Frequency (GHz)');
-% t(10) = ylabel('S11 (dB)');
-% tt(5) = title([filename num2str(run)]);
-% t(11) = legend(h,'0','2','3.612','3.685','5');
-
-% hfig7 = setfig(16); % Plot field-temperature
-% h = plot(H,T1,H,T2);
-% xlim([0 9])
-% set(gca,'fontsize',plotopt.ftsz)
-% t(12) = xlabel('Field (T)');
-% t(13) = ylabel('Temperature (K)');
-% tt(6) = title([filename num2str(run)]);
-% t(14) = legend(h,'MC','Sample');
-
-
-set(t,'fontsize',plotopt.ftsz,'interpreter','latex')
-set(tt,'fontsize',plotopt.ftsz,'interpreter','none')
-
-% Save plots
-%figname = [filename num2str(run)];
-%saveplots(hfig1,[figname '_field-freq_dB_map'])
-% saveplots(hfig2,[figname '_field-dB_3.200GHz'])
-% saveplots(hfig3,[figname '_field-rS_3.200GHz'])
-% saveplots(hfig4,[figname '_field-iS_3.200GHz'])
-% saveplots(hfig5,[figname '_freq_dB_H'])
-% saveplots(hfig6,[figname '_field_T'])
-
 end
-
 
 function option2(filepath,filename, plotopt)
 %Set data range and parameters
@@ -268,6 +191,10 @@ f0 = f0(ia);
 Q0 = Q0(ia);
 dB0 = dB0(ia);
 FWHM = FWHM(ia);
+resp_H = find(dB0 == max(dB0));
+
+figure
+plot(
 
 clearvars idx ia ii HM
 
@@ -386,7 +313,7 @@ end
 % Plot the resonant frequency from Lorentzian fit versus DC magnetic field
 % figure
 hold on
-freqPlot = plot(Hx(1:round(length(Hx)/100):end),ff0(1:round(length(Hx)/100):end),'or','MarkerSize',2,'MarkerFaceColor','red');
+plot(Hx(1:round(length(Hx)/100):end),ff0(1:round(length(Hx)/100):end),'or','MarkerSize',2,'MarkerFaceColor','red');
 % freqPlot2 = plot(Hx(1:length(Hx)/100:end),ff0_2(1:length(Hx)/100:end),'sk','MarkerSize',2,'MarkerFaceColor','black');
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
@@ -405,7 +332,7 @@ axis([field_l field_h freq_l freq_h]);
 % figure
 hold on
 f0 = medfilt1(f0,order); % apply median filter to remove some noise
-hfig1 = plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
+plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
 % hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
@@ -415,7 +342,7 @@ axis([field_l field_h freq_l freq_h]);
 % Plot the peak amplitude from minimum search vs. magnetic field
 figure
 dB0 = medfilt1(dB0, order); % apply median filter to remove some noise
-nfig2 = plot(H0, dB0, 'o', 'MarkerSize', 2);
+plot(H0, dB0, 'o', 'MarkerSize', 2);
 xlabel('Field(T)');
 ylabel('S11 amplitute');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
@@ -425,32 +352,22 @@ figure
 H0 = H0(Q0 >=0);
 Q0 = Q0(Q0 >=0);
 Q0 = medfilt1(Q0, 10);
-Qplot2 = plot(H0(1:round(length(H0)/100):end), Q0(1:round(length(Q0)/100):end),'s-','MarkerSize',2);
+plot(H0(1:round(length(H0)/100):end), Q0(1:round(length(Q0)/100):end),'s-','MarkerSize',2);
 
 %Plot Quality factor from Lorentzian fit vs magnetic field
 hold on
 Hx = Hx(Qf >=0);
 Qf = Qf(Qf >=0); %Remove unphysical points
 Qf = medfilt1(Qf, order);
-Qplot1 = plot(Hx(1:round(length(Hx)/100):end), Qf(1:round(length(Qf)/100):end),'o-','MarkerSize',2);
+plot(Hx(1:round(length(Hx)/100):end), Qf(1:round(length(Qf)/100):end),'o-','MarkerSize',2);
 gca;
 xlabel('Field (T)');
 ylabel('Q factor');
 legend('Quality factor from Lorentzian fit', 'Quality factor from FWHM');
 title('Quality factor');
-%         set(hk(n),'color',col,'linewidth',plotopt.lnwd);
 
-% set(ax,'fontsize',plotopt.ftsz,'xlim',[field_l field_h])
-%
-% set(ax(2),'ylim',[0.2 0.6])
-% tl = legend(h1,num2str(T(:),'%3.1f K'),'location','se');
-% set([tx ty tl tt],'fontsize',plotopt.ftsz,'interpreter','latex')
-%     tt(2) = title([filename num2str(runs(n)) ', f = 3.437 GHz']);
-
-% saveplots(hfig(2),'7-Temperature_field-S_-16dBm_Q')
 cd(filepath);
 end
-
 
 function option3(filepath, filename)
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
@@ -573,21 +490,6 @@ cd(filepath);
 tit=[direction,num2str(Temperature,'%3.3f'), excitation,'.mat'];
 save(tit,'H0','f0','dB0');
 end
-%% --------------------------------------------------------------------------------
-function hfig = setfig(nfig)
-
-hfig = figure(nfig);
-clf
-pos = get(hfig,'position');
-set(hfig,'position',[pos(1:2) 700 500])
-
-ha = get(hfig,'currentAxes');
-if isempty(ha)
-    ha = axes('position',[0.15 0.15 0.7 0.7]);
-else
-    set(ha,'position',[0.15 0.15 0.7 0.7])
-end
-end
 
 function saveplots(hfig,figname)
 % Function to save the figures to a specified directory and in different
@@ -599,11 +501,11 @@ curdir = cd;
 cd('G:\My Drive\File sharing\PhD projects\LiHoF4\Data\Matlab\Cavity resonator\D24mm_T5mm_G0.2mm\12.02.2019')
 %cd('/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4/Data/Matlab/Cavity resonator/D24mm_T5mm_G0.2mm/12.02.2019')
 
-%saveas(figure(hfig),[figname '.fig'],'fig');
-%     print(figure(hfig),[figname  '.jpg'],'-djpeg','-r600');
-%     print(figure(hfig),[figname  '.png'],'-dpng','-r600');
-%print2eps(figname,hfig)
-%[~,~] = eps2xxx([figname '.eps'],{'jpeg','pdf'});
+saveas(figure(hfig),[figname '.fig'],'fig');
+    print(figure(hfig),[figname  '.jpg'],'-djpeg','-r600');
+    print(figure(hfig),[figname  '.png'],'-dpng','-r600');
+print2eps(figname,hfig)
+[~,~] = eps2xxx([figname '.eps'],{'jpeg','pdf'});
 
 disp(['Figure ' figname ' saved to '])
 disp(cd)
