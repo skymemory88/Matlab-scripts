@@ -399,8 +399,6 @@ cd(filepath);
 end
 
 function option3(filepath, filename)
-clear freq S11 dB N FdB FrS FiS FTT1 FTT2
-
 %Set data range and parameters
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 order = 4; % set to what order the median filters is applied

@@ -506,15 +506,9 @@ Q0 = Q0(ia);
 dB0 = dB0(ia);
 
 figure
-dB0 = medfilt1(dB0); % apply median filter to remove some noise
-plot(H0(1:length(H0)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
-xlabel('Field(T)');
-ylabel('S11 amplitute');
-title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
-set(gca,'fontsize',plotopt.ftsz)
-
-figure
 f0 = medfilt1(f0,order); % apply median filter to remove some noise
+f0 = f0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+H0 = H0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 plot(H0(1:round(length(H0)/100):end),f0(1:round(length(f0)/100):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
 % hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
@@ -522,9 +516,22 @@ ylabel('Resonant frequency (GHz)');
 title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
 axis([field_l field_h freq_l freq_h]);
 
+figure
+dB0 = medfilt1(dB0); % apply median filter to remove some noise
+dB0 = dB0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+plot(H0(1:length(H0)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
+xlabel('Field(T)');
+ylabel('S11 amplitute');
+title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
+set(gca,'fontsize',plotopt.ftsz)
+
+[~,Hpos] = max(dB0); % find the line crossing position on field axis
+hPara = [H0(Hpos), field_l, field_h];
+fPara = [(freq_l+freq_h)/2, freq_l, freq_h];
+[fitPara,~] = wk_cpl_fit(H0,f0,hPara,fPara);
 cd(filepath);
 tit=[direction,num2str(Temperature,'%3.3f'), excitation,'.mat'];
-save(tit,'H0','f0','dB0');
+save(tit,'H0','f0','dB0','hPara','fPara','fitPara');
 end
 
 function saveplots(hfig,figname)
