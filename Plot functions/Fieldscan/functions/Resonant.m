@@ -1,4 +1,4 @@
-B = linspace(0,8,100);
+B = linspace(0,9,100);
 Br = 3.72;
 m = 7/2;
 hbar = 1;
