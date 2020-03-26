@@ -1,6 +1,6 @@
 [B,w] = meshgrid(linspace(min(H0),max(H0),500),linspace(min(f0),max(f0),500));
-kc = 0.005;
-ke = 0.005;
+kc = 0.1*fitPara.g;
+ke = kc;
 gc = fitPara.g;
 wc = fitPara.wc;
 Br = fitPara.x0;
