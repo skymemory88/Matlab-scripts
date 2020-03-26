@@ -12,13 +12,13 @@ function Field_scan
     plotopt.mksz = 5;
 %% Read ZVL
     % set the path to the data file
-    filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC127\17.08.2019\';
+    filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC108 (6x5x4.5mm)\05.05.2019';
     % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC127/17.08.2019/';
     % The first line is for windows, the second line is for mac OS
-    filename = '2019_08_0006';
+    filename = '2019_05_0006';
 
     %Choose desired operation on the data
-    opt  = 2;
+    opt  = 1;
 
     switch opt
         case 1
@@ -35,8 +35,7 @@ end
 
 function option1(filepath,filename, plotopt)
 % Read & Plot data
-run = 1;
-out = readdata_v3(filepath,filename,run);
+out = readdata_v3(filepath,filename,1);
 
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
