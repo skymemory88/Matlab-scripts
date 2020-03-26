@@ -18,13 +18,11 @@ rundipole = true;
 Q=1; %<J> as a function of H (Q=1) or T (Q=0) ?
 
 if Q == 1
-
-% temp = [0.001 0.05 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2 2.5 3 0.15 0.25 0.35 0.45 0.55 0.65 0.75 0.85 0.95 1.05 1.15 1.25 1.35 1.45 1.55 1.65 1.75 1.85 1.95 4];
-        temp = [0.1 0.15 0.2 0.25 0.35 0.4 0.45 0.5 0.8 1.2];
+        temp = [0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.8 1.2];
 %         temp = 0.300;
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
-        Hmax = 9.0; % Maximum magnetic field
+        Hmax = 17.0; % Maximum magnetic field
         phi = 0; % phi=0 means H along x (in radian)
         theta = 0; % theta indicates a transverse magnetic field
 
