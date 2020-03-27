@@ -12,13 +12,13 @@ function Field_scan
     plotopt.mksz = 5;
 %% Read ZVL
     % set the path to the data file
-    filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC108 (6x5x4.5mm)\05.05.2019';
+    filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm, triangle)\06.11.2019';
     % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC127/17.08.2019/';
     % The first line is for windows, the second line is for mac OS
-    filename = '2019_05_0006';
+    filename = '2019_11_0025';
 
     %Choose desired operation on the data
-    opt  = 1;
+    opt  = 2;
 
     switch opt
         case 1
@@ -143,6 +143,10 @@ freq_temp(dupl+1)=[];
 dB_temp(dupl+1)=[];
 HH_temp(dupl+1)=[];
 
+if mod(length(dB_temp),nop) ~= 0
+    nop = nop - 1;
+end
+    
 dB = reshape(dB_temp,nop,[]);  %reshape the matrix so that each complete frequency scan occupy one column
 freq = reshape(freq_temp,nop,[]);
 HH = reshape(HH_temp,nop,[]);
@@ -455,6 +459,10 @@ freq(dupl+1)=[];
 dB(dupl+1)=[];
 HH(dupl+1)=[];
 
+if mod(length(dB),nop) ~= 0
+    nop = nop - 1;
+end
+    
 dB = reshape(dB,nop,[]);  %reshape the matrix so that each complete frequency scan occupy one column
 freq = reshape(freq,nop,[]);
 HH = reshape(HH,nop,[]);
