@@ -12,10 +12,10 @@ function Field_scan
     plotopt.mksz = 5;
 %% Read ZVL
     % set the path to the data file
-    filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_2 (2.5 x 1 x 0.5 mm, triangle)\06.11.2019';
+    filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC127\17.08.2019';
     % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC127/17.08.2019/';
     % The first line is for windows, the second line is for mac OS
-    filename = '2019_11_0025';
+    filename = '2019_08_0006';
 
     %Choose desired operation on the data
     opt  = 2;
@@ -206,7 +206,9 @@ fPara = [(freq_l+freq_h)/2, freq_l, freq_h];
 H_res = fitP.x0;
 f_res = fitP.wc;
 gc = fitP.g;
+gamma = fitP.gamma;
 
+%Plot the data with strong coupling formula
 B = linspace(field_l,field_h,100);
 spin = 7/2;
 Delt = -spin*(B-H_res);
@@ -218,7 +220,19 @@ plot(B,wm,'-r',B,wp,'-r','LineWidth',2);
 % hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
-title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
+title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K and strong coupling fit'));
+axis([field_l field_h freq_l freq_h]);
+
+% Plot the data with weak coupling formula
+figure
+plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',4);
+hold on
+wk = f_res - gc^2.*Delt./(Delt.^2 + gamma^2);
+plot(B,wk,'-r','LineWidth',2);
+% hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
+xlabel('Field (T)');
+ylabel('Resonant frequency (GHz)');
+title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K and weak coupling fit'));
 axis([field_l field_h freq_l freq_h]);
 
 % Plot frequency scan at line crossing
@@ -228,7 +242,7 @@ xlabel('Frequency (GHz)');
 ylabel('S11 (dB)');
 title('Frequency scan at line crossing');
 
-clearvars B Delt hPara fPara wp wm spin fitPara H_res f_res Hpos gc
+clearvars B Delt hPara fPara wp wm spin fitPara H_res f_res Hpos gc gamma
 
 % Interpolate the data on a 2D grid for the colormap
 [xq,yq] = meshgrid(linspace(field_l,field_h,301),linspace(freq_l,freq_h,310));
