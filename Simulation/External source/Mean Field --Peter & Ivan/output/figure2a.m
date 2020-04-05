@@ -1,8 +1,9 @@
 function figure2a
-close all
+% close all
+hold on
 clearvars
 % temp=[0.100, 0.300, 0.500, 0.800, 1.3];
-temp = [0.150];
+temp = [0.200];
 color = ["black","red","blue","magenta","green","yellow","cyan"];
 theta = [90]; % Angle between the transverse field and a-axis
 marker = [":","-.","--","-"];
@@ -19,9 +20,8 @@ figs = gobjects(7,numel(temp));
 %             lname=[num2str(temp(iter),'%3.3f'),num2str(theta(iter2),'_%u'),'.mat']; 
             lname=[num2str(temp(iter),'%3.3f'),'.mat']; 
             
-            load(lname,'-mat','eee','fff','h_mf2');
+            load(lname,'-mat','eee','fff');
             fields = vecnorm(fff);
-            hmf=h_mf2(:,3);
             E2f = 241.8; % Convert Energy to frequency
             E(:,:)=squeeze(eee)*E2f;
             %E(:,:) = eee(:,1,:)*E2F;
@@ -68,7 +68,7 @@ figs = gobjects(7,numel(temp));
                 Ediff(i,:)=E(:,i+1)-E(:,i);
             end
     %         % Plot the lowest energy difference between the 8 levels
-            figure
+%             figure
             % frequency = { '1.682 GHz', '3.436 GHz', '3.924 GHz', '4.449 GHz', '5.604 GHz' } ;
             figs(:, iter2) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle',marker(1), 'Color',color(iter2),'LineWidth',2);
             hold on
@@ -81,8 +81,8 @@ figs = gobjects(7,numel(temp));
 %             legend(num2str(temp(iter),'T = %.2f K, A = A_{th}'),num2str(temp(iter),'T = %.2f K, A = A_{th}'))
 
 %             % Plot the resonant frequency of a bare cavity
-%             f_cav = 3.674; % Set resonant frequency of the bare cavity
-%             plot([0 9],[f_cav f_cav],'-r','LineWidth',1.5);
+%             f_cav = 3.54; % Set resonant frequency of the bare cavity
+%             plot([0 max(fields)],[f_cav f_cav],'-r','LineWidth',1.5);
 
 %             % Load experimental data of line crossings and superimpose the plot onto the calculated data
 %             load('f0_BC.mat');
