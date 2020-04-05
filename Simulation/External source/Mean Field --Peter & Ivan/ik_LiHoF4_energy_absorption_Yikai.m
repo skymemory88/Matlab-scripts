@@ -19,7 +19,7 @@ Q=1; %<J> as a function of H (Q=1) or T (Q=0) ?
 
 if Q == 1
         temp = [0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.8 1.2];
-%         temp = 0.300;
+%         temp = [0.100 0.150 0.200];
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
         Hmax = 17.0; % Maximum magnetic field
@@ -27,9 +27,9 @@ if Q == 1
         theta = 0; % theta indicates a transverse magnetic field
 
         % Calcualte each component of the DC magnetic field
-        Hx = (Hmin:0.05:Hmax)*cos(phi)*cos(theta);
-        Hy = (Hmin:0.05:Hmax)*sin(phi)*cos(theta);
-        Hz = (Hmin:0.05:Hmax)*sin(theta);
+        Hx = (Hmin:0.02:Hmax)*cos(phi)*cos(theta);
+        Hy = (Hmin:0.02:Hmax)*sin(phi)*cos(theta);
+        Hz = (Hmin:0.02:Hmax)*sin(theta);
         
         fields = [Hx; Hy; Hz];
 
