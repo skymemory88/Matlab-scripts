@@ -1,13 +1,18 @@
-function linear_response_theory_publish
+function MF_linear_response
 cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
 clearvars;
-% Temperatures = [0.080, 0.160, 0.200, 0.300, 0.500];
-Temperatures=[0.150];
-filenames = strcat(num2str(Temperatures(:),'%.3f'),'.mat');
-load(filenames,'-mat','eee','fff','ttt','vvv'); % loads variables "fields", "temp", "E" and "V" 
-% which are eigenstates and eigenvalues calculated in the mean-field model 
-% as a function of transverse field and temperature
-
+Temperatures = [0.100, 0.150, 0.200, 0.250, 0.300, 0.350];
+% Temperatures = 0.150;
+for ii = 1:length(Temperatures)
+    filenames = strcat(num2str(Temperatures(ii),'%.3f'),'.mat');
+    load(filenames,'-mat','eee','fff','ttt','vvv'); % loads variables "fields", "temp", "E" and "V" 
+    % which are eigenstates and eigenvalues calculated in the mean-field model 
+    % as a function of transverse field and temperature
+    linear_response(eee,fff,ttt,vvv);
+end
+end
+function linear_response(eee,fff,ttt,vvv)
+%% Calculation of susceptibilities
 E = eee;
 V = vvv;
 temp = ttt;
@@ -119,7 +124,6 @@ for l = 1:length(temp(1,:)) % calculate susceptibility for all temperatures
         end
     end
 end
-
 %% Save the susceptibilities
 x1x = squeeze(rechi1x); 
 x2x = squeeze(imchix);
