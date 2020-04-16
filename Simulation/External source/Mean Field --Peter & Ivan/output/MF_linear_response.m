@@ -2,7 +2,7 @@ function MF_linear_response
 cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
 clearvars;
 % Temperatures = [0.250, 0.300, 0.350, 0.500];
-Temperatures = [0.450 0.800];
+Temperatures = [0.100, 0.150];
     for ii = 1:length(Temperatures)
         filenames = strcat(num2str(Temperatures(ii),'%.3f'),'.mat');
         load(filenames,'-mat','eee','fff','ttt','vvv'); % loads variables "fields", "temp", "E" and "V" 
@@ -52,11 +52,12 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
     Ixh=(Iph+Imh)/2;
     Iyh=(Iph-Imh)/2i;
 
-    ghztomeV = 1/241.8;
-    omega = freq*ghztomeV;     % define frequency sweep range (meV)
-    gama = 0.00005; % define lifetime (meV) (theoretical basis?)
+    f2E = 1/241.8;  % GHz to meV
+    omega = freq*f2E;   % define frequency sweep range (meV)
+%     gama = 0.00005; % define lifetime (meV) (theoretical basis?)
+    gama = 0.00005;
 
-    for k = 1:length(fields(1,:)) % calculate susceptibility for all fields
+    parfor k = 1:length(fields(1,:)) % calculate susceptibility for all fields
         v = squeeze ( squeeze(V(k,:,:,:)) ); % Obtain the corresponding eigen vectors
         en = squeeze ( squeeze(E(k,:,:)) ); % Obtain the corresponding eigen energies in meV
 %       N = length(en);
@@ -113,17 +114,17 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
     end
 end
 %% Save the susceptibilities
-x1x = squeeze(rechi1x); 
-x2x = squeeze(imchix);
-save(strcat('x1x_x2x_',num2str(ttt*1000),'mK'),'fields','freq_total','x1x','x2x')
-
-x1y = squeeze(rechi1y); 
-x2y = squeeze(imchiy);
-save(strcat('x1y_x2y_',num2str(ttt*1000),'mK'),'fields','freq_total','x1y','x2y')
+% x1x = squeeze(rechi1x); 
+% x2x = squeeze(imchix);
+% save(strcat('x1x_x2x_',num2str(ttt*1000),'mK'),'fields','freq_total','x1x','x2x')
+% 
+% x1y = squeeze(rechi1y); 
+% x2y = squeeze(imchiy);
+% save(strcat('x1y_x2y_',num2str(ttt*1000),'mK'),'fields','freq_total','x1y','x2y')
 
 x1z = squeeze(rechi1z); 
 x2z = squeeze(imchiz);
-save(strcat('x1z_x2z_',num2str(ttt*1000),'mK'),'fields','freq_total','x1z','x2z')
+save(strcat('x1z_x2z_',num2str(ttt*1000),'mK_5E-5meV_45deg'),'fields','freq_total','x1z','x2z')
 %% Color plot the susceptibilities
 % % Color plot of the imaginary part of the susceptibility of x component
 %     hfig0 = figure (1);
