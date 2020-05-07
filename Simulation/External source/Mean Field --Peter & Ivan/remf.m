@@ -1,4 +1,6 @@
 function [ion,evolution,E,V,h_mf1]=remf(ion,h,t,withdemagn,alpha)
+global strategies;
+
 for i=1:size(ion.name,1)
     if ion.prop(i)~=0
         k=i;
@@ -114,8 +116,8 @@ for iterations=1:NiterMax
         h_mf=zeros([size(ion.name,1),3]);
         for i=1:size(ion.name,1)
             h_mf(i,:)=ion.prop(i)*((1-ion.hyp(i))*(ion.gLande(i)*h_dipol(i,:)+h_ex(i,:)) + ion.hyp(i)*(ion.gLande(i)*h_dipol_hyp(i,:)+h_ex_hyp(i,:)));
-            for j=1:size(ion.name,1)-1
-                k=(i+j>size(ion.name,1))*size(ion.name,1);
+            for j=1:size(ion.name,1)-1 % this may be problematic for doped samples --Yikai
+                k=(i+j>size(ion.name,1))*size(ion.name,1); % cyclic (periorid) condition
                 h_mf(i,:)=h_mf(i,:)+ion.prop(i+j-k)*((1-ion.hyp(i+j-k))*ion.gLande(i)*h_dipol(i+j-k,:)+ion.hyp(i+j-k)*ion.gLande(i)*h_dipol_hyp(i+j-k,:));%other kinds of ions
             end
         end
@@ -134,8 +136,7 @@ for iterations=1:NiterMax
         end
         %      E(ionn)=mean(energies(ionn,:)); % Why does it take an arithmetic average of all the energy levels? --Yikai (12.02.2020)
         
-        symm_equal = 1; 
-        if symm_equal % HMR: equivalency by symmetry) --Yikai (10.02.2020)
+        if strategies.symmetry % HMR: equivalency by symmetry) --Yikai (10.02.2020)
             energies = repmat(energies(1,:),4,1);
             ion.mom_hyp = repmat(ion.mom_hyp(1,:,:),4,1,1);
             ion.mom = repmat(ion.mom(1,:,:),4,1,1);
@@ -152,8 +153,10 @@ for iterations=1:NiterMax
 
 
     % Iterate untill convergence criterion reached
-    Diff=sum(sum(abs(momente_old-momente_mean)));
-    if (Diff<ConvMin) || (Diff<ConvMax && iterations>NiterMin) 
+    % Added energy convergence check --Yikai (2020-05-07)
+    JDiff = sum(sum(abs(momente_old-momente_mean)));
+    EDiff = [energies(4,:)-energies(3,:);energies(3,:)-energies(2,:);energies(2,:)-energies(1,:)];
+    if (~any(EDiff(:)>=ConvMin) && JDiff<ConvMin) || (JDiff<ConvMax && iterations>NiterMin) 
         E=energies(1,:);
         V = v;
         h_mf1 = h_mf;

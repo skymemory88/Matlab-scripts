@@ -8,11 +8,12 @@ strategies.damping=0.05; % damping factor. May reduce exponential fit efficiency
 strategies.expfit=true; % turn on fitting to an exponential.
 strategies.expfit_period=30; % period between exponential fit.
 strategies.expfit_deltaN=5; % The exponential fit points distance. Three points used: N, N-deltaN, N-2deltaN.
+strategies.symmetry = false; % Copy the state of one site to its crystal symmetry equivalent sites instead of calculating them individually
 
-global rundipole
+global rundipole % Run dipole calculations or not
 rundipole = true;
 %% define temp / field scan
-Q = 1; %<J> as a function of H (TRUE) or T (FALSE)
+Q = false; %Chose scan type: field scan (TRUE) or temperature scan (FALSE)
 
 if Q == 1
 %         temp = [0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.8 1.2 1.6 1.8 2];
@@ -35,13 +36,11 @@ elseif Q == 0
         Hx = 0;
         Hy = 0;
         Hz = 0;
-        temp = 0:0.025:1.0 ; %  range of temperatures
+        temp = 0:0.025:2.0 ; %  range of temperatures
         fields = [Hx;Hy;Hz];
 else
     error('Q must equal to 0 or 1')
 end
-
-
 %% define LiRF4
 
 %Ions' names
