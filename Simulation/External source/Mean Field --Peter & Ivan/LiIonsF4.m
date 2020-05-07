@@ -102,21 +102,8 @@ history=cell([length(temp),size(field,2)]);
 for j = 1:length(temp)
     % Reinitiate the angular moments at each temperature step (2020.01.02)
     if size(field,2) > 1
-        %% 
-        % Following code is commented out with the introduction of internal temporary
-        % variable 'ion_mom_init'
-%         %Ions' initial moments
-%         ion.mom(:,:,1)=[1 0 0; 1 0 0; -1 0 0; -1 0 0];      %Er
-%         % ion.mom(:,:,1)=[0 1 0; 0 1 0; 0 -1 0; 0 -1 0];      %Er
-%         ion.mom(:,:,2)=[0 0 1;  0 0 1;  0 0 1; 0 0 1]*2.6;  %Ho %Why multiply by 2.6 (Yikai)?
-%         % ion.mom(:,:,2)=[3.473 -0.045 0.1;  3.473 -0.045 0.1;  3.473 -0.045 0.1; 3.473 -0.045 0.1];  %Ho
-%         ion.mom(:,:,3)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Yb
-%         ion.mom(:,:,4)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Tm
-%         ion.mom(:,:,5)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Gd
-%         ion.mom(:,:,6)=[0 0 0; 0 0 0; 0 0 0; 0 0 0];      %Y
-%% 
         ion.mom = ion_mom_init; %Reinitialize the spin moments at each field
-        ion.mom_hyp=ion.mom; %Is this necessary? it is reassigned inside 'remf()' (Yikai)
+        ion.mom_hyp = ion.mom;
         rundipole = true;
     end
 
@@ -169,10 +156,13 @@ for j = 1:length(temp)
     end
     fff = field;
     ttt = temp(j);
+% Save the data split by temperatures when there are multi-dimensional, otherwise save data outside this function
+    if size(field,2) >1 && length(temp) >1
         cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-        tit=[num2str(temp(j),'%3.3f'),'.mat'];
+        tit=['Li',ion.name(1:end), 'F4_', num2str(temp(j),'%3.3f'),'.mat'];
         save(tit,'ttt','fff','eee','vvv','h_mf2','-v7.3')
         cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan')
+    end
 end
 
 % end

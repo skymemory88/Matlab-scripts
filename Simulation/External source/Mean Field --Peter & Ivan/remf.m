@@ -1,16 +1,19 @@
 function [ion,evolution,E,V,h_mf1]=remf(ion,h,t,withdemagn,alpha)
-
 for i=1:size(ion.name,1)
     if ion.prop(i)~=0
         k=i;
+        if ion.prop(i)==1
+            H_dims = (2*ion.I(k)+1)*(2*ion.J(k)+1); % Claculate the dimension of the Hilbert space
+        end
     end
 end
 
 persistent dipole;
 global rundipole
 
+dip_range = 80; %The range over which the dipolar interaction is included
 if(isempty(dipole))
-    dipole=dipole_direct([0 0 0],80,ion.a{k});
+    dipole=dipole_direct([0 0 0],dip_range,ion.a{k});
     for i=1:size(ion.name,1)
         ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:))};
         ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i))};
@@ -18,7 +21,7 @@ if(isempty(dipole))
 end
 
 if rundipole == true
-    dipole=dipole_direct([0 0 0],80,ion.a{k});
+    dipole=dipole_direct([0 0 0],dip_range,ion.a{k});
     for i=1:size(ion.name,1)
         ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:))};
         ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i))};
@@ -35,8 +38,8 @@ if ~isfield(ion,'mom_hyp')
 end
 %%
 for i=1:size(ion.name,1)
-%    ion.mom_hyp(:,:,i)=ion.mom(:,:,i); %we will apply the virtual crystal approximation for the isotops of LiErF4
-     momente_mean=momente_mean+ion.prop(i)*ion.mom(:,:,i);
+%     ion.mom_hyp(:,:,i)=ion.mom(:,:,i); %we will apply the virtual crystal approximation for the isotops
+    momente_mean=momente_mean+ion.prop(i)*ion.mom(:,:,i);
 end
 
 %Lorenzterm = N/V * mu_0/4pi * (mu_b)^2 * 4pi/3
@@ -51,6 +54,7 @@ end
 eins=zeros(3,3,4,4); eins(1,1,:,:)=1; eins(2,2,:,:)=1; eins(3,3,:,:)=1;
 demagn=zeros(3,3,4,4);
 demagn_t=ellipsoid_demagn(alpha);
+% demagn_t = [7.55 0 0; 0 1.68 0; 0 0 -0.32]; % Thesis "Ultra-low temperature dilatometry" by John L. Dunn
 demagn(1,1,:,:)=demagn_t(1,1);
 demagn(2,2,:,:)=demagn_t(2,2);
 demagn(3,3,:,:)=demagn_t(3,3);
@@ -90,6 +94,7 @@ for iterations=1:NiterMax
     end
     momente_old=momente_mean;
     %  E=zeros(1,length(energies(1,:)));
+    energies = zeros(4, H_dims); % dims = (2*I+1) x (2*J+1)
     for ionn=1:4 % each Ho3+ ion in the unit cell
         %calculate meanfield
         h_dipol=zeros([size(ion.name,1),3]);
@@ -105,7 +110,7 @@ for iterations=1:NiterMax
             end
         end
 
-        %Virtual meanfield
+        % Virtual meanfield
         h_mf=zeros([size(ion.name,1),3]);
         for i=1:size(ion.name,1)
             h_mf(i,:)=ion.prop(i)*((1-ion.hyp(i))*(ion.gLande(i)*h_dipol(i,:)+h_ex(i,:)) + ion.hyp(i)*(ion.gLande(i)*h_dipol_hyp(i,:)+h_ex_hyp(i,:)));
@@ -116,34 +121,26 @@ for iterations=1:NiterMax
         end
 
         %calculate moments of ions in a meanfield (ie diagonnalize the hamiltonian)
-        %      energies=zeros(4,size(ion.name,1));
         for i=1:size(ion.name,1)
-            if ion.prop(i)>0
-                if ion.hyp(i)
-                %junk=[];
+            if ion.prop(i)>0 % if the ion exists
+                if ion.hyp(i) % if there is no doping
                  [jx,jy,jz,energies(ionn,:),v]=MF_moments_hyper(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i},ion.A(i),ion.I(i));
                  ion.mom_hyp(ionn,:,i)=update_moments([jx,jy,jz],evolution.(ion.name_hyp{i}),ionn,iterations);
-                else
-                %junk=[];
+                else % if there is doping
                  [jx,jy,jz,energies(ionn,:)]=MF_moments(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i});
                  ion.mom(ionn,:,i)=update_moments([jx,jy,jz],evolution.(ion.name{i}),ionn,iterations);
                 end
-                %               energies(ionn,:)=junk;
             end
         end
         %      E(ionn)=mean(energies(ionn,:)); % Why does it take an arithmetic average of all the energy levels? --Yikai (12.02.2020)
-
-        symm_equal = 1; % HMR: hack to calc only one ion per unit cell and copy to others (equivalent by symmetry) --Yikai (10.02.2020)
-        if symm_equal 
-            for ionn=2:4 % sets ionn=4 to end loop over ions.
-                energies(ionn,:)=energies(1,:);
-                for i=1:size(ion.name,1)
-                   ion.mom_hyp(ionn,:,i)=ion.mom_hyp(1,:,i);
-                   ion.mom(ionn,:,i)=ion.mom(1,:,i);
-                end
-            end
-        break % exits the for ionn=1:4 loop
-        end % hack by HMR
+        
+        symm_equal = 1; 
+        if symm_equal % HMR: equivalency by symmetry) --Yikai (10.02.2020)
+            energies = repmat(energies(1,:),4,1);
+            ion.mom_hyp = repmat(ion.mom_hyp(1,:,:),4,1,1);
+            ion.mom = repmat(ion.mom(1,:,:),4,1,1);
+            break % exits the for ionn=1:4 loop
+        end 
     end
 
     momente_mean=0;
@@ -167,6 +164,7 @@ for iterations=1:NiterMax
     end
 end
 
+energies = squeeze(energies);
 E=energies(1,:);
 V = v;
 h_mf1 = h_mf;
@@ -221,34 +219,34 @@ Jx=(Jp+Jm)/2;
 Jy=(Jp-Jm)/2i;
 
 %Calculate Hamiltonian
-Hzeeman=(-gLande*0.05788)*(hvec(1)*Jx+hvec(2)*Jy+hvec(3)*Jz);
+Hzeeman=(-gLande*0.05788)*(hvec(1)*Jx+hvec(2)*Jy+hvec(3)*Jz); %in meV (Yikai)
 Hdipole=h_dipol(1)*Jx+h_dipol(2)*Jy+h_dipol(3)*Jz;
 Ham=Hcf+Hzeeman-Hdipole;
 
 %Diagonalize
-[v,e]=eig(Ham);
+[v,e]=eig(Ham); %in meV
 E=e;
 e=real(diag(e));
 e=e-min(e);
 [e,n]=sort(e);
 v=v(:,n);
+beta = 1/(0.08617*t); % [kB*T]^-1 in [meV]
 
 %Calculate Matrixelements and Moments
-if t==0
-    % At zero temperature, use only lowest eigenvalue.
+if t==0 % At zero temperature, use only lowest eigenvalue.
     energies=E(1,1);
     jx=real(v(:,1)'*Jx*v(:,1));
     jy=real(v(:,1)'*Jy*v(:,1));
     jz=real(v(:,1)'*Jz*v(:,1));
-else
-    % Boltzman factor (with t in Kelvin)
+else % Boltzman factor (with t in Kelvin)
     % energien korrigieren, damit positiv, sonst NaN Fehler mit exp()
     e=e-min(e);
-    z=exp(-e/(t/11.6))/sum(exp(-e/(t/11.6)));
+    z=exp(-e*beta)/sum(exp(-e*beta)); % Density matrix element
     jx=real(diag(v'*Jx*v))'*z;
     jy=real(diag(v'*Jy*v))'*z;
     jz=real(diag(v'*Jz*v))'*z;
-    energies=sum(E)*z;
+%     energies=sum(E)*z; % This assignment is very puzzling --Yikai
+    energies = e;
 end
 
 return
@@ -284,29 +282,27 @@ Ham=Hcfh+Hzeeman-h_dipol(1)*Jxh-h_dipol(2)*Jyh-h_dipol(3)*Jzh + A*(Ixh*Jxh + Iyh
 
 %Diagonalize
 [v,e]=eig(Ham);
-% E=e;
-e=real(diag(e));
-e=e-min(e); % calculate the energy gaps of excited states from the ground state energy.
+e=real(diag(e)); % Take only the real part of the eigen-energy to form a diaganol matrix
+e=e-min(e); % Normalize the energy amplitude to the lowest eigen-energy
 [e,n]=sort(e); % sort the energy from lowest to the highest
-v=v(:,n);
+v=v(:,n); % sort the eigen-vectors in its basis accordingly
+beta = 1/(0.08617*t); % [kB*T]^-1 in [meV]
 
-%Calculate Matrixelements and Moments
-if t==0
-    % At zero temperature, use only lowest eigenvalue.
-%     energies=E(1,1);
-energies=e;
+%Calculate Matrix elements and Moments
+if t==0 
+    energies = e;
+    % energies=e(1,1); % At zero temperature, use only lowest eigenvalue.
     jx=real(v(:,1)'*Jxh*v(:,1));
     jy=real(v(:,1)'*Jyh*v(:,1));
     jz=real(v(:,1)'*Jzh*v(:,1));
-else
-    % Boltzman factor (with t in Kelvin)
+else % Boltzman factor (with t in Kelvin)
     % energien korrigieren, damit positiv, sonst NaN Fehler mit exp()
-    z=exp(-e/(t/11.6))/sum(exp(-e/(t/11.6)));
-    jx=real(diag(v'*Jxh*v))'*z;
+    z=exp(-e*beta)/sum(exp(-e*beta)); % density matrix element
+    jx=real(diag(v'*Jxh*v))'*z; % Calculate the expectation values
     jy=real(diag(v'*Jyh*v))'*z;
     jz=real(diag(v'*Jzh*v))'*z;
-%     energies=sum(E)*z;
-  energies=e;
+%     energies=sum(E)*z; % this is a puzzling assignment (Yikai)
+    energies=e;
 end
 
 return
