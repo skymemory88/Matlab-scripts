@@ -37,6 +37,7 @@
 % xlabel('Frequency (GHz)');
 % ylabel('S11 response');
 %% 2D color plot of S11
+% % use 'dealta' to move the frequency window and central freqeuncy by steps
 % clearvars -except delta freq_l freq_h w0
 % delta = -0.02;
 % freq_l = freq_l+delta;
@@ -65,38 +66,39 @@ Option = 2;
 path = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output';
 cd(path);
 temp = 0.300;
+
 if Option == 1
 %% Option 1: Perturbative treatment of resonant frequency (working progress)
-    % load(num2str(temp*1000,'sim_%umK_trans.mat')); % Load the energy levels from mean field calculations
-    % w_up = 0.5.*(Ediff(:,:) + w0)+0.5.*sqrt((Ediff(:,:)-w0).^2 + 4*Gamma^2); %Upper perturbed resonant frequencies of the cavity by different transition lines
-    % w_low = 0.5.*(Ediff(:,:) + w0)-0.5.*sqrt((Ediff(:,:)-w0).^2 + 4*Gamma^2); % Lower perturbed resonant frequencies of the cavity by different transition lines
+    load(num2str(temp*1000,'sim_%umK_trans.mat')); % Load the energy levels from mean field calculations
+    w_up = 0.5.*(Ediff(:,:) + w0)+0.5.*sqrt((Ediff(:,:)-w0).^2 + 4*Gamma^2); %Upper perturbed resonant frequencies of the cavity by different transition lines
+    w_low = 0.5.*(Ediff(:,:) + w0)-0.5.*sqrt((Ediff(:,:)-w0).^2 + 4*Gamma^2); % Lower perturbed resonant frequencies of the cavity by different transition lines
 
-    % wh = double.empty(size(w,1),0);
-    % wl = double.empty(size(w,1),0);
-    % ww = double.empty(size(w,1),0);
-    % for ii = 1:length(fields)
-    %     [~,idx] = min(Ediff(:,ii)-w0);
-    %     wh(ii) = 0.5.*(Ediff(idx,ii) + w0)+0.5.*sqrt((Ediff(idx,ii)-w0).^2 + 4*Gamma^2);
-    %     wl(ii) = 0.5.*(Ediff(idx,ii) + w0)-0.5.*sqrt((Ediff(idx,ii)-w0).^2 + 4*Gamma^2);
-    %     ww(ii) = (19*wh(ii)+wl(ii))/20; % Take a weighted average between the upper and lower levels
-    %     ww(ii) = mean(w_up(:,ii));
-    % end
-    % ww = w0 - Gamma^2*(Ediff(idx,:)-w0)./((Ediff(idx,:)-w0).^2 + Gamma^2);
-    % ww = repmat(ww',[1,501]);
-    % figure
-    % plot(fields, w_up, '-k', fields, w_low, '-r'); % check point
-    % figure
-    % plot(fields, ws,'-k'); % check point
-    % figure
-    % plot(fields, ww,'-k'); % check point
+    wh = double.empty(size(w,1),0);
+    wl = double.empty(size(w,1),0);
+    ww = double.empty(size(w,1),0);
+    for ii = 1:length(fields)
+        [~,idx] = min(Ediff(:,ii)-w0);
+        wh(ii) = 0.5.*(Ediff(idx,ii) + w0)+0.5.*sqrt((Ediff(idx,ii)-w0).^2 + 4*Gamma^2);
+        wl(ii) = 0.5.*(Ediff(idx,ii) + w0)-0.5.*sqrt((Ediff(idx,ii)-w0).^2 + 4*Gamma^2);
+        ww(ii) = (19*wh(ii)+wl(ii))/20; % Take a weighted average between the upper and lower levels
+        ww(ii) = mean(w_up(:,ii));
+    end
+    ww = w0 - Gamma^2*(Ediff(idx,:)-w0)./((Ediff(idx,:)-w0).^2 + Gamma^2);
+    ww = repmat(ww',[1,501]);
+    figure
+    plot(fields, w_up, '-k', fields, w_low, '-r'); % check point
+    figure
+    plot(fields, ws,'-k'); % check point
+    figure
+    plot(fields, ww,'-k'); % check point
 
-    % ws1 = -0.35.*B0+5; % make two fictitious dispersion relations for checkpoints
-    % ws2 = +0.75.*B0;
-    % plot(y,ws1,y,ws2);
-    % xlim([0 9])
-    % ylim([1 5])
+    ws1 = -0.35.*B0+5; % make two fictitious dispersion relations for checkpoints
+    ws2 = +0.75.*B0;
+    plot(y,ws1,y,ws2);
+    xlim([0 9])
+    ylim([1 5])
 elseif Option == 2
-%% Option 2 Load existing susceptibilities
+%% Option 2 Load existing susceptibilities and interpolate
     filename = ['LHF_',num2str(temp,'%.3f.mat')];
     load(filename,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
     E = squeeze(eee);
@@ -113,18 +115,18 @@ elseif Option == 2
     x1 = interp2(fields,freq_total,x1z,B0,w);
     x2 = interp2(fields,freq_total,x2z,B0,w);
 elseif Option == 3
-%% Option 3: Calculate susceptabilities for resonant frequency shift
+%% Option 3: Calculate susceptabilities for resonant frequency shift (takes long time)
     filename = ['LHF_',num2str(temp,'%.3f.mat')];
     load(filename,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
     if ~exist ('x1','var') && ~exist('x2','var')
         gama = 0.00005; % define lifetime (meV) for hyperfine levels
-        [fields, Ediff, x1, x2] = linear_response(eee,fff,ttt,vvv,gama)); % Calculate susceptibilities
+        [fields, Ediff, x1, x2] = linear_response(eee,fff,ttt,vvv,gama); % Calculate susceptibilities
     end
     x1 = x1';
     x2 = x2';
     [w,B0] = meshgrid(freq,field);
 end
-%% Calculate S11 response
+
 w0 = w0./(sqrt(1+filFctr.*(x1+1i*x2)));
 Ediff = Ediff(1:7,:); % Select the levels to include
 
