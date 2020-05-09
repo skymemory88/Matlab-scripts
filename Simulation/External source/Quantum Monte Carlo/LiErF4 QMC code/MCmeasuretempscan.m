@@ -18,8 +18,10 @@ for a=1:3
     for b=1:3
         for t=1:length(params.temp)
             if(params.temp(t)~=0)
-                chi_fdt(a,b,t)=(mean(mmagsq(t,a,b,:))-mean(mmag(t,:,a))*mean(mmag(t,:,b)))/params.temp(t);
-                chi(a,b,t)=mean(mean(msq0(t,a,b,:,:)))/params.temp(t);
+%                 chi_fdt(a,b,t)=(mean(mmagsq(t,a,b,:))-mean(mmag(t,:,a))*mean(mmag(t,:,b)))/params.temp(t);
+%                 chi(a,b,t)=mean(mean(msq0(t,a,b,:,:)))/params.temp(t);
+                chi_fdt(a,b,t)=(mean(mmagsq(a,b,:,t))-mean(mmag(:,a,t))*mean(mmag(:,b,t)))/params.temp(t);
+                chi(a,b,t)=mean(mean(msq0(a,b,:,:,t)))/params.temp(t);
             end
         end
     end
