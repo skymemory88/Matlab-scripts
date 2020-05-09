@@ -97,7 +97,7 @@ if Option == 1
     % ylim([1 5])
 elseif Option == 2
 %% Option 2 Load existing susceptibilities
-    filename = num2str(temp,'%.3f.mat');
+    filename = ['LHF_',num2str(temp,'%.3f.mat')];
     load(filename,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
     E = squeeze(eee);
     V = vvv;
