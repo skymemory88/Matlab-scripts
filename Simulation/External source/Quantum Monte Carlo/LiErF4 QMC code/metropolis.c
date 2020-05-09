@@ -6,10 +6,13 @@
 #include <stdio.h>
 
 
-void metropolis(const double dE, const double T, double* acc);
+void metropolis(const double dE,
+                const double T,
+                double* acc);
 
-void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) 
-{
+void mexFunction(
+        int nlhs, mxArray *plhs[],
+        int nrhs, const mxArray *prhs[]) {
     const mxArray *m_dE, *m_T;
     double dE, T;
     double *acc;
@@ -35,7 +38,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 
 
-void metropolis(const double dE, const double T, double* acc)
+void metropolis(const double dE,
+                const double T,
+                double* acc)
 {
     double alpha;
     
