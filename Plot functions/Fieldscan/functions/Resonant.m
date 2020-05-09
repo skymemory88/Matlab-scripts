@@ -66,7 +66,7 @@ path = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External 
 cd(path);
 temp = 0.300;
 if Option == 1
-%% Option 1: Perturbative treatment of resonant frequency
+%% Option 1: Perturbative treatment of resonant frequency (working progress)
     % load(num2str(temp*1000,'sim_%umK_trans.mat')); % Load the energy levels from mean field calculations
     % w_up = 0.5.*(Ediff(:,:) + w0)+0.5.*sqrt((Ediff(:,:)-w0).^2 + 4*Gamma^2); %Upper perturbed resonant frequencies of the cavity by different transition lines
     % w_low = 0.5.*(Ediff(:,:) + w0)-0.5.*sqrt((Ediff(:,:)-w0).^2 + 4*Gamma^2); % Lower perturbed resonant frequencies of the cavity by different transition lines
@@ -114,9 +114,11 @@ elseif Option == 2
     x2 = interp2(fields,freq_total,x2z,B0,w);
 elseif Option == 3
 %% Option 3: Calculate susceptabilities for resonant frequency shift
+    filename = ['LHF_',num2str(temp,'%.3f.mat')];
+    load(filename,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
     if ~exist ('x1','var') && ~exist('x2','var')
         gama = 0.00005; % define lifetime (meV) for hyperfine levels
-        [fields, Ediff, x1, x2] = SuscptCal(path, temp, freq, gama); % Calculate susceptibilities
+        [fields, Ediff, x1, x2] = linear_response(eee,fff,ttt,vvv,gama)); % Calculate susceptibilities
     end
     x1 = x1';
     x2 = x2';
