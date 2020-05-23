@@ -1,4 +1,4 @@
-function Field_scan
+function Field_scan_v3
     format long;  
     addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
     addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
