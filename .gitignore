@@ -1,0 +1,17 @@
+**/*.mat
+
+**/*.ini
+
+**/*.asv
+
+SpinW
+
+Plot functions/Fieldscan/Field_scan.m
+
+Plot functions/Fieldscan/Field_scan_v2.m
+
+Plot functions/Phase diagram/functions/
+
+Plot functions/spec1d--Henrik/
+
+Plot functions/mumax plotter/
