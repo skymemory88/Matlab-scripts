@@ -1,4 +1,4 @@
-function [ion,history,E,V]=LiIonsF4(ion,temp,field,demagn,alpha)
+function [ion,history,E,V]=LiIonsF4(ion,temp,field,phi,demagn,alpha)
 %Compute the magnetization and the alternated magnetization for a range
 %of temperatures and fields. (1-x) is the dilution. temp and h are the 
 %temperature and field arrays. xHypIso is the proportion of nuclear moments
@@ -6,7 +6,8 @@ function [ion,history,E,V]=LiIonsF4(ion,temp,field,demagn,alpha)
 %the ratio a/c (for demagnetization tensor).
 
 global strategies;
-global rundipole
+global rundipole;
+global Options;
 
 t=tic;
     
@@ -154,14 +155,16 @@ for j = 1:length(temp)
         eee(i,1,:)=energy;
         vvv(i,1,:,:)=v;
     end
-    fff = field;
     ttt = temp(j);
 % Save the data split by temperatures when there are multi-dimensional, otherwise save data outside this function
-    if size(field,2) >1 && length(temp) >1
-        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-        tit=['Li',ion.name(1:end), 'F4_', num2str(temp(j),'%3.3f'),'.mat'];
-        save(tit,'ttt','fff','eee','vvv','h_mf2','-v7.3')
-        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan')
+    if Options.saving == true
+        if size(field,2) >1 && length(temp) >1
+            cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
+            tit=strcat('Hscan_Li',[ion.name(ion.prop~=0)], 'F4_', sprintf('%1$3.3fK_%2$uDeg',temp(j),phi*pi/180),'.mat');
+            save(char(tit),'ttt','field','eee','vvv','h_mf2')
+%             save(char(tit),'ttt','field','eee','vvv','h_mf2','-v7.3')
+            cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan')
+        end
     end
 end
 

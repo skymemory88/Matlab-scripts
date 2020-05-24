@@ -11,30 +11,31 @@ function Field_scan_v4a
     plotopt.ftsz = 12;
     plotopt.mksz = 5;
 
-    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC162\SC162-1 (2.2 x 1.9 x 0.9 mm)\2020.05.23';
+    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC162\SC162-1 (2.2 x 1.9 x 0.9 mm)\2020.05.24';
     % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC138 (2x1.8x1mm)/2020.03.05';
     %The first line is for windows, the second line is for mac OS
-    filename = '2020_05_0001';
-
+    filename = '2020_05_0008.dat';
+    fileobj = fullfile(filepath,filename);
+    
 % Operation options
     opt  = 1;
 
     switch opt
         case 1
             % Simple color plot of minimally processed raw data
-            option1(filepath, filename, plotopt)
+            option1(fileobj, plotopt)
         case 2
             % Color plot + Data fitting
-            option2(filepath, filename, plotopt)
+            option2(fileobj, plotopt)
         case 3
             % Data fitting and file saving (w/o plots)
-            option3(filepath, filename, plotopt)
+            option3(fileobj, plotopt)
     end
 end
 
-function option1(filepath,filename, plotopt)
+function option1(fileobj, plotopt)
 
-out = readdata_v4(filepath,filename);
+out = readdata_v4(fileobj);
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
 H = out.data.DCField1;
@@ -68,22 +69,23 @@ FdB = TriScatteredInterp(HH,freq,dB);
 zq = FdB(xq,yq);
 
 % Plot the interpolated frequency response data in a field scan using color map
-% figure
+figure
 cmap = pcolor(xq,yq,zq);
 set(cmap, 'edgeColor','none')
 shading interp;
 colorbar
 set(gca,'fontsize',plotopt.ftsz)
-t(1) = xlabel('Field (T)');
-t(2) = ylabel('Frequency (GHz)');
-tt(1) = title(num2str(Temperature,'S11 response at T = %3.3f K'));
+xlabel('Field (T)');
+ylabel('Frequency (GHz)');
+xticks(linspace(field_l,field_h,5));
+title(num2str(Temperature,'S11 response at T = %3.3f K'));
 
 % Plot the temperature profile against magnetic field
 % hfig2 = setfig(12);
 figure
 plot(H(1:100:end),lck(1:100:end),'s-')
 xlabel('DC Magnetic field')
-ylabel('Hall resistance')
+ylabel('Hall voltage (mV)')
 title('Magnetic field vs Temperature')
 
 figure
@@ -91,17 +93,15 @@ plot(H(1:100:end),T1(1:100:end),'o-')
 xlabel('DC Magnetic field')
 ylabel('Temperature')
 title('Magnetic field vs Temperature')
-
-cd(filepath);
 end
 
-function option2(filepath,filename, plotopt)
+function option2(fileobj, plotopt)
 %Set data range and parameters
 order = 4; % set to what order the median filters is applied
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
 % extract data from raw data file
-out = readdata_v4(filepath,filename);
+out = readdata_v4(fileobj);
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;  
 H = out.data.DCField1;
@@ -405,17 +405,16 @@ xlabel('Field (T)');
 ylabel('Q factor');
 legend('Quality factor from Lorentzian fit', 'Quality factor from FWHM');
 title(num2str(Temperature,'Quality factor, T= %.3f'));
-cd(filepath);
 end
 
-function option3(filepath, filename, plotopt)
+function option3(fileobj, plotopt)
 %% Plot data
 %Set data range and parameters
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 order = 4; % set to what order the median filters is applied
 
 % extract data from raw data file
-out = readdata_v3(filepath,filename);
+out = readdata_v4(fileobj);
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;  
 H = out.data.DCField1;
@@ -530,7 +529,8 @@ set(gca,'fontsize',plotopt.ftsz)
 hPara = [H0(Hpos), field_l, field_h];
 fPara = [(freq_l+freq_h)/2, freq_l, freq_h];
 [fitPara,~] = wk_cpl_fit(H0,f0,hPara,fPara);
-cd(filepath);
+
+cd(fileparts(fileobj));
 tit=[direction,num2str(Temperature,'%3.3f'), excitation,'.mat'];
 save(tit,'H0','f0','dB0','hPara','fPara','fitPara');
 end

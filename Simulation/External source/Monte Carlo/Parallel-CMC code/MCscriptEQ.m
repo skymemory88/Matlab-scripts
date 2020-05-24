@@ -45,8 +45,8 @@ params.C=[  1  1  1
             1 -1  1];
         
 % number of replicates of the supercell in each dimension for dipole interaction calculation
-params.replicas=[10;10;10];
-% params.replicas=[5;5;5];
+% params.replicas=[10;10;10];
+params.replicas=[0;0;0];
 params.abc=a{num_abc}; 
 
 % Leave as it is
@@ -85,6 +85,7 @@ end
 
 cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Tc scaling (Ising Basis)');
 % cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Iteration limit');
+% cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Tc scaling');
 filename=sprintf(['resultsEQ_',params.jobid,'.mat']);
 save(filename,'inter','lattice','relaxE','params','ion','EQlat_mom');
 cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Monte Carlo\Parallel-CMC code');

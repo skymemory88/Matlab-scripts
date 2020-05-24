@@ -47,7 +47,7 @@ for iterations=1:Niter
     while(chosen==0)
         new_ion=randi(size(lattice,2),1,1);
         [alpha_new, beta_new]=random_angles;
-        [new_mom, new_E_Zee,field_change]=cl_eff_mod(alpha_new, beta_new, field, lattice{new_ion},field_change);
+        [new_mom, new_E_Zee,field_change]=cl_eff_mod2(alpha_new, beta_new, field, lattice{new_ion},field_change);
         chosen=1;
     end
     

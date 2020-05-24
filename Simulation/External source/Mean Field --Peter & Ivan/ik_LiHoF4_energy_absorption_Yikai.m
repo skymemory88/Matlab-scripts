@@ -13,15 +13,18 @@ strategies.symmetry = false; % Copy the state of one site to its crystal symmetr
 global rundipole % Run dipole calculations or not
 rundipole = true;
 %% define temp / field scan
-Q = false; %Chose scan type: field scan (TRUE) or temperature scan (FALSE)
+global Options;
+Options.scantype = true; %Choose scan type: field scan (TRUE) or temperature scan (FALSE)
+Options.plotting = false; %Choose whether or not to plot the figures at the end
+Options.saving = true;
 
-if Q == 1
+if Options.scantype == 1
 %         temp = [0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.8 1.2 1.6 1.8 2];
-        temp = 0.0;
+        temp = 0.15;
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
-        Hmax = 9.0; % Maximum magnetic field
-        H_step = 0.2; % Field scan resolution
+        Hmax = 17.0; % Maximum magnetic field
+        H_step = 0.05; % Field scan resolution
         phi = 0; % ab-plane rotation, phi=0 means H along x (in radian)
         theta = 0; % theta = 0 indicates a transverse magnetic field
 
@@ -31,15 +34,18 @@ if Q == 1
         Hz = (Hmin:H_step:Hmax)*sin(theta);
         fields = [Hx;Hy;Hz];
 
-elseif Q == 0
+elseif Options.scantype == 0
         hypFr = 1.0; % Scaling factor for hyperfine interaction
-        Hx = 0;
-        Hy = 0;
-        Hz = 0;
+        H = 0; % Static external magnetic field
+        phi = 0; % ab-plane rotation, phi=0 means H along x (in radian)
+        theta = pi/2; % theta = 0 indicates a transverse magnetic field
+        Hx = H*cos(phi)*cos(theta);
+        Hy = H*sin(phi)*cos(theta);
+        Hz = H*sin(theta);
         temp = 0:0.025:2.0 ; %  range of temperatures
         fields = [Hx;Hy;Hz];
 else
-    error('Q must equal to 0 or 1')
+    error('Options.scantype must equal to 0 or 1')
 end
 %% define LiRF4
 
@@ -123,59 +129,67 @@ ion.mom_hyp=ion.mom;
 demagn=true; % Demagnetization factor included if TRUE
 alpha=0; % shape in calculating demagnetization factor is a needle (0), sphere (1)
 %% Calculate and save results inside the LiIonsF4 function
-[ion,history,E,V]=LiIonsF4(ion,temp,fields,demagn,alpha);
+[ion,history,E,V]=LiIonsF4(ion,temp,fields,phi,demagn,alpha);
 %% Plot data
 n = ion.prop~=0;
-if Q == 1 % For field scan
-    J_H=zeros([3,size(fields,2),size(ion.name,1)]);  
-    Jnorm_H=zeros([size(fields,2),size(ion.name,1)]);
-else % for temperature scan
-    J_H=zeros([3,size(temp,2),size(ion.name,1)]);  
-    Jnorm_H=zeros([size(temp,2),size(ion.name,1)]);
+if Options.plotting == true
+    if Options.scantype == 1 % For field scan
+        J_H=zeros([3,size(fields,2),size(ion.name,1)]);
+        Jnorm_H=zeros([size(fields,2),size(ion.name,1)]);
+    else % for temperature scan
+        J_H=zeros([3,size(temp,2),size(ion.name,1)]);
+        Jnorm_H=zeros([size(temp,2),size(ion.name,1)]);
+    end
+    
+    for ii=1:size(ion.name,1)
+        J_H(:,:,ii)=squeeze(mean(ion.Js_hyp(:,:,:,:,ii),1)); % With hyperfine
+        %         J_H(:,:,i)=squeeze(mean(ion.Js(:,:,:,:,i),1)); % Without hyperfine
+        Jnorm_H(:,ii)=squeeze(mean(ion.Jmom_hyp_norm(:,:,ii),1)); % with hyperfine
+        %         Jnorm_H(:,i)=squeeze(mean(ion.Jmom_norm(:,:,i),1)); % Without hyperfine
+    end
+    
+    HH = zeros(1,size(fields,2)); % Calculate the norm of the applied magnetic field
+    for ii = 1:size(fields,2)
+        HH(ii) = norm(fields(:,ii));
+    end
+    
+    %Plot spin moments
+    figure
+    hold on
+    p1 = plot(HH(1:10:end),Jnorm_H(1:10:end,n),'-o','Color', 'black', 'LineWidth', 2, 'MarkerSize',4);
+    title(sprintf('Norm of spin moments for %s', char(ion.name(n))));
+    xlabel('Magnetic field (|B| [T])');
+    ylabel('Spin moment norm <J_n>');
+    
+    figure
+    hold on
+    p2_1 = plot(HH,J_H(:,:,n),'-','LineWidth', 4);
+    p2_2 = plot(HH(1:10:end), J_H(:,1:10:end,n),'o','MarkerSize',8); % Add spaced markers to the <J> curves
+    title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
+    legend('<J_{norm}>','<J_x>','<J_y>','<J_z>');
+    xlabel('Magnetic field (|B| [T])');
+    ylabel('Spin moment <J>');
 end
-
-for ii=1:size(ion.name,1)
-    J_H(:,:,ii)=squeeze(mean(ion.Js_hyp(:,:,:,:,ii),1)); % With hyperfine
-%         J_H(:,:,i)=squeeze(mean(ion.Js(:,:,:,:,i),1)); % Without hyperfine 
-    Jnorm_H(:,ii)=squeeze(mean(ion.Jmom_hyp_norm(:,:,ii),1)); % with hyperfine
-%         Jnorm_H(:,i)=squeeze(mean(ion.Jmom_norm(:,:,i),1)); % Without hyperfine
-end
-
-HH = zeros(1,size(fields,2)); % Calculate the norm of the applied magnetic field
-for ii = 1:size(fields,2)
-    HH(ii) = norm(fields(:,ii));
-end
-
-% %% %Plot spin moments
-% figure
-% hold on
-% p1 = plot(HH(1:10:end),Jnorm_H(1:10:end,n),'-o','Color', 'black', 'LineWidth', 2, 'MarkerSize',4);
-% title(sprintf('Norm of spin moments for %s', char(ion.name(n))));
-% xlabel('Magnetic field (|B| [T])');
-% ylabel('Spin moment norm <J_n>');
-% 
-% figure
-% hold on
-% p2_1 = plot(HH,J_H(:,:,n),'-','LineWidth', 4);
-% p2_2 = plot(HH(1:10:end), J_H(:,1:10:end,n),'o','MarkerSize',8); % Add spaced markers to the <J> curves
-% title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
-% legend('<J_{norm}>','<J_x>','<J_y>','<J_z>');
-% xlabel('Magnetic field (|B| [T])');
-% ylabel('Spin moment <J>');
 %% Save the data files
 % if more than one temperatures provided, the data is saved insied LiIonF4() function
-if Q == 1 && length(temp) == 1 % Field scan: Q=1, Temperature scan: Q=0
-    elem = [ion.name(n)];  
-    tit = strcat('fieldscan_',num2str(hypFr*100,3),'%_Li',elem(1:end),num2str(phi*pi/180,'F4_%udeg.mat'));
-%     cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-    cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-    save(char(tit),'fields','ion','history','E','V')
-% if more than one field value provided, the data is saved insied LiIonF4() function
-elseif Q == 0 && size(fields,2) == 1 % Field scan: Q=1, Temperature scan: Q=0
-    cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-    elem = [ion.name(n)];  
-    tit = strcat('tempscan_',num2str(hypFr*100,3),'%_Li',elem(1:end),'F4.mat');
-    save(char(tit),'temp','fields','ion','history','E','V')
+if Options.saving == true
+    eee = squeeze(E);
+    fff = fields;
+    ttt = temp;
+    vvv = squeeze(V);
+    if Options.scantype == 1 && length(temp) == 1 % Field scan: Options.scantype=1, Temperature scan: Options.scantype=0
+        elem = [ion.name(n)];
+        tit = strcat('Hscan_','Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$uDeg.mat', temp, phi*pi/180));
+        %     cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
+        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
+        save(char(tit),'ttt','fff','eee','vvv','ion','history')
+        % if more than one field value provided, the data is saved insied LiIonF4() function
+    elseif Options.scantype == 0 && size(fields,2) == 1 % Field scan: Options.scantype=1, Temperature scan: Options.scantype=0
+        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
+        elem = [ion.name(n)];
+        tit = strcat('Tscan_Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$uDeg.mat', temp, phi*pi/180));
+        save(char(tit),'ttt','fff','eee','vvv','ion','history')
+    end
+    cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan')
 end
-cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan')
 end

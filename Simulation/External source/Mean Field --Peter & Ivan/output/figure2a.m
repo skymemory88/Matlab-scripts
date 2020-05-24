@@ -3,9 +3,9 @@ function figure2a
 hold on
 clearvars
 % temp=[0.100, 0.300, 0.500, 0.800, 1.3];
-temp = [0.200];
+temp = [0.150];
 color = ["black","red","blue","magenta","green","yellow","cyan"];
-theta = [90]; % Angle between the transverse field and a-axis
+theta = [0]; % Angle (in degrees) in the transverse field plane
 marker = [":","-.","--","-"];
 % theta = 0;
 % color = {[255 127 0], [255 0 127], [127 0 255], [0 127 255], [0 255 127]} ;
@@ -18,7 +18,7 @@ figs = gobjects(7,numel(temp));
             cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output\');
 %             cd('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Simulation/External source/Mean Field --Peter & Ivan/output/A=1.0_angles_Peter')
 %             lname=[num2str(temp(iter),'%3.3f'),num2str(theta(iter2),'_%u'),'.mat']; 
-            lname=[num2str(temp(iter),'%3.3f'),'.mat']; 
+            lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$uDeg',temp(iter),theta),'.mat']; 
             
             load(lname,'-mat','eee','fff');
             fields = vecnorm(fff);
@@ -123,18 +123,6 @@ figs = gobjects(7,numel(temp));
     end
     lgd = legend(figs(1,:),lg);
     lgd.FontSize = 12;
-    filename = strcat('sim_',num2str(temp*1000,'%u'),'mK_trans.mat');
-    save(filename,'fields','Ediff');
-end
-
-function saveplots(hfig,figname)
-% if strcmpi(input(['Save plot ' num2str(hfig) ' {' figname '}? Y/[N]: '],'s'),'y')
-cd('D:\Projects\LiHoF4_Network_Analyzer\plots\new_analysis\figure2a')
-saveas(figure(hfig),[figname '.fig'],'fig');
-print(figure(hfig),[figname  '.jpg'],'-djpeg','-r600');
-print2eps(figname,hfig)
-[result,msg] = eps2xxx([figname '.eps'],{'jpeg'});
-disp(['Figure ' figname ' saved to '])
-disp(cd)
-% cd('C:\Users\ikovacev\Documents\Projects\LiHoF4_EPR_MF_calculations_and_literature\saved_mf_results\3.42GHz\absorption')
+%     filename = strcat('sim_',num2str(temp*1000,'%u'),'mK_trans.mat');
+%     save(filename,'fields','Ediff');
 end

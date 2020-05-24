@@ -5,22 +5,23 @@ Options.plotting = false; % Decide whether or not to plot the data at the end
 Options.saving = true;
 
 % Temperatures = [0.250, 0.300, 0.350, 0.500];
-Temperatures = [0.100];
+Temperatures = 0.150;
+phi = 0;
     for ii = 1:length(Temperatures)
-        filenames = strcat('LHF_', num2str(Temperatures(ii),'%.3f'),'.mat');
+        filenames = strcat('Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$uDeg', Temperatures(ii), phi),'.mat');
         load(filenames,'-mat','eee','fff','ttt','vvv'); % loads variables "fields", "temp", "E" and "V" 
         % which are eigenstates and eigenvalues calculated in the mean-field model 
         % as a function of transverse field and temperature
         
-%         [rechi1x, imchix, rechi1y, imchiy, rechi1z, imchiz]=linear_response(eee,fff,ttt,vvv);
-        [~, ~, ~, ~, rechi1z, imchiz]=linear_response(eee,fff,ttt,vvv);
+%         [rechi1x, imchix, rechi1y, imchiy, rechi1z, imchiz] = linear_response(eee,fff,ttt,vvv);
+        [fields, freq_total, rechi, imchi] = linear_response(eee,fff,ttt,vvv);
     end
 %% Color plot the susceptibilities
 if Options.plotting == true
 % Color plot of the imaginary part of the susceptibility of x component
-    hfig0 = figure (1);
+    figure (1);
     clf
-    hp1 = pcolor(fields(1,:),freq_total,squeeze(log(imchix)));
+    hp1 = pcolor(fields(1,:),freq_total,squeeze(log(imchi.x)));
     set(hp1, 'edgeColor','none')
     caxis([-23 2]);
     colorbar
@@ -31,7 +32,7 @@ if Options.plotting == true
 % Color plot of the imaginary part of the susceptibility of y component
     hfig1 = figure (2);
     clf
-    hp1 = pcolor(fields(1,:),freq_total,squeeze(log(imchiy)));
+    hp1 = pcolor(fields(1,:),freq_total,squeeze(log(imchi.y)));
     set(hp1, 'edgeColor','none')
     caxis([-23 2]);
     colorbar
@@ -40,9 +41,9 @@ if Options.plotting == true
     title({'Imaginary part of Susceptibility (log scale)', 'in y direction'})
     
 % Color plot the imaginary part of the susceptibilities of z component
-    hfig2 = figure (3);
+    figure (3);
     clf
-    hp2 = pcolor(fields(1,:),freq_total,squeeze(log(imchiz)));
+    hp2 = pcolor(fields(1,:),freq_total,squeeze(log(imchi.z)));
     set(hp2, 'edgeColor','none')
     caxis([-23 2]);
     colorbar
@@ -51,11 +52,11 @@ if Options.plotting == true
     title({'Imaginary part of Susceptibility (log scale)', 'in z direction'})
 
 % Plot the real part of the susceptibility of the z component
-    hfig4 = figure (4);
+    figure (4);
     clf
     set(hfig1,'position',[50 100 600 400])
-    hp2 = pcolor(fields(1,:),freq_total,squeeze(rechi1z));
-    set(hp2, 'edgeColor','none')
+    hp3 = pcolor(fields(1,:),freq_total,squeeze(rechi.z));
+    set(hp3, 'edgeColor','none')
     caxis([-23 2]);
     colorbar
     xlabel('Magnetic field (T)')
@@ -72,15 +73,15 @@ if Options.saving == true
     % x2y = squeeze(imchiy);
     % save(strcat('x1y_x2y_',num2str(ttt*1000),'mK'),'fields','freq_total','x1y','x2y')
 
-    x1z = squeeze(rechi1z); 
-    x2z = squeeze(imchiz);
-    save(strcat('x1z_x2z_',num2str(ttt*1000),'mK_5E-5meV_45deg'),'fields','freq_total','x1z','x2z')
+    x1z = squeeze(rechi.z); 
+    x2z = squeeze(imchi.z);
+    save(strcat('LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$uDeg', ttt, phi),'fields','freq_total','x1z','x2z')
 end
 end
 
-function [rechi1x, imchix, rechi1y, imchiy, rechi1z, imchiz]=linear_response(eee,fff,ttt,vvv)
+function [fields, freq_total, rechi, imchi]=linear_response(eee,fff,ttt,vvv)
 % Calculation of susceptibilities
-E = eee;Q
+E = eee;
 V = vvv;
 fields = vecnorm(fff);
 freq_total = (1:0.02:5);
@@ -112,7 +113,7 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
     %Initiate I operators
     Iz=diag(I:-1:-I); %Iz = -I, -I+1,...,I-1,I
     Izh=kron(eye(2*J+1),Iz); % Expand Hilbert space
-    Ip=diag(sqrt((I-[(I-1):-1:-I]).*(I+1+[(I-1):-1:-I])),1); % Nuclear spin ladder operator
+    Ip=diag(sqrt((I-((I-1):-1:-I)).*(I+1+((I-1):-1:-I))),1); % Nuclear spin ladder operator
     Im=Ip'; % Nuclear spin ladder operator
     Iph=kron(eye(2*J+1),Ip); % Expand to match the Hilbert space
     Imh=kron(eye(2*J+1),Im); % Expand to match the Hilbert space
@@ -180,4 +181,11 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
         rechi1z (m,k,1) =  real(sss1)  ;
     end
 end
+imchi.x = imchix;
+imchi.y = imchiy;
+imchi.z = imchiz;
+
+rechi.x = rechi1x;
+rechi.y = rechi1y;
+rechi.z = rechi1z;
 end
