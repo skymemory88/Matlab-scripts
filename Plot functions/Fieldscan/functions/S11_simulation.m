@@ -48,17 +48,17 @@
 % w0 = w0; % Resonant frequency of the bare cavity
 
 clearvars -except delta
-freq_l = 3.68;
-freq_h = 3.77;
+freq_l = 3.69;
+freq_h = 3.73;
 freq_pts = 501;
 freq = linspace(freq_l,freq_h,freq_pts);
-filFctr = 5E-6;
-w0 = 3.72; % Resonant frequency for bare cavity
+filFctr = 1E-5;
+w0 = 3.71; % Resonant frequency for bare cavity
 f2E = 1/241.8; % Convert from GHz to meV
 kB = 0.08617; % [meV/K]
-kappa = 0.05; % Define coupling strength between the driving field and the cavity field
-gamma = -2.0*kappa^2;
-Gamma = 1.5*gamma; % Coupling strength between the cavity field and the spin system
+kappa = 0.06; % Define coupling strength between the driving field and the cavity field
+gamma = -2*kappa^2;
+Gamma = 1.3*gamma; % Coupling strength between the cavity field and the spin system
 % Gamma = -2.0*0.5*0.08^2; % fix Gamma for checkpoint
 
 Option = 2;

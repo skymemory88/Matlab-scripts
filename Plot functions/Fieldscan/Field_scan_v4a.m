@@ -14,7 +14,7 @@ function Field_scan_v4a
     filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC162\SC162-1 (2.2 x 1.9 x 0.9 mm)\2020.05.24';
     % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC138 (2x1.8x1mm)/2020.03.05';
     %The first line is for windows, the second line is for mac OS
-    filename = '2020_05_0008.dat';
+    filename = '2020_05_0003.dat';
     fileobj = fullfile(filepath,filename);
     
 % Operation options
@@ -545,11 +545,11 @@ curdir = cd;
 cd('G:\My Drive\File sharing\PhD projects\LiHoF4\Data\Matlab\Cavity resonator\D24mm_T5mm_G0.2mm\12.02.2019')
 %cd('/Users/yikaiyang/Google Drive/File sharing/PhD projects/LiHoF4/Data/Matlab/Cavity resonator/D24mm_T5mm_G0.2mm/12.02.2019')
 
-%saveas(figure(hfig),[figname '.fig'],'fig');
-%     print(figure(hfig),[figname  '.jpg'],'-djpeg','-r600');
-%     print(figure(hfig),[figname  '.png'],'-dpng','-r600');
-%print2eps(figname,hfig)
-%[~,~] = eps2xxx([figname '.eps'],{'jpeg','pdf'});
+saveas(figure(hfig),[figname '.fig'],'fig');
+print(figure(hfig),[figname  '.jpg'],'-djpeg','-r600');
+print(figure(hfig),[figname  '.png'],'-dpng','-r600');
+print2eps(figname,hfig)
+[~,~] = eps2xxx([figname '.eps'],{'jpeg','pdf'});
 
 disp(['Figure ' figname ' saved to '])
 disp(cd)
