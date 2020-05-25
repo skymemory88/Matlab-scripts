@@ -4,6 +4,14 @@
 
 **/*.asv
 
+**/*.fig
+
+**/*.png
+
+**/*.txt
+
+**/*.dat
+
 SpinW
 
 Plot functions/Fieldscan/Field_scan.m
