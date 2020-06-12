@@ -43,7 +43,7 @@ clearvars -except delta
 % w0 = 3.71;
 % filFctr = 5E-3;
 
-temp = 0.240; % temperature(s)
+temp = 0.150; % temperature(s)
 theta = 0; % Angle (in degrees) in the transverse field plane
 
 %frequency parameters
@@ -69,9 +69,9 @@ gamma = -2*kappa^2;
 % Gamma = 0.8*gamma; % Coupling strength between the cavity field and the spin system
 Gamma = -0.1*0.05^2; % fix Gamma for checkpoint
 
-Option = 2;
+Option = 1;
 Options.Elevel = false;
-Options.Ediff = true;
+Options.Ediff = false;
 Options.savedata = false;
 
 path = genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output');
@@ -103,6 +103,9 @@ end
 
 %Optional: Plot the lowest eight energy levels
 if Options.Elevel == true
+    color = ["black","red","blue","magenta","green","yellow","cyan"];
+    theta = [0]; % Angle (in degrees) in the transverse field plane
+    marker = [":","-.","--","-"];
     figure
     hold on
     plot(fields,E(:,1:8),'Color',[35 107 142]/255,'linewidth',2);
@@ -139,12 +142,16 @@ end
 % Calculate perturbed discpersion relations
 
 w = double.empty(size(Ediff,1)+1,size(field,2),0); % eigen-frequencys
-boltFac = double.empty(size(Ediff,1),size(field,2),0); % Boltzmann factor 
+% boltFac = double.empty(size(Ediff,1),size(field,2),0); % Boltzmann factor 
+temp_Ediff = double.empty(size(Ediff,1),size(field,2),0);
 w(1,:,1) = w0;
 for ii = 2:size(Ediff,1)+1
     w(ii,:) = interp1(fields,Ediff(ii-1,:),field);
-    boltFac(ii-1,:,1) = interp1(fields,bzF(ii-1,:),field);
+    temp_Ediff(ii-1,:,1) = interp1(fields,Ediff(ii-1,:),field);
+%     boltFac(ii-1,:,1) = interp1(fields,bzF(ii-1,:),field);
 end
+Ediff = temp_Ediff;
+clearvars temp_Ediff
 
 % Construct interaction Hamiltonian along magnetic field axis
 ww = double.empty(0,size(Ediff,1)+1,size(field,2));
@@ -164,26 +171,45 @@ for jj = 1:size(field,2)
     Ham(2:end,1) = gs';
     ww(1,:,jj) = eig(Ham);
 end
-w0 = squeeze(ww);
+% pick out the frequencies along the field axis that is closes to bare frequency of the cavity
+wn = abs(squeeze(ww)-w0);
+w0 = ww(wn == min(wn,[],1));
+clearvars wn ww
 
 figure
-pert = plot(field,w0,'--k','linewidth',1);
+plot(field,w0,'--k','linewidth',1);
+hold on
+plot(field,Ediff,'-r');
 xlim([field_l field_h])
-ylim([3.65 3.70])
+ylim([freq_l freq_h])
+
+w0 = repmat(w0,1,size(freq,2)); % expand the resonant frequency to a matrix for calculations in the next step
+[freq,field] = meshgrid(freq,field);
 elseif Option == 2
 %% Option 2 Load existing susceptibilities and interpolate
     filename = ['Hscan_LiHoF4_',sprintf('%1$3.3fK_%2$uDeg.mat',temp,phi)];
     load(filename,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
     E = squeeze(eee);
+    fields = vecnorm(fff);
     V = vvv;
-    [freq,field] = meshgrid(freq,field);
     E2f = 241.8; % Convert Energy (meV) to frequency (GHz)
     Ediff = double.empty(0,size(E,1));
     for i=1:7
         Ediff(i,:) = (E(:,i+1)-E(:,i))*E2f;
     end
+    
+    % interpolate the dispersion relation along field axis
+    temp_Ediff = double.empty(size(Ediff,1),size(field,2),0);
+    for ii = 1:size(Ediff,1)
+        temp_Ediff(ii,:,1) = interp1(fields,Ediff(ii,:),field);
+    end
+    Ediff = temp_Ediff;
+    clearvars temp_Ediff fff vvv eee
+    
     filename = strcat('LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$uDeg.mat',temp,phi));
     load(filename,'-mat','fields','freq_total','x1z','x2z');
+    
+    [freq,field] = meshgrid(freq,field);
     x1 = interp2(fields,freq_total,x1z,field,freq);
     x2 = interp2(fields,freq_total,x2z,field,freq);
     w0 = w0./(sqrt(1+filFctr.*(x1+1i*x2)));
@@ -208,10 +234,11 @@ end
 spins = double.empty(size(Ediff,2),0); % A container for the elements of spin term summation in the denominator of S11
 spin_term = double.empty(size(Ediff,2),size(freq,2),0); % A container for the spin term summation in the denominator of S11
 popul = double.empty(size(Ediff,1),size(Ediff,2),0); % A container for the population factor of the transition levels
-for ii = 1:size(Ediff,2)
+for ii = 1:size(field,1)
     for kk = 1:size(Ediff,1)
        popul(kk,ii,1) = exp(-Ediff(kk,ii).*f2E./(kB*temp))./exp(-min(Ediff(kk,ii)).*f2E./(kB*temp)); % occupation factor
        spins(kk) = 2*Gamma^2.*sqrt(popul(kk,ii,1))./(1i.*(Ediff(kk,ii)-w0(ii,1)) + 3*abs(gamma)); % calculate the spin term for each transition level
+%        spins(kk) = 2*Gamma^2.*sqrt(popul(kk,ii,1))./(1i.*(Ediff(kk,ii)-w0(kk,ii)) + 3*abs(gamma)); % calculate the spin term for each transition level
     end
     spin_term(ii,:,1) = sum(spins(:)); % Sum over all levels
 end
