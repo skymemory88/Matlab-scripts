@@ -15,16 +15,17 @@ rundipole = true;
 %% define temp / field scan
 global Options;
 Options.scantype = true; %Choose scan type: field scan (TRUE) or temperature scan (FALSE)
+Options.hyperfine = true; % Including/excluding hyperfine calculations
 Options.plotting = false; %Choose whether or not to plot the figures at the end
 Options.saving = true;
 
-if Options.scantype == 1
+if Options.scantype == true
 %         temp = [0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.8 1.2 1.6 1.8 2];
-        temp = 0.400;
+        temp = 0.200;
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
-        Hmax = 17.0; % Maximum magnetic field
-        H_step = 0.05; % Field scan resolution
+        Hmax = 9.0; % Maximum magnetic field
+        H_step = 0.025; % Field scan resolution
         phi = 0; % ab-plane rotation, phi=0 means H along x (in radian)
         theta = 0; % theta = 0 indicates a transverse magnetic field
 
@@ -34,7 +35,7 @@ if Options.scantype == 1
         Hz = (Hmin:H_step:Hmax)*sin(theta);
         fields = [Hx;Hy;Hz];
 
-elseif Options.scantype == 0
+elseif Options.scantype == false
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         H = 0; % Static external magnetic field
         phi = 0; % ab-plane rotation, phi=0 means H along x (in radian)
@@ -42,7 +43,7 @@ elseif Options.scantype == 0
         Hx = H*cos(phi)*cos(theta);
         Hy = H*sin(phi)*cos(theta);
         Hz = H*sin(theta);
-        temp = 0:0.025:2.0 ; %  range of temperatures
+        temp = 0:0.04:2.0 ; %  range of temperatures
         fields = [Hx;Hy;Hz];
 else
     error('Options.scantype must equal to 0 or 1')
@@ -88,10 +89,6 @@ ion.renorm=[[1,1,1]         %Er
             [1,1,1]         %Gd
             [1,1,1]];       %Y
 
-%Ions' hyperfine
-% ion.hyp=[0;1;0;0;0;0]; % LiHoF4
-% ion.hyp=[1;0;0;0;0;0]; % LiErF4
-ion.hyp=[1;1;0;0;0;0]; % Er, Ho, Yb, Tm, Gd, Y
 
 %Ions' nuclear spin I
 A_Ho=0.003361; %Henrik
@@ -110,7 +107,7 @@ ex.Yb=0;
 ex.Tm=0;
 
 % ion.ex=[0; ex.Ho; 0; 0; 0; 0]; % LiHoF4
-% ion.ex=[0; ex.Ho; 0; 0; 0; 0]; % LiErF4
+% ion.ex=[ex.Er; 0; 0; 0; 0; 0]; % LiErF4
 ion.ex=[ex.Er; ex.Ho; ex.Yb; ex.Tm; 0; 0];
 
 %Ions' initial moments
@@ -124,7 +121,14 @@ ion.mom(:,:,4)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Tm
 ion.mom(:,:,5)=[1 0 0; -1 0 0; -1 0 0; 1 0 0];      %Gd
 ion.mom(:,:,6)=[0 0 0; 0 0 0; 0 0 0; 0 0 0];      %Y
 
-ion.mom_hyp=ion.mom;
+%Ions' hyperfine
+if Options.hyperfine
+    % ion.hyp=[0;1;0;0;0;0]; % LiHoF4
+    % ion.hyp=[1;0;0;0;0;0]; % LiErF4
+    ion.hyp=[1;1;0;0;0;0]; % Er, Ho, Yb, Tm, Gd, Y
+else
+    ion.hyp = [0;0;0;0;0;0];
+end
 
 demagn=true; % Demagnetization factor included if TRUE
 alpha=0; % shape in calculating demagnetization factor is a needle (0), sphere (1)
@@ -133,7 +137,7 @@ alpha=0; % shape in calculating demagnetization factor is a needle (0), sphere (
 %% Plot data
 n = ion.prop~=0;
 if Options.plotting == true
-    if Options.scantype == 1 % For field scan
+    if Options.scantype == true % For field scan
         J_H=zeros([3,size(fields,2),size(ion.name,1)]);
         Jnorm_H=zeros([size(fields,2),size(ion.name,1)]);
     else % for temperature scan
@@ -154,21 +158,39 @@ if Options.plotting == true
     end
     
     %Plot spin moments
-    figure
-    hold on
-    p1 = plot(HH(1:10:end),Jnorm_H(1:10:end,n),'-o','Color', 'black', 'LineWidth', 2, 'MarkerSize',4);
-    title(sprintf('Norm of spin moments for %s', char(ion.name(n))));
-    xlabel('Magnetic field (|B| [T])');
-    ylabel('Spin moment norm <J_n>');
-    
-    figure
-    hold on
-    p2_1 = plot(HH,J_H(:,:,n),'-','LineWidth', 4);
-    p2_2 = plot(HH(1:10:end), J_H(:,1:10:end,n),'o','MarkerSize',8); % Add spaced markers to the <J> curves
-    title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
-    legend('<J_{norm}>','<J_x>','<J_y>','<J_z>');
-    xlabel('Magnetic field (|B| [T])');
-    ylabel('Spin moment <J>');
+    if Options.scantype == true % For field scan 
+        figure
+        hold on
+        p1 = plot(HH(1:10:end),Jnorm_H(1:10:end,n),'-o','Color', 'black', 'LineWidth', 2, 'MarkerSize',4);
+        title(sprintf('Norm of spin moments for %s', char(ion.name(n))));
+        xlabel('Magnetic field (|B| [T])');
+        ylabel('Spin moment norm <J_n>');
+        
+        figure
+        hold on
+        p2_1 = plot(HH,J_H(:,:,n),'-','LineWidth', 2);
+        p2_2 = plot(HH(1:10:end), J_H(:,1:10:end,n),'o','MarkerSize',4); % Add spaced markers to the <J> curves
+        title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
+        legend('<J_{norm}>','<J_x>','<J_y>','<J_z>');
+        xlabel('Magnetic field (|B| [T])');
+        ylabel('Spin moment <J>');
+    else
+        figure
+        hold on
+        p1 = plot(temp,ion.altJmom(:,:,n),'-o','Color', 'black', 'LineWidth', 2, 'MarkerSize',4);
+        title(sprintf('Alternating spin moments for %s', char(ion.name(n))));
+        xlabel('Temperature (K)');
+        ylabel('Alternating Spin moment <altJ_n>');
+        
+        figure
+        hold on
+        p2_1 = plot(temp,J_H(:,:,n),'-','LineWidth', 2);
+        p2_2 = plot(temp,J_H(:,:,n),'o','MarkerSize',4); % Add spaced markers to the <J> curves
+        title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
+        legend('<J_{norm}>','<J_x>','<J_y>','<J_z>');
+        xlabel('Magnetic field (|B| [T])');
+        ylabel('Spin moment <J>');
+    end
 end
 %% Save the data files
 % if more than one temperatures provided, the data is saved insied LiIonF4() function

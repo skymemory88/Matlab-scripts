@@ -170,22 +170,36 @@ end
 
 % end
 
-for k=1:size(ion.name,1)    
-    ion.Jmom(:,:,:,k)=squeeze(ion.Jmom(:,:,:,k));
-    ion.Jmom_hyp(:,:,:,k)=squeeze(ion.Jmom_hyp(:,:,:,k));
-    
-    ion.Jmom_norm(:,:,k)=squeeze(ion.Jmom_norm(:,:,k));
-    ion.Jmom_hyp_norm(:,:,k)=squeeze(ion.Jmom_hyp_norm(:,:,k));
-    
-    ion.altJmom(:,:,:,k)=squeeze(ion.altJmom(:,:,:,k));
-    ion.altJmom_hyp(:,:,:,k)=squeeze(ion.altJmom_hyp(:,:,:,k));
-    
-    ion.Js(:,:,:,:,k)=squeeze(ion.Js(:,:,:,:,k));
-    ion.Js_hyp(:,:,:,:,k)=squeeze(ion.Js_hyp(:,:,:,:,k));
-    
-    ion.altJs(:,:,:,:,k)=squeeze(ion.altJs(:,:,:,:,k));
-    ion.altJs_hyp(:,:,:,:,k)=squeeze(ion.altJs_hyp(:,:,:,:,k));
-end
+% for k=1:size(ion.name,1)   % Original code 
+%     ion.Jmom(:,:,:,k)=squeeze(ion.Jmom(:,:,:,k));
+%     ion.Jmom_hyp(:,:,:,k)=squeeze(ion.Jmom_hyp(:,:,:,k));
+%     
+%     ion.Jmom_norm(:,:,k)=squeeze(ion.Jmom_norm(:,:,k));
+%     ion.Jmom_hyp_norm(:,:,k)=squeeze(ion.Jmom_hyp_norm(:,:,k));
+%     
+%     ion.altJmom(:,:,:,k)=squeeze(ion.altJmom(:,:,:,k));
+%     ion.altJmom_hyp(:,:,k)=squeeze(ion.altJmom_hyp(:,:,:,k));
+%     
+%     ion.Js(:,:,:,:,k)=squeeze(ion.Js(:,:,:,:,k));
+%     ion.Js_hyp(:,:,:,:,k)=squeeze(ion.Js_hyp(:,:,:,:,k));
+%     
+%     ion.altJs(:,:,:,:,k)=squeeze(ion.altJs(:,:,:,:,k));
+%     ion.altJs_hyp(:,:,:,:,k)=squeeze(ion.altJs_hyp(:,:,:,:,k));
+% end
 
+ion.Jmom = squeeze(ion.Jmom(:,:,:,k));
+ion.Jmom_hyp = squeeze(ion.Jmom_hyp(:,:,:,k));
+
+ion.Jmom_norm = squeeze(ion.Jmom_norm(:,:,k));
+ion.Jmom_hyp_norm = squeeze(ion.Jmom_hyp_norm(:,:,k));
+
+ion.altJmom = squeeze(ion.altJmom(:,:,:,k));
+ion.altJmom_hyp = squeeze(ion.altJmom_hyp(:,:,:,k));
+
+ion.Js = squeeze(ion.Js(:,:,:,:,k));
+ion.Js_hyp = squeeze(ion.Js_hyp(:,:,:,:,k));
+
+ion.altJs = squeeze(ion.altJs(:,:,:,:,k));
+ion.altJs_hyp = squeeze(ion.altJs_hyp(:,:,:,:,k));
 
 toc(t)

@@ -5,7 +5,11 @@ for i=1:size(ion.name,1)
     if ion.prop(i)~=0
         k=i;
         if ion.prop(i)==1
-            H_dims = (2*ion.I(k)+1)*(2*ion.J(k)+1); % Claculate the dimension of the Hilbert space
+            if ion.hyp(i) > 0
+                H_dims = (2*ion.I(k)+1)*(2*ion.J(k)+1); % Claculate the dimension of the Hilbert space
+            elseif ion.hyp(i) == 0
+                H_dims = 2*ion.J(k)+1; % Claculate the dimension of the Hilbert space
+            end
         end
     end
 end
@@ -34,10 +38,8 @@ end
 
 hvec=h;
 momente_mean=0;
+ion.mom_hyp=ion.mom;
 
-if ~isfield(ion,'mom_hyp')
-  ion.mom_hyp=ion.mom;
-end
 %%
 for i=1:size(ion.name,1)
 %     ion.mom_hyp(:,:,i)=ion.mom(:,:,i); %we will apply the virtual crystal approximation for the isotops
@@ -97,6 +99,7 @@ for iterations=1:NiterMax
     momente_old=momente_mean;
     %  E=zeros(1,length(energies(1,:)));
     energies = zeros(4, H_dims); % dims = (2*I+1) x (2*J+1)
+%     energies = zeros(4,2); % truncate the energy levels to Ising basis
     for ionn=1:4 % each Ho3+ ion in the unit cell
         %calculate meanfield
         h_dipol=zeros([size(ion.name,1),3]);
@@ -125,11 +128,11 @@ for iterations=1:NiterMax
         %calculate moments of ions in a meanfield (ie diagonnalize the hamiltonian)
         for i=1:size(ion.name,1)
             if ion.prop(i)>0 % if the ion exists
-                if ion.hyp(i) % if there is no doping
+                if ion.hyp(i) % if hyperfine interaction is included
                  [jx,jy,jz,energies(ionn,:),v]=MF_moments_hyper(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i},ion.A(i),ion.I(i));
                  ion.mom_hyp(ionn,:,i)=update_moments([jx,jy,jz],evolution.(ion.name_hyp{i}),ionn,iterations);
-                else % if there is doping
-                 [jx,jy,jz,energies(ionn,:)]=MF_moments(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i});
+                else % if there hyperfine interaction is excluded
+                 [jx,jy,jz,energies(ionn,:),v]=MF_moments(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i});
                  ion.mom(ionn,:,i)=update_moments([jx,jy,jz],evolution.(ion.name{i}),ionn,iterations);
                 end
             end
@@ -213,7 +216,7 @@ end
 return
 
 
-function [jx,jy,jz,energies]=MF_moments(hvec,h_dipol,t,J,gLande,Hcf)
+function [jx,jy,jz,energies,v]=MF_moments(hvec,h_dipol,t,J,gLande,Hcf)
 %Initiate J operators
 Jz=diag(J:-1:-J);
 Jp=diag(sqrt((J-[(J-1):-1:-J]).*(J+1+[(J-1):-1:-J])),1);
@@ -233,6 +236,8 @@ e=real(diag(e));
 e=e-min(e);
 [e,n]=sort(e);
 v=v(:,n);
+% e = e(1:2); % truncate the vasis to form an Ising basis
+% v = v(:,1:2); % truncate the basis to form an Ising basis
 beta = 1/(0.08617*t); % [kB*T]^-1 in [meV]
 
 %Calculate Matrixelements and Moments

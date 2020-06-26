@@ -5,7 +5,7 @@ Options.plotting = false; % Decide whether or not to plot the data at the end
 Options.saving = true;
 
 % Temperatures = [0.250, 0.300, 0.350, 0.500];
-Temperatures = 0.400;
+Temperatures = 0.080;
 phi = 0;
     for ii = 1:length(Temperatures)
         filenames = strcat('Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$uDeg', Temperatures(ii), phi),'.mat');
@@ -13,7 +13,7 @@ phi = 0;
         % which are eigenstates and eigenvalues calculated in the mean-field model 
         % as a function of transverse field and temperature
         
-%         [rechi1x, imchix, rechi1y, imchiy, rechi1z, imchiz] = linear_response(eee,fff,ttt,vvv);
+%         [fields, freq_total, rechi, imchi] = linear_response(eee,fff,ttt,vvv);
         [fields, freq_total, rechi, imchi] = linear_response(eee,fff,ttt,vvv);
     end
 %% Color plot the susceptibilities
@@ -67,15 +67,15 @@ end
 if Options.saving == true
     % x1x = squeeze(rechi1x); 
     % x2x = squeeze(imchix);
-    % save(strcat('x1x_x2x_',num2str(ttt*1000),'mK'),'fields','freq_total','x1x','x2x')
+    % save(strcat('LiHoF4_x1x_x2x_',sprintf('%1$3.3fK_%2$uDeg', ttt, phi),'fields','freq_total','x1x','x2x'));
     % 
     % x1y = squeeze(rechi1y); 
     % x2y = squeeze(imchiy);
-    % save(strcat('x1y_x2y_',num2str(ttt*1000),'mK'),'fields','freq_total','x1y','x2y')
+    % save(strcat('LiHoF4_x1y_x2y_',sprintf('%1$3.3fK_%2$uDeg', ttt, phi),'fields','freq_total','x1y','x2y'));
 
     x1z = squeeze(rechi.z); 
     x2z = squeeze(imchi.z);
-    save(strcat('LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$uDeg', ttt, phi),'fields','freq_total','x1z','x2z'));
+    save(strcat('LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$uDeg.mat', ttt, phi)),'fields','freq_total','x1z','x2z');
 end
 end
 

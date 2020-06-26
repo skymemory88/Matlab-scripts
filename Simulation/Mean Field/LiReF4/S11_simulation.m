@@ -55,19 +55,19 @@ freq = linspace(freq_l,freq_h,freq_pts); % frequency range
 % field parameters
 field_l = 0;
 field_h = 9;
-field_pts = 301; % number of points along field axis
+field_pts = 501; % number of points along field axis
 field = linspace(field_l,field_h,field_pts); % sampling points along field axis
 
 w0 = 3.50; % Resonant frequency for bare cavity
-filFctr = 1E-3; % Calculated from COMSOL
+filFctr = 1E-4; % Calculated from COMSOL
 
 
 f2E = 1/241.8; % Convert from GHz to meV
 kB = 0.08617; % [meV/K]
-kappa = 0.05; % Define coupling strength between the driving field and the cavity field
+kappa = 0.09; % Define coupling strength between the driving field and the cavity field
 gamma = -2*kappa^2;
-% Gamma = 0.8*gamma; % Coupling strength between the cavity field and the spin system
-Gamma = -0.1*0.05^2; % fix Gamma for checkpoint
+Gamma = 0.4*gamma; % Coupling strength between the cavity field and the spin system
+% Gamma = -0.1*0.05^2; % fix Gamma for checkpoint
 
 Option = 1;
 Options.Elevel = false;
@@ -249,7 +249,7 @@ figure
 map = pcolor(field,freq,log(abs(S11_2))); % color plot of the S11 response
 map.EdgeColor = 'none';
 colorbar
-xlim([3 4.5])
+% xlim([3 4.5])
 % ylim([3.69 3.73])
 xlabel('Magnetic field (T)');
 ylabel('Frequency (GHz)');
