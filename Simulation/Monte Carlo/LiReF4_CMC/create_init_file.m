@@ -13,7 +13,9 @@ params.field=[0 0 0];
 % params.field(16:25,3)=linspace(0.84,19.8,10)';
 % params.field(26:40,3)=linspace(20,24,15)';
 
-params.temp=linspace(0,0.6,32);
+params.temp(1:5)=linspace(0.05,0.1,5);
+params.temp(6:27)=linspace(0.11,0.15,22);
+params.temp(28:32)=linspace(0.16,0.25,5);
 % params.temp=0.01;
 % params.temp=zeros(1,40);
 % logtemp=logspace(0,-5,25);
@@ -29,10 +31,14 @@ params.L=7;
 
 params.prop=[1;0;0;0;0;0]; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
 num_abc=1; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
-params.NiterEQ=1e6; % Thermalization steps
-params.Nitermeas=1e6; % Sampling stemps
+params.NiterEQ = 5e2*4*params.L^3; % Thermalization steps (scaled according to the system size)
+params.Nitermeas = 1e3*4*params.L^3; % Sampling stemps
 
-% 1 for random, 2 for ordered
+% % For testing
+% params.NiterEQ = 4*params.L^3; % Thermalization steps (scaled according to the system size)
+% params.Nitermeas = 10*4*params.L^3; % Sampling stemps
+
+% 1 for random, 2 for ordered, called in lat()
 params.init_Er=2;
 % params.init_Ho=2;
 % params.init_Yb=2;

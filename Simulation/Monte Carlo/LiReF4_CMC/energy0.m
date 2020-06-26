@@ -1,9 +1,10 @@
 function E_0=energy0(ion,params,inter,lattice,EQlat_mom)
 % computes the energy of the configuration at T = 0 K
 
-% t=tic;
-
 mu_b=5.7883817555e-2; % Bohr magneton in meV/T
+if iscell(EQlat_mom)
+    EQlat_mom = EQlat_mom{:};
+end
 
 %arrays to write the energy of each ion and the sum of the energies of the
 % dipolar interactions for each ion
@@ -15,8 +16,6 @@ for i=1:size(lattice,2)
     ion1=lattice{i};
     gLande1=ion{ion1.num}.gLande;
     staggered_field=ion1.staggfield;
-    % [ion1.mom, ion1.energy]=cl_eff_mod(ion1.alpha, ion1.beta, field, ion1);
-    %ion1.mom=gLande1*ion1.mom;
     ion1.mom=gLande1*EQlat_mom(1:3,i)';
     ion1.energy=EQlat_mom(6,i);
     theta=atan2(ion1.mom(2),ion1.mom(1));
@@ -26,11 +25,8 @@ for i=1:size(lattice,2)
         
         ion2=lattice{j};
         gLande2=ion{ion2.num}.gLande;
-        % [ion2.mom, ion2.energy]=cl_eff_mod(ion2.alpha, ion2.beta, field, ion2);
-        %ion2.mom=gLande2*ion2.mom;
         ion2.mom=gLande2*EQlat_mom(1:3,j)';
-%         ion2.energy=EQlat_mom(6,i); %Why is this 'i' not 'j'? --Yikai
-        ion2.energy=EQlat_mom(6,j); % --Yikai
+        ion2.energy=EQlat_mom(6,j);
 
         r_ij=ion2.position-ion1.position;
         [idx]=latmod(params,r_ij); % find the index to the distance info stored in the array 'inter'
@@ -55,5 +51,4 @@ end
 
 E_0=sum(E_ions(:));
 
-% toc(t);
 end

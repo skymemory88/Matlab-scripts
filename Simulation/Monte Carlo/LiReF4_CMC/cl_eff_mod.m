@@ -4,11 +4,8 @@ function [mom, E, field_change]=cl_eff_mod(alpha,beta,field,ion,field_change)
 % mean value of the effective quantum momentum and hamiltonian in the state
 % defined by alpha and beta
 
-% muB=0.05788; % Bohr magneton, in meV/T
-J=ion.J; % Spin
-% gLande=ion.gLande; % Landé factor
-
 % definition of the J operators
+J=ion.J; % Spin
 Jz=diag(J:-1:-J);
 Jp=diag(sqrt((J-[J-1:-1:-J]).*(J+1+[J-1:-1:-J])),1);
 Jm=Jp';
@@ -37,5 +34,7 @@ mom(1)=real(state'*Jxt*state);
 mom(2)=real(state'*Jyt*state);
 mom(3)=real(state'*Jzt*state);
 E=real(state'*Hzeff*state);
+
+clearvars -except mom E field_change
 
 end

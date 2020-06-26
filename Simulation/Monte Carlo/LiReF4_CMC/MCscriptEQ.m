@@ -3,6 +3,7 @@ function MCscriptEQ(jobid)
 infilename=sprintf(['init_',jobid,'.mat']);
 load(infilename)
        
+params.jobid = jobid;
 staggfield=0;
 
 %Ions' names
@@ -21,14 +22,22 @@ a=[{[5.162 0 0; 0 5.162 0; 0 0 10.70]}      %Er
    {[5.162 0 0; 0 5.162 0; 0 0 10.70]}      %Gd
    {[5.132 0 0; 0 5.132 0; 0 0 10.59]}];    %Y
 
-%Ions' cf parameters
-B=[[60.2258   -0.1164   -4.3280   0  -0.0019   -0.0850   -0.0227]     %Er [63   -0.55   -5.54  0.47  -0.000006   -0.1082   -0.0146]
-   [-60   0.35   3.6  0  0.0004   0.07   0.006]                       %Ho
-   [663   12.5   102  0  -0.62   -16   0]                             %Yb !!! Conradin's parameters !!!
-   [224.3   -1.85   -11.7  -15.2  0.002   0.2645   0.1377]            %Tm
-   [0 0 0 0 0 0 0]                                                    %Gd
-   [0 0 0 0 0 0 0]]/1000;                                             %Y
-    
+%Ions' cf parameters (original)
+% B=[[60.2258   -0.1164   -4.3280   0  -0.0019   -0.0850   -0.0227]     %Er [63   -0.55   -5.54  0.47  -0.000006   -0.1082   -0.0146]
+%    [-60   0.35   3.6  0  0.0004   0.07   0.006]                       %Ho
+%    [663   12.5   102  0  -0.62   -16   0]                             %Yb !!! Conradin's parameters !!!
+%    [224.3   -1.85   -11.7  -15.2  0.002   0.2645   0.1377]            %Tm
+%    [0 0 0 0 0 0 0]                                                    %Gd
+%    [0 0 0 0 0 0 0]]/1000;                                             %Y
+
+% Ions' cf parameters (from MF code)
+B=[[60.2258   -0.1164   -4.3280   -0.0019   -0.0850   -0.0227]      %Er
+   [-60   0.35   3.6   0.0004   0.07   0.006]                       %Ho
+   [646.2016   15.3409  116.4854   -0.0686  -15.1817    0.0000]     %Yb    
+%        [663   12.5   102   -0.62   -16   0]                             %Yb
+   [224.3   -1.85   -11.7   0.002   0.2645   0.1377]                %Tm
+   [0 0 0 0 0 0]                                                    %Gd
+   [0 0 0 0 0 0]]/1000.0;                                           %Y
 
 F=[0.005; 0; 0; 0; 0; 0]; %cf Science LiErF4 2012, supp mat
 
@@ -45,12 +54,9 @@ params.C=[  1  1  1
             1 -1  1];
         
 % number of replicates of the supercell in each dimension for dipole interaction calculation
-% params.replicas=[10;10;10];
-params.replicas=[20;20;20];
+params.replicas=[10;10;10];
+% params.replicas=[5;5;5];
 params.abc=a{num_abc}; 
-
-% Leave as it is
-params.field_changed=0;
 
 ion=cell(size(name,1), 1);
 
@@ -64,8 +70,10 @@ for i=1:size(name,1)
     ion{i}.F=F(i);   
     ion{i}.gLande=gLande(ion{i}.L,ion{i}.S); 
     ion{i}.Hcf=cf(ion{i}.B,ion{i}.J);
-    [ion{i}.VV,~]=Ising_basis2(params.field(1,:), ion{i});
+    [ion{i}.VV,~]=Ising_basis(params.field(1,:), ion{i});
 end 
+
+params.field_changed=1; % Avoid repeating Ising_basis()
 
 %% Initialize the lattice and a container for dipole interactions
 
@@ -78,16 +86,18 @@ disp('Dipole interactions done.')
 if(strcmp(params.meas_type,'temp'))
     disp('Simulation type: Temperature scan')
     [relaxE,EQlat_mom,lattice,params] = paraTloopEQ(ion,params,inter,lattice,lat_mom);
+%     [relaxE,EQlat_mom,lattice,params] = TloopEQ(ion,params,inter,lattice,lat_mom);
 elseif(strcmp(params.meas_type,'field'))
     disp('Simulation type: Field scan')
     [relaxE,EQlat_mom,lattice,params] = paraFieldloopEQ(ion,params,inter,lattice,lat_mom);
+%     [relaxE,EQlat_mom,lattice,params] = FieldloopEQ(ion,params,inter,lattice,lat_mom);
 end
 
-cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Boundary condition test');
+% cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Boundary condition test');
 % cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Iteration limit');
-% cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Tc scaling');
+cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Test');
 filename=sprintf(['resultsEQ_',params.jobid,'.mat']);
-save(filename,'inter','lattice','relaxE','params','ion','EQlat_mom');
-cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Monte Carlo\Parallel-CMC code');
+save(filename,'inter','lattice','relaxE','params','ion','EQlat_mom','-v7.3');
+cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Monte Carlo\LiReF4_CMC');
 
 

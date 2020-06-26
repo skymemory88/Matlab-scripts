@@ -1,58 +1,64 @@
- function [energies,Egs,Egs2,mag,magsq,sq0,sqx,sqy,lattice,E_0,lat_mom]=LiIonsF4_MC(ion,L,Niter,inter,lattice,field,T,E_0,lat_mom,field_change)
-persistent phasex phasey phase0 % local variables
+% function [energies,Egs,Egs2,mag,magsq,sq0,sqx,sqy,lattice,E_0,lat_mom]=LiIonsF4_MC(ion,L,Niter,inter,lattice,field,T,E_0,lat_mom,field_change)
+function [energies,Egs,Egs2,mag,lattice,lat_mom,tempMark]=LiIonsF4_MC(ion,params,inter,lattice,T,E_0,lat_mom,field_change,numWkrs,interval,tempMark)
 
-N=4*(L^3); % number of sites
-N_meas=floor(Niter/N);
+kB = 1/11.6; % Boltzmann constant
+N_meas=floor(params.Nitermeas/params.N_Er);
+
 %N_meas=1;
-
-if isempty(phasex)
-    phase0=ones(N);
-    qx=2*pi/L;
-    qy=qx;
-    pos=zeros(3,N);
-    for i=1:N
-        pos(:,i)=lattice{i}.position;
-    end
-    phasex=exp(1i*qx*pos(1,:))'*exp(1i*qx*pos(1,:));
-    phasey=exp(1i*qy*pos(2,:))'*exp(1i*qy*pos(2,:));
-   
+if iscell(lat_mom)
+    lat_mom = lat_mom{:};
 end
 
-energies=zeros(1,Niter);
+% persistent phasex phasey phase0 % local variables
+% if isempty(phasex)
+%     phase0=ones(params.N_Er);
+%     qx=2*pi/L;
+%     qy=qx;
+%     pos=zeros(3,params.N_Er);
+%     for i=1:params.N_Er
+%         pos(:,i)=lattice{i}.position;
+%     end
+%     phasex=exp(1i*qx*pos(1,:))'*exp(1i*qx*pos(1,:));
+%     phasey=exp(1i*qy*pos(2,:))'*exp(1i*qy*pos(2,:));
+% end
+
+energies=zeros(1,params.Nitermeas);
 
 % arrays to write the magnetizations
 mag=zeros([3,4,N_meas]);
-magsq=zeros([3,3,4,N_meas]);
-% form factors
-sq0=zeros([3,3,4,4,N_meas]);
-sqx=zeros([3,3,4,4,N_meas]);
-sqy=zeros([3,3,4,4,N_meas]);
+% magsq=zeros([3,3,4,N_meas]);
+% % form factors
+% sq0=zeros([3,3,4,4,N_meas]);
+% sqx=zeros([3,3,4,4,N_meas]);
+% sqy=zeros([3,3,4,4,N_meas]);
+
 % energies per spin and energies per spin squared
 Egs=zeros([1,N_meas]);
 Egs2=zeros([1,N_meas]);
 % counter
 p=1;
+mark = 1;
 
-for j=1:N
+for j=1:params.N_Er
     lattice{j}.mom=lat_mom(1:3,j)';
     lattice{j}.beta=lat_mom(4,j);
     lattice{j}.alpha=lat_mom(5,j);
     lattice{j}.energy=lat_mom(6,j);
 end
 
-for iterations=1:Niter
+for iterations=1:params.Nitermeas
     
     % Rotate one moment
     chosen=0;
     while(chosen==0)
         new_ion=randi(size(lattice,2),1,1);
         [alpha_new, beta_new]=random_angles;
-        [new_mom, new_E_Zee,field_change]=cl_eff_mod2(alpha_new, beta_new, field, lattice{new_ion},field_change);
+        [new_mom, new_E_Zee,field_change]=cl_eff_mod(alpha_new, beta_new, params.field, lattice{new_ion},field_change);
         chosen=1;
     end
     
     % Computes the energy variation
-    dE=energy_update(ion,field,lattice,L,inter,new_ion,new_mom,new_E_Zee,lattice{new_ion}.energy);
+    dE=energy_update(ion,params.field,lattice,params.L,inter,new_ion,new_mom,new_E_Zee,lattice{new_ion}.energy);
     % Metropolis-Hastings
     acc=metropolis(dE,T);
     %fprintf('dE = %f meV, acc = %d \n',dE,acc)
@@ -70,40 +76,57 @@ for iterations=1:Niter
     end
 
     E_0 = E_0+acc*dE;
-    energies(iterations)=E_0/N;
+    energies(iterations)=E_0/params.N_Er;
          
-    if rem(iterations,N)==0
-        Egs(p)=energies(iterations);
-        Egs2(p)=(energies(iterations))^2;
+    % take a measure of <E>, <E^2>, and form factors every params.N_Er steps
+    if rem(iterations,params.N_Er)==0
+        Egs(p)=energies(iterations); %Energy per site
+        Egs2(p)=(energies(iterations))^2; %Energy squared per site
         
-        for i=1:3
-            for j=1:3
-                for m=1:4
-                    for mp=1:4
-                        sq0(i,j,m,mp,p)=lat_mom(i,m:4:end)*phase0(m:4:end,mp:4:end)*lat_mom(j,mp:4:end)';
-                        sqx(i,j,m,mp,p)=lat_mom(i,m:4:end)*phasex(m:4:end,mp:4:end)*lat_mom(j,mp:4:end)';
-                        sqy(i,j,m,mp,p)=lat_mom(i,m:4:end)*phasey(m:4:end,mp:4:end)*lat_mom(j,mp:4:end)';
-                    end
-                end
-            end
-        end
+%         for i=1:3
+%             for j=1:3
+%                 for m=1:4
+%                     for mp=1:4
+%                         sq0(i,j,m,mp,p)=lat_mom(i,m:4:end)*phase0(m:4:end,mp:4:end)*lat_mom(j,mp:4:end)';
+%                         sqx(i,j,m,mp,p)=lat_mom(i,m:4:end)*phasex(m:4:end,mp:4:end)*lat_mom(j,mp:4:end)';
+%                         sqy(i,j,m,mp,p)=lat_mom(i,m:4:end)*phasey(m:4:end,mp:4:end)*lat_mom(j,mp:4:end)';
+%                     end
+%                 end
+%             end
+%         end
         
         % magnetizations and magnetizations squared per type of site
-        mag(:,1,p)=sum(lat_mom(1:3,1:4:end)/N,2);
-        mag(:,2,p)=sum(lat_mom(1:3,2:4:end)/N,2);
-        mag(:,3,p)=sum(lat_mom(1:3,3:4:end)/N,2);
-        mag(:,4,p)=sum(lat_mom(1:3,4:4:end)/N,2);
+        mag(:,1,p)=sum(lat_mom(1:3,1:4:end)/params.N_Er,2);
+        mag(:,2,p)=sum(lat_mom(1:3,2:4:end)/params.N_Er,2);
+        mag(:,3,p)=sum(lat_mom(1:3,3:4:end)/params.N_Er,2);
+        mag(:,4,p)=sum(lat_mom(1:3,4:4:end)/params.N_Er,2);
         
-        for a=1:3
-            for b=1:3
-                for m=1:4                   
-                    magsq(a,b,m,p)=sum((lat_mom(a,m:4:end)/N).*(lat_mom(b,1:4:end)/N),2);
-                end
+%         for a=1:3
+%             for b=1:3
+%                 for m=1:4                   
+%                     magsq(a,b,m,p)=sum((lat_mom(a,m:4:end)/params.N_Er).*(lat_mom(b,1:4:end)/params.N_Er),2);
+%                 end
+%             end
+%         end       
+
+        % Every 50*params.N_Er steps, perform a parallel tempering attempt
+        if rem(iterations,interval)==0 && labindex <= numWkrs
+            src = mod(labindex-2,numWkrs)+1;
+            dest = mod(labindex,numWkrs)+1;
+%             fprintf('source: %1$d; destination: %2$d.',src,dest); %checkpoint
+            Ex = labSendReceive(dest,src,Egs(p));
+            Tx = labSendReceive(dest,src,T);
+            if exp( (Egs(p)-Ex)/kB/(T-Tx) ) > 1
+                fprintf('Swaping with %d.\n',dest);
+                T = Tx;
+                tempMark(mark) = 1; %Mark down the swap on MC timeline
             end
-        end       
+            mark = mark + 1;
+%             fprintf('marker = %d.\n',mark); % checkpoint
+        end
         p=p+1;
     end
-    
 end
-
+energies = energies(1:params.N_Er:end); % keep data only every N=Num of Spin steps
+clearvars -except energies Egs Egs2 mag magsq sq0 sqx sqy lattice E_0 lat_mom tempMark
 return

@@ -61,8 +61,4 @@ void dipole_sum(const double *rij, const double *L, const double *N, double *D)
             }
         }
     }
-    /*Lorentz factor on the diagonal, finally added later*/
-    /*D[0]+=4*M_PI/3/V;
-    D[4]+=4*M_PI/3/V;
-    D[8]+=4*M_PI/3/V;*/
 }

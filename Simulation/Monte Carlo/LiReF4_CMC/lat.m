@@ -32,13 +32,12 @@ for i=1:size(hkls,1)
                     [lattice{i}.mom,lattice{i}.energy,params.field_changed]=cl_eff_mod(pi/2, 0,[0.00001,0,0],lattice{i},params.field_changed);
                     lattice{i}.alpha=pi/2;
                     lattice{i}.beta=0;
-                else
+                else % if lattice{i}.site == 2 or 3
                     [lattice{i}.mom,lattice{i}.energy,params.field_changed]=cl_eff_mod(pi/2,pi,[0.00001,0,0],lattice{i},params.field_changed);
                     lattice{i}.alpha=pi/2;
                     lattice{i}.beta=pi;
                 end
-            end
-            if(params.init_Er==1) % random orientations
+            elseif(params.init_Er==1) % random orientations
                 [lattice{i}.alpha, lattice{i}.beta]=random_angles;
                 [lattice{i}.mom,lattice{i}.energy,params]=cl_eff_mod(lattice{i}.alpha,lattice{i}.beta, [0,0,0], lattice{i},params);
             end
@@ -50,8 +49,7 @@ for i=1:size(hkls,1)
                 [lattice{i}.mom,lattice{i}.energy,params]=cl_eff_mod(pi, pi,[0,0,0],lattice{i},params);
                 lattice{i}.alpha=pi;
                 lattice{i}.beta=pi;
-            end
-            if(params.init_Ho==1) % random orientations
+            elseif(params.init_Ho==1) % random orientations
                 [lattice{i}.alpha, lattice{i}.beta]=random_angles;
                 [lattice{i}.mom,lattice{i}.energy, params]=cl_eff_mod(lattice{i}.alpha,lattice{i}.beta, [0,0,0], lattice{i},params);
             end
@@ -60,8 +58,7 @@ for i=1:size(hkls,1)
             if(params.init_Yb==1) % random orientations
                 [lattice{i}.alpha, lattice{i}.beta]=random_angles;
                 [lattice{i}.mom,lattice{i}.energy,params]=cl_eff_mod(lattice{i}.alpha,lattice{i}.beta, [0,0,0], lattice{i},params);
-            end
-            if(params.init_Yb==2) % bi-layered AFM order
+            elseif(params.init_Yb==2) % bi-layered AFM order
                 if(lattice{i}.site==1 || lattice{i}.site==4)
                     [lattice{i}.mom,lattice{i}.energy,params]=cl_eff_mod(pi/2, 0,[0.00001,0,0],lattice{i},params);
                     lattice{i}.alpha=pi/2;
