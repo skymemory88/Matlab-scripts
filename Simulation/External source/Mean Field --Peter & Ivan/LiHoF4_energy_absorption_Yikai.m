@@ -1,4 +1,4 @@
-function ik_LiHoF4_energy_absorption_Yikai
+function LiHoF4_energy_absorption_Yikai
 clearvars
 %% Setup parameters.
 global strategies; % global convergence strategies switches
