@@ -1,4 +1,6 @@
 function Field_scan_v3
+% This version of function deals with data prior to 2020 taken before ACM
+% measurement software was transformed to labview platform
     format long;  
     addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
     addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik'));
@@ -12,10 +14,10 @@ function Field_scan_v3
     plotopt.mksz = 5;
 %% Read ZVL
     % set the path to the data file
-    filepath = 'G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC127\17.08.2019';
+    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_1 (2.5 x1 x 0.5 mm, rectangle)\20.08.2019';
     % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC127/17.08.2019/';
     % The first line is for windows, the second line is for mac OS
-    filename = '2019_08_0006';
+    filename = '2019_08_0010';
 
     %Choose desired operation on the data
     opt  = 2;
@@ -326,7 +328,8 @@ switch 1 % Pick Lorentzian fit function from either custom function of spec1d
             % Set up boundaries for the fitting parameters
             fit = Lorentz_fit(yq(:,ii), -zq(:,ii),param, bound);
             if mod(ii,20) == 0
-                fprintf('Current magnetic field: %3.2f. on core %u.\n', Hx(ii), labindex);
+                worker = getCurrentTask();
+                fprintf('Current magnetic field: %3.2f. on core %u.\n', Hx(ii), worker.ID);
             end
 %             % Double Lorentzian function fit
 %             param = [FWHM(ii) ff0(ii) 0 1 FWHM(ii) freq_l+freq_h-ff0(ii) 0 1];

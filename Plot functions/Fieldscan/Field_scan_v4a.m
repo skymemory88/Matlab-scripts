@@ -2,23 +2,23 @@ function Field_scan_v4a
     format long;  
     addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions\');
     addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik\'));
-    % addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
-    % addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
+%     addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
+%     addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
     %The first line is for windows, the second line is for mac OS
 
     % Figure plot options:
     plotopt.lnwd = 2;
     plotopt.ftsz = 12;
-    plotopt.mksz = 5;
+    plotopt.mksz = 3;
 
-    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC162\SC162-1 (2.2 x 1.9 x 0.9 mm)\2020.05.24';
-    % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC138 (2x1.8x1mm)/2020.03.05';
+    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_1 (2.5 x1 x 0.5 mm, rectangle)\20.08.2019';
+%     filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC162/SC162-1 (2.2 x 1.9 x 0.9 mm)/2020.05.29';
     %The first line is for windows, the second line is for mac OS
-    filename = '2020_05_0003.dat';
+    filename = '2019_08_0010.dat';
     fileobj = fullfile(filepath,filename);
     
 % Operation options
-    opt  = 1;
+    opt  = 2;
 
     switch opt
         case 1
@@ -85,8 +85,8 @@ title(num2str(Temperature,'S11 response at T = %3.3f K'));
 figure
 plot(H(1:100:end),lck(1:100:end),'s-')
 xlabel('DC Magnetic field')
-ylabel('Hall voltage (mV)')
-title('Magnetic field vs Temperature')
+ylabel('Hall resistence')
+title('Hall resistance vs Field')
 
 figure
 plot(H(1:100:end),T1(1:100:end),'o-')
@@ -209,22 +209,21 @@ clearvars c idx ia ii HM T1 trunc1 trunc2 dupl nop
 hPara = [H0(Hpos), field_l, field_h];
 fPara = [(freq_l+freq_h)/2, freq_l, freq_h];
 [fitP,~] = wk_cpl_fit(H0,f0,hPara,fPara);
-H_res = fitP.x0;
-f_res = fitP.wc;
-gc = fitP.g;
 
+% Coupling curve with fit parameters
 B = linspace(field_l,field_h,100);
 spin = 7/2;
-Delt = -spin*(B-H_res);
+Delt = -spin*(B-fitP.x0);
 plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',4);
 hold on
-wp = f_res + Delt./2 + sqrt(Delt.^2+4*gc^2)/2;
-wm = f_res + Delt./2 - sqrt(Delt.^2+4*gc^2)/2;
+wp = fitP.wc + Delt./2 + sqrt(Delt.^2+4*fitP.g^2)/2;
+wm = fitP.wc + Delt./2 - sqrt(Delt.^2+4*fitP.g^2)/2;
 plot(B,wm,'-r',B,wp,'-r','LineWidth',2);
 % hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
 title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
+legend(sprintf('gc = %.3f GHz',fitP.g));
 axis([field_l field_h freq_l freq_h]);
 
 % Plot frequency scan at line crossing
@@ -318,7 +317,8 @@ switch 2 % Pick Lorentzian fit function from either custom function of spec1d
             % Set up boundaries for the fitting parameters
             fit = Lorentz_fit(yq(:,ii), -zq(:,ii),param, bound);
             if mod(ii,20) == 0
-                fprintf('Current magnetic field: %3.2f. on core %u.\n', Hx(ii), labindex);
+                worker = getCurrentTask();
+                fprintf('Current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
             end
 %             % Double Lorentzian function fit
 %             param = [FWHM(ii) ff0(ii) 0 1 FWHM(ii) freq_l+freq_h-ff0(ii) 0 1];
@@ -343,7 +343,8 @@ switch 2 % Pick Lorentzian fit function from either custom function of spec1d
             Qf(ii) = abs(fbck.pvals(2)/fbck.pvals(3)/2); %Calculate the quality factor
 %             chi(ii) = 1/Qf(ii);
             if mod(ii,20) == 0
-                fprintf('Current magnetic field: %3.2f. on core %u.\n', Hx(ii), labindex);
+                worker = getCurrentTask();
+                fprintf('Current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
             end
         end
 end
