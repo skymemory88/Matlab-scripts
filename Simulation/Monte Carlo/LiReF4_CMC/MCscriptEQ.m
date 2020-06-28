@@ -73,7 +73,7 @@ for i=1:size(name,1)
     [ion{i}.VV,~]=Ising_basis(params.field(1,:), ion{i});
 end 
 
-params.field_changed=1; % Avoid repeating Ising_basis()
+params.field_changed = 1; % Avoid repeating Ising_basis()
 
 %% Initialize the lattice and a container for dipole interactions
 

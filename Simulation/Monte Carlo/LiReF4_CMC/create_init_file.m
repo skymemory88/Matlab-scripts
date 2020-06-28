@@ -13,6 +13,8 @@ params.field=[0 0 0];
 % params.field(16:25,3)=linspace(0.84,19.8,10)';
 % params.field(26:40,3)=linspace(20,24,15)';
 
+% params.temp(1:6) = linspace(0.1,0.6,6); % for debugging
+
 params.temp(1:5)=linspace(0.05,0.1,5);
 params.temp(6:27)=linspace(0.11,0.15,22);
 params.temp(28:32)=linspace(0.16,0.25,5);
@@ -27,14 +29,15 @@ params.temp(28:32)=linspace(0.16,0.25,5);
 % params.temp(34:40)=linspace(0.044,0.080,7);
 
 % Supercell size
-params.L=7;
+params.L=5;
 
 params.prop=[1;0;0;0;0;0]; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
 num_abc=1; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
-params.NiterEQ = 5e2*4*params.L^3; % Thermalization steps (scaled according to the system size)
-params.Nitermeas = 1e3*4*params.L^3; % Sampling stemps
 
-% % For testing
+params.NiterEQ = 5e2*4*params.L^3; % Thermalization steps (scaled according to the system size)
+params.Nitermeas = 2e3*4*params.L^3; % Sampling stemps
+
+% % for debugging
 % params.NiterEQ = 4*params.L^3; % Thermalization steps (scaled according to the system size)
 % params.Nitermeas = 10*4*params.L^3; % Sampling stemps
 

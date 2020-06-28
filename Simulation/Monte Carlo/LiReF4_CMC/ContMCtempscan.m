@@ -8,10 +8,25 @@ EQs2 = fullfile(store1,EQname2);
 load(EQs1,'-mat','lat_mom','params','bestE','bestE2');
 load(EQs2,'-mat','ion','inter','lattice');
 
-[relaxE,bbestE,bbestE2,C_v,malt,lat_mom,params] = paraTloop(ion,params,inter,lattice,lat_mom);
+[relaxE,cbestE,cbestE2,C_v,malt,lat_mom,params,tempMark] = paraTloop(ion,params,inter,lattice,lat_mom);
 
-bestE = (bbestE + bestE)./2;
-bestE2 = (bbestE2 + bestE2)./2;
+% Gather all the data from different workers and arrage them into arrays
+cbestE = [cbestE{:}]';
+cbestE2 = [cbestE2{:}]';
+relaxE = [relaxE{:}]';
+malt = [malt{:}]';
+C_v = [C_v{:}]';
+lat_mom = {lat_mom{:}};
+tempMark = [tempMark{:}]';
+
+cbestE = cbestE(:)';
+cbestE2 = cbestE2(:)';
+relaxE = relaxE(:)';
+malt = malt(:)';
+C_v = C_v(:)';
+
+bestE = (cbestE + bestE)./2;
+bestE2 = (cbestE2 + bestE2)./2;
 
 % specific heat (derivative of the energy with respect to temperature) --Yikai
 C_fdt = diff(bestE)./diff(params.temp);
@@ -33,7 +48,7 @@ C_fdt = diff(bestE)./diff(params.temp);
 cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Test');
 filename=sprintf(['results_tempscan_',params.jobid, num2str(finish,'_%d.mat')]);
 % save(filename,'relaxE','bestE','bestE2','C_fdt','C_v','chi_v','chi','mmagsq','angl','msq0','msqx','msqy','mmag','malt','params','lat_mom','-v7.3');
-save(filename,'relaxE','bestE','bestE2','C_fdt','C_v','params','malt','lat_mom','-v7.3');
+save(filename,'relaxE','bestE','bestE2','C_fdt','C_v','params','malt','lat_mom','tempMark','-v7.3');
 cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Monte Carlo\LiReF4_CMC');
 clearvars
 end

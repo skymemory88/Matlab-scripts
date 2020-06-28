@@ -9,13 +9,19 @@ load(EQs);
 [relaxE,bestE,bestE2,C_v,malt,lat_mom,params,tempMark] = paraTloop(ion,params,inter,lattice,EQlat_mom);
 
 % Gather all the data from different workers into arrays
-bestE = [bestE{:}];
-bestE2 = [bestE2{:}];
-relaxE = [relaxE{:}];
-malt = [malt{:}];
-C_v = [C_v{:}];
+bestE = [bestE{:}]';
+bestE2 = [bestE2{:}]';
+% relaxE = [relaxE{:}]';
+malt = [malt{:}]';
+C_v = [C_v{:}]';
 lat_mom = {lat_mom{:}};
-tempMark = [tempMark{:}];
+tempMark = [tempMark{:}]';
+
+bestE = bestE(:)';
+bestE2 = bestE2(:)';
+% relaxE = relaxE(:)';
+malt = malt(:)';
+C_v = C_v(:)';
 
 % specific heat (derivative of the energy with respect to temperature) --Yikai
 C_fdt = diff(bestE)./diff(params.temp);

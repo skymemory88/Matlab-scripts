@@ -27,7 +27,7 @@ spmd
         if labindex == 1
             disp(['T = ',num2str(params.temp(ii)),' Field = [',num2str(params.field(1)),',',num2str(params.field(2)),',',num2str(params.field(3)),']']);
         end
-        [relaxE(ii,:),~,~,EQlat_mom{ii}]=LiIonsF4_MCEQ(ion,params.L,params.NiterEQ,inter,lattice,params.field,params.temp(ii),relaxE(ii,end)*N,EQlat_mom{ii},field_change);
+        [relaxE(ii,:),~,~,EQlat_mom{ii}]=LiIonsF4_MCEQ(params,ion,inter,lattice,params.temp(ii),relaxE(ii,end)*N,EQlat_mom{ii},field_change);
         if ii < size(params.temp,2)
             relaxE(ii+1,:) = relaxE(ii,:); % Seed the thermalization process of the next temperature point
             EQlat_mom{ii+1} = EQlat_mom{ii}; % Seed the tehermalization process of the next temperature point

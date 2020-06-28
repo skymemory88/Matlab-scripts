@@ -1,8 +1,8 @@
-function [energies,lattice,E_0,lat_mom]=LiIonsF4_MCEQ(ion,L,Niter,inter,lattice,field,T,E_0,lat_mom,field_change)
+function [energies,lattice,E_0,lat_mom]=LiIonsF4_MCEQ(params,ion,inter,lattice,T,E_0,lat_mom,field_change)
 
-N=4*(L^3); % Nb of spins
+N = params.N_Er; % Nb of spins
 estm = 0; % initiate an estimator
-energies=zeros(1,Niter);% array for the energy per spin
+energies=zeros(1,params.NiterEQ);% array for the energy per spin
 
 for j=1:N
     lattice{j}.mom=lat_mom(1:3,j)';
@@ -11,18 +11,18 @@ for j=1:N
     lattice{j}.energy=lat_mom(6,j);
 end
 
-for iterations=1:Niter
+for iterations=1:params.NiterEQ
     % Rotate one moment
     chosen=0;
     while(chosen==0)
         new_ion=randi(size(lattice,2),1,1);
         [alpha_new, beta_new]=random_angles;
-        [new_mom, new_E_Zee,field_change]=cl_eff_mod(alpha_new, beta_new, field, lattice{new_ion},field_change);
+        [new_mom, new_E_Zee,field_change]=cl_eff_mod(alpha_new, beta_new, params.field, lattice{new_ion},field_change);
         chosen=1;
     end
     
     % Computes the energy variation
-    dE=energy_update(ion,field,lattice,L,inter,new_ion,new_mom,new_E_Zee,lattice{new_ion}.energy);
+    dE=energy_update(ion,params.field,lattice,L,inter,new_ion,new_mom,new_E_Zee,lattice{new_ion}.energy);
 
     % Metropolis-Hastings
     acc=metropolis(dE,T);
