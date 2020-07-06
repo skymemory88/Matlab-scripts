@@ -29,7 +29,7 @@ params.temp(28:32)=linspace(0.16,0.25,5);
 % params.temp(34:40)=linspace(0.044,0.080,7);
 
 % Supercell size
-params.L=5;
+params.L=15;
 
 params.prop=[1;0;0;0;0;0]; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
 num_abc=1; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}

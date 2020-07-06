@@ -1,5 +1,5 @@
 % function [energies,Egs,Egs2,mag,magsq,sq0,sqx,sqy,lattice,E_0,lat_mom]=LiIonsF4_MC(ion,L,Niter,inter,lattice,field,T,E_0,lat_mom,field_change)
-function [energies,Egs,Egs2,mag,lattice,lat_mom,tempMark]=LiIonsF4_MC(ion,params,inter,lattice,T,E_0,lat_mom,field_change,numWkrs,half_interval,tempMark,prob)
+function [energies,Egs,Egs2,mag,lattice,lat_mom,tempMark,T]=LiIonsF4_MC(ion,params,inter,lattice,T,E_0,lat_mom,field_change,numWkrs,half_interval,tempMark,prob)
 
 kB = 1/11.6; % Boltzmann constant
 N_meas=floor(params.Nitermeas/params.N_Er);
@@ -75,7 +75,7 @@ for iterations=1:params.Nitermeas
     end
     
     E_0 = E_0+acc*dE;
-    energies(iterations) = E_0/params.N_Er;
+    energies(iterations) = E_0/params.N_Er;  %Energy per site
     
     % take a measure of <E>, <E^2>, and form factors every params.N_Er steps
     if rem(iterations,params.N_Er)==0
@@ -95,13 +95,13 @@ for iterations=1:params.Nitermeas
         % Every 50*params.N_Er steps, perform a parallel tempering attempt (even and odd numbered workers' turns
         % are mismatched by half interval) To use this procedure, it is necessary to ensure all cores are working
         % at the same time throughtout (temperature points has to match the number of cores).
-        if rem(iterations,2*half_interval)==0
+        if rem(iterations,2*half_interval)==0 && iterations > 0.5*params.Nitermeas % Only start parallel tempering after half the interations are done
             % Exchange to the left for even numbered worker
             if mod(labindex,2) == 0
                 left = mod(labindex-2,numWkrs)+1; % worker on the left
                 E_l = labSendReceive(left,left,Egs(p),1);
                 T_l = labSendReceive(left,left,T,2);
-                if prob(mark) < exp( (Egs(p)-E_l)/kB/(T-T_l) )
+                if prob(mark) <= exp( (Egs(p)-E_l)/kB/(T-T_l) )
                     fprintf('Swaping with %d.\n',left);
                     T = T_l;
                     tempMark(mark) = left; %Mark down the swap on MC timeline
@@ -112,8 +112,8 @@ for iterations=1:params.Nitermeas
                 E_h = labSendReceive(right,right,Egs(p),1);
                 T_h = labSendReceive(right,right,T,2);
                 chance = exp( (Egs(p)-E_h)/kB/(T-T_h) );
-                fprintf('Swaping probability: %u.',chance); %checkpoint
-                if prob(mark) < chance
+                fprintf('Swaping probability: %1$.3f, Transition probability: %2$.3f', prob(mark), chance); %checkpoint
+                if prob(mark) <= exp( (Egs(p)-E_h)/kB/(T-T_h) )
                     fprintf(', Swaping with %d.\n',right);
                     T = T_h;
                     tempMark(mark) = right; %Mark down the swap on MC timeline
@@ -127,7 +127,7 @@ for iterations=1:params.Nitermeas
                 %                 [E_l,T_l] = labSendReceive(left,left,[Egs(p),T]);
                 E_l = labSendReceive(left,left,Egs(p),1);
                 T_l = labSendReceive(left,left,T,2);
-                if prob(mark) < exp( (Egs(p)-E_l)/kB/(T-T_l) )
+                if prob(mark) <= exp( (Egs(p)-E_l)/kB/(T-T_l) )
                     fprintf('Swaping with %d.\n',left);
                     T = T_l;
                     tempMark(mark) = left; %Mark down the swap on MC timeline
@@ -137,8 +137,8 @@ for iterations=1:params.Nitermeas
                 E_h = labSendReceive(right,right,Egs(p),1);
                 T_h = labSendReceive(right,right,T,2);
                 chance = exp( (Egs(p)-E_h)/kB/(T-T_h) );
-                fprintf('Swaping probability: %u.',chance); %checkpoint
-                if prob(mark) < chance
+                 fprintf('Swaping probability: %1$.3f, Transition probability: %2$.3f', prob(mark), chance); %checkpoint
+                if prob(mark) <= exp( (Egs(p)-E_h)/kB/(T-T_h) )
                     fprintf(', Swaping with %d.\n',right);
                     T = T_h;
                     tempMark(mark) = right; %Mark down the swap on MC timeline
@@ -168,6 +168,7 @@ for iterations=1:params.Nitermeas
     end
 end
 energies = energies(1:params.N_Er:end); % keep data only every N = Num of Spin steps
+tempMark = tempMark(1:mark-1);
 % clearvars -except energies Egs Egs2 mag magsq sq0 sqx sqy lattice E_0 lat_mom tempMark
-clearvars -except energies Egs Egs2 mag lattice lat_mom tempMark
+clearvars -except energies Egs Egs2 mag lattice lat_mom tempMark T
 return

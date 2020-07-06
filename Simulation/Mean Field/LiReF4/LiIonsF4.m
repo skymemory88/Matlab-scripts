@@ -1,4 +1,4 @@
-function [ion,history,E,V]=LiIonsF4(ion,temp,field,phi,demagn,alpha)
+function [ion,history,E,V]=LiIonsF4(ion,temp,field,~,theta,demagn,alpha)
 %Compute the magnetization and the alternated magnetization for a range
 %of temperatures and fields. (1-x) is the dilution. temp and h are the 
 %temperature and field arrays. xHypIso is the proportion of nuclear moments
@@ -156,19 +156,35 @@ for j = 1:length(temp)
         vvv(i,1,:,:)=v;
     end
     ttt = temp(j);
-% Save the data split by temperatures when there are multi-dimensional, otherwise save data outside this function
+    fff = field;
+% Save the data split by temperatures when they are multi-dimensional, otherwise save the data outside this function
     if Options.saving == true
         if size(field,2) >1 && length(temp) >1
-            cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-            tit=strcat('Hscan_Li',[ion.name(ion.prop~=0)], 'F4_', sprintf('%1$3.3fK_%2$uDeg',temp(j),phi*pi/180),'.mat');
-            save(char(tit),'ttt','field','eee','vvv','h_mf2')
-%             save(char(tit),'ttt','field','eee','vvv','h_mf2','-v7.3')
-            cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan')
+            cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output')
+            tit=strcat('Hscan_Li',[ion.name(ion.prop~=0)], 'F4_', sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg',temp(j),theta*pi/180,phi*pi/180),'.mat');
+            save(char(tit),'ttt','fff','eee','vvv','-v7.3')
+%             save(char(tit),'ttt','fff','eee','vvv','h_mf2','-v7.3')
+            cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4')
         end
     end
 end
 
 % end
+
+ion.Jmom = squeeze(ion.Jmom(:,:,:,:));
+ion.Jmom_hyp = squeeze(ion.Jmom_hyp(:,:,:,:));
+
+ion.Jmom_norm = squeeze(ion.Jmom_norm(:,:,:));
+ion.Jmom_hyp_norm = squeeze(ion.Jmom_hyp_norm(:,:,:));
+
+ion.altJmom = squeeze(ion.altJmom(:,:,:,:));
+ion.altJmom_hyp = squeeze(ion.altJmom_hyp(:,:,:,:));
+
+ion.Js = squeeze(ion.Js(:,:,:,:,:));
+ion.Js_hyp = squeeze(ion.Js_hyp(:,:,:,:,:));
+
+ion.altJs = squeeze(ion.altJs(:,:,:,:,:));
+ion.altJs_hyp = squeeze(ion.altJs_hyp(:,:,:,:,:));
 
 % for k=1:size(ion.name,1)   % Original code 
 %     ion.Jmom(:,:,:,k)=squeeze(ion.Jmom(:,:,:,k));
@@ -186,20 +202,5 @@ end
 %     ion.altJs(:,:,:,:,k)=squeeze(ion.altJs(:,:,:,:,k));
 %     ion.altJs_hyp(:,:,:,:,k)=squeeze(ion.altJs_hyp(:,:,:,:,k));
 % end
-
-ion.Jmom = squeeze(ion.Jmom(:,:,:,k));
-ion.Jmom_hyp = squeeze(ion.Jmom_hyp(:,:,:,k));
-
-ion.Jmom_norm = squeeze(ion.Jmom_norm(:,:,k));
-ion.Jmom_hyp_norm = squeeze(ion.Jmom_hyp_norm(:,:,k));
-
-ion.altJmom = squeeze(ion.altJmom(:,:,:,k));
-ion.altJmom_hyp = squeeze(ion.altJmom_hyp(:,:,:,k));
-
-ion.Js = squeeze(ion.Js(:,:,:,:,k));
-ion.Js_hyp = squeeze(ion.Js_hyp(:,:,:,:,k));
-
-ion.altJs = squeeze(ion.altJs(:,:,:,:,k));
-ion.altJs_hyp = squeeze(ion.altJs_hyp(:,:,:,:,k));
 
 toc(t)

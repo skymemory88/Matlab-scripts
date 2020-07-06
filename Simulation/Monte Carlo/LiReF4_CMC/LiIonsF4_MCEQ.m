@@ -22,7 +22,7 @@ for iterations=1:params.NiterEQ
     end
     
     % Computes the energy variation
-    dE=energy_update(ion,params.field,lattice,L,inter,new_ion,new_mom,new_E_Zee,lattice{new_ion}.energy);
+    dE=energy_update(ion,params.field,lattice,params.L,inter,new_ion,new_mom,new_E_Zee,lattice{new_ion}.energy);
 
     % Metropolis-Hastings
     acc=metropolis(dE,T);

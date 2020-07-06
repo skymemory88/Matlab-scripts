@@ -6,8 +6,8 @@
 % Delt = -m*(B-Br)/hbar;
 % wc = 3.674;
 % gc = 0.055;
-% gamma = 0.1;
-% w = wc - gc^2.*Delt./(Delt.^2+gamma^2);
+% gamma_e = 0.1;
+% w = wc - gc^2.*Delt./(Delt.^2+gamma_e^2);
 % hp1 = plot(B,w,'-k','LineWidth',3);
 % hold on
 % wp = wc + Delt./2 + sqrt(Delt.^2+4*gc^2)/2;
@@ -16,10 +16,10 @@
 %% Bare cavity S11 Simulation
 % clearvars
 % kappa = 0.2;
-% gamma = -2.0*kappa^2;
+% gamma_e = -2.0*kappa^2;
 % w0 = 3.5;
 % w = linspace(3,4,101);
-% S11 = 1+gamma./(1i.*(w-w0)-gamma/2);
+% S11 = 1+gamma_e./(1i.*(w-w0)-gamma_e/2);
 % 
 % S11_real = real(S11);
 % S11_img = imag(S11);
@@ -43,40 +43,35 @@ clearvars -except delta
 % w0 = 3.71;
 % filFctr = 5E-3;
 
-temp = 0.150; % temperature(s)
-theta = 0; % Angle (in degrees) in the transverse field plane
-
-%frequency parameters
-freq_l = 3.49;
-freq_h = 3.51;
-freq_pts = 501; % number of points along frequency axis
-freq = linspace(freq_l,freq_h,freq_pts); % frequency range
+temp = 0.130; % temperature(s)
+theta = 1.0; % angular deviation (in degrees) of the field angle from c-axis direction
+phi = 10.0; % angle (in degrees) in ab-plane rotation
 
 % field parameters
 field_l = 0;
-field_h = 9;
+field_h = 17;
 field_pts = 501; % number of points along field axis
 field = linspace(field_l,field_h,field_pts); % sampling points along field axis
 
-w0 = 3.50; % Resonant frequency for bare cavity
-filFctr = 1E-4; % Calculated from COMSOL
-
+%frequency parameters
+w0 = 3.63; % Resonant frequency for bare cavity
+freq_l = 3.58;
+freq_h = 3.665;
+freq_pts = 501; % number of points along frequency axis
+freq = linspace(freq_l,freq_h,freq_pts); % frequency range
 
 f2E = 1/241.8; % Convert from GHz to meV
 kB = 0.08617; % [meV/K]
-kappa = 0.09; % Define coupling strength between the driving field and the cavity field
-gamma = -2*kappa^2;
-Gamma = 0.4*gamma; % Coupling strength between the cavity field and the spin system
-% Gamma = -0.1*0.05^2; % fix Gamma for checkpoint
+filFctr = 0.0018; % Calculated from COMSOL
+gamma_e = -0.004; % internal dissipation rate
+gamma_i = 1.05*gamma_e; % external dissipation rate
+Gamma = 0.1*gamma_e; % Coupling strength between the cavity field and the spin system
+% Gamma = -0.4*0.065^2; % fix Gamma for checkpoint
 
-Option = 1;
+Option = 2;
 Options.Elevel = false;
 Options.Ediff = false;
 Options.savedata = false;
-
-path = genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output');
-addpath(path);
-phi = 0; % field angle in ab-plane
 
 if Option == 1
 %% Option 1: Perturbative treatment of resonant frequency
@@ -85,11 +80,11 @@ g = 0.001; % Coupling strength measured against the ground state energy
 % g = 0.01*w0;
 
 %         cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output\A=1.0_angles_Yikai');
-addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output'));
+location = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output';
 %         cd('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Simulation/External source/Mean Field --Peter & Ivan/output/A=1.0_angles_Peter')
 lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$uDeg',temp,theta),'.mat'];
-
-load(lname,'-mat','eee','fff');
+file = fullfile(location,lname);
+load(file,'-mat','eee','fff');
 fields = vecnorm(fff);
 E2f = 241.8; % Convert Energy to frequency
 E(:,:)=squeeze(eee)*E2f;
@@ -187,8 +182,10 @@ w0 = repmat(w0,1,size(freq,2)); % expand the resonant frequency to a matrix for 
 [freq,field] = meshgrid(freq,field);
 elseif Option == 2
 %% Option 2 Load existing susceptibilities and interpolate
-    filename = ['Hscan_LiHoF4_',sprintf('%1$3.3fK_%2$uDeg.mat',temp,phi)];
-    load(filename,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
+    location = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I';
+    filename = ['Hscan_LiHoF4_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat',temp,theta,phi)];
+    file = fullfile(location,filename);
+    load(file,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
     E = squeeze(eee);
     fields = vecnorm(fff);
     V = vvv;
@@ -197,8 +194,35 @@ elseif Option == 2
     for i=1:7
         Ediff(i,:) = (E(:,i+1)-E(:,i))*E2f;
     end
-    
-    % interpolate the dispersion relation along field axis
+
+%% Calculate the expecation value of the spin moment
+%     gLande_Ho=1.25;
+%     ELEf = gLande_Ho * 0.05788;     % Lande factor * Bohr magneton (meV T^-1)
+%     NUCf = 4.173 * 3.15245e-5;   % Nuclear Lande factor, mu/mu_N = 4.173
+%     % NUCf = 4.732 * 3.1519e-5;   % Original code
+%     J=8; % Electronic moment for Ho3+
+%     I=3.5; % Nuclear moment for Ho3+
+%     %Initiate J operators
+%     Jz=diag(J:-1:-J); % Jz = -J, -J+1,...,J-1,J
+%     Jzh=kron(Jz,eye(2*I+1)); % Expand Jz space to include nuclear degree of freedom
+% %     Iz=diag(I:-1:-I); %Iz = -I, -I+1,...,I-1,I
+% %     Izh=kron(eye(2*J+1),Iz); % Expand Hilbert space
+%     Jz_exp = double.empty(0,length(fields(1,:)));
+% %     JIz_exp = double.empty(0,length(fields(1,:)));
+%     for kk = 1:length(fields(1,:)) % calculate susceptibility for all fields
+%         v = squeeze(squeeze(V(kk,:,:,:))); % Obtain the corresponding eigen vectors
+%         JzhT = Jzh * ELEf;
+% %         IzhT = Izh * NUCf;
+%         tz = v'  * JzhT * v;
+% %         ttz  = v'  * (JzhT+IzhT) * v;
+% %         Jz_exp(1,kk) = sqrt(sum(sum((tz) .* (tz.'))));
+%         Jz_exp(1,kk) = real(sum(diag(tz)));
+% %         JIz_exp(1,kk) = sqrt(sum(sum((ttz) .* (ttz.'))));
+% %         JIz_exp(1,kk) = real(sum(diag(ttz)));
+%     end
+%     Jz_exp = interp1(fields,Jz_exp,field);
+% %     JIz_exp = interp1(fields,JIz_exp,field);
+%% interpolate the dispersion relation along field axis
     temp_Ediff = double.empty(size(Ediff,1),size(field,2),0);
     for ii = 1:size(Ediff,1)
         temp_Ediff(ii,:,1) = interp1(fields,Ediff(ii,:),field);
@@ -206,43 +230,52 @@ elseif Option == 2
     Ediff = temp_Ediff;
     clearvars temp_Ediff fff vvv eee
     
-    filename = strcat('LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$uDeg.mat',temp,phi));
-    load(filename,'-mat','fields','freq_total','x1z','x2z');
+    % Load the susceptibilities from MF-linear response calculations
+    filename = strcat('LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat',temp,theta,phi));
+    file = fullfile(location,filename);
+    load(file,'-mat','fields','freq_total','x1z','x2z');
     
     [freq,field] = meshgrid(freq,field);
     x1 = interp2(fields,freq_total,x1z,field,freq);
     x2 = interp2(fields,freq_total,x2z,field,freq);
     w0 = w0./(sqrt(1+filFctr.*(x1+1i*x2)));
-% w0 = w0./(sqrt(1+filFctr.*x1)); % Use only real part of the susceptibility
-% w0 = w0./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
+%     w0 = w0./(sqrt(1+filFctr.*x1)); % Use only real part of the susceptibility
+    % w0 = w0./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
 elseif Option == 3
 %% Option 3: Calculate susceptabilities for resonant frequency shift (takes long time)
+    location = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output';
     filename = ['LHF_',num2str(temp,'%.3f.mat')];
-    load(filename,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
+    file = fullfile(location,filename);
+    load(file,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
     if ~exist ('x1','var') && ~exist('x2','var')
-        gama = 0.00005; % define lifetime (meV) for hyperfine levels
-        [fields, Ediff, x1, x2] = linear_response(eee,fff,ttt,vvv,gama); % Calculate susceptibilities
+        life = 1/0.00005; % define lifetime (meV-1) for hyperfine levels
+        [fields, Ediff, x1, x2] = linear_response(eee,fff,ttt,vvv,1/life); % Calculate susceptibilities
     end
     x1 = x1';
     x2 = x2';
     [freq,field] = meshgrid(freq,field);
-    w0 = w0./(sqrt(1+filFctr.*(x1+1i*x2)));
-% w0 = w0./(sqrt(1+filFctr.*x1)); % Use only real part of the susceptibility
-% w0 = w0./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
+%     w0 = w0./(sqrt(1+filFctr.*(x1+1i*x2)));
+    w0 = w0./(sqrt(1+filFctr.*x1)); % Use only real part of the susceptibility
+    % w0 = w0./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
 end
+% life = 1/(200*abs(gamma_e)); % define spin level lifetime (meV-1)
+% % life = 0.0001;
+% % life = 0.00005;
 
-spins = double.empty(size(Ediff,2),0); % A container for the elements of spin term summation in the denominator of S11
-spin_term = double.empty(size(Ediff,2),size(freq,2),0); % A container for the spin term summation in the denominator of S11
-popul = double.empty(size(Ediff,1),size(Ediff,2),0); % A container for the population factor of the transition levels
-for ii = 1:size(field,1)
-    for kk = 1:size(Ediff,1)
-       popul(kk,ii,1) = exp(-Ediff(kk,ii).*f2E./(kB*temp))./exp(-min(Ediff(kk,ii)).*f2E./(kB*temp)); % occupation factor
-       spins(kk) = 2*Gamma^2.*sqrt(popul(kk,ii,1))./(1i.*(Ediff(kk,ii)-w0(ii,1)) + 3*abs(gamma)); % calculate the spin term for each transition level
-%        spins(kk) = 2*Gamma^2.*sqrt(popul(kk,ii,1))./(1i.*(Ediff(kk,ii)-w0(kk,ii)) + 3*abs(gamma)); % calculate the spin term for each transition level
-    end
-    spin_term(ii,:,1) = sum(spins(:)); % Sum over all levels
-end
-S11_2 = 1 + gamma./(1i.*(w0-freq) -gamma + spin_term); % Calculate the S11 response
+% spins = double.empty(size(Ediff,2),0); % A container for the elements of spin term summation in the denominator of S11
+% spin_term = double.empty(size(Ediff,2),size(freq,2),0); % A container for the spin term summation in the denominator of S11
+% popul = double.empty(size(Ediff,1),size(Ediff,2),0); % A container for the population factor of the transition levels
+% for ii = 1:size(field,1)
+%     for kk = 1:size(Ediff,1)
+% %        popul(kk,ii,1) = exp(-Ediff(kk,ii).*f2E./(kB*temp))./exp(-min(Ediff(kk,ii)).*f2E./(kB*temp)); % occupation factor
+% %        spins(kk) = JIz_exp(1,ii)*2*Gamma^2.*sqrt(popul(kk,ii,1))./(1i.*(Ediff(kk,ii)-w0(ii,1)) + 1/life); % calculate the spin term for each transition level
+%        spins(kk) = 2*Gamma^2.*Jz_exp(1,ii)./(1i.*(Ediff(kk,ii)-w0(ii,1)) + 1/life);
+% %        spins(kk) = 2*Gamma^2.*sqrt(popul(kk,ii,1))./(1i.*(Ediff(kk,ii)-w0(kk,ii)) + 3*abs(gamma_e)); % calculate the spin term for each transition level
+%     end
+%     spin_term(ii,:,1) = sum(spins(:)); % Sum over all levels
+% end
+% S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + spin_term); % Calculate the S11 response using spin turms
+S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + Gamma.*x2); % Calculate the S11 response using susceptibilites
 close all
 
 figure
@@ -254,7 +287,7 @@ colorbar
 xlabel('Magnetic field (T)');
 ylabel('Frequency (GHz)');
 title(num2str(temp*1000,'Simulated data of S11 at %umK'));
-caxis([-7 0])
+caxis([-10 0])
 % hold on
 % levels = plot(fields, Ediff, '-k'); % plot the transition levels on top of the S11 color map
 clearvars -except delta

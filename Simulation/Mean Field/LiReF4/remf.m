@@ -215,7 +215,6 @@ else
 end
 return
 
-
 function [jx,jy,jz,energies,v]=MF_moments(hvec,h_dipol,t,J,gLande,Hcf)
 %Initiate J operators
 Jz=diag(J:-1:-J);
@@ -238,7 +237,7 @@ e=e-min(e);
 v=v(:,n);
 % e = e(1:2); % truncate the vasis to form an Ising basis
 % v = v(:,1:2); % truncate the basis to form an Ising basis
-beta = 1/(0.08617*t); % [kB*T]^-1 in [meV]
+beta = 11.6/t; % [kB*T]^-1 in [meV]
 
 %Calculate Matrixelements and Moments
 if t==0 % At zero temperature, use only lowest eigenvalue.
@@ -281,12 +280,17 @@ Iph=kron(eye(2*J+1),Ip);
 Imh=kron(eye(2*J+1),Im);
 Ixh=(Iph+Imh)/2;
 Iyh=(Iph-Imh)/2i;
+ELEf = gLande*0.05788;     % Lande factor * Bohr magneton (meV T^-1)
+NUCf = 4.173 * 3.15245e-5;   % Nuclear Lande factor, mu/mu_N = 4.173
+% NUCf = 1.668 * 3.15245e-5;  % http://easyspin.org/documentation/isotopetable.html
+% NUCf = 4.732 * 3.1519e-5;   % Original values from linear response code
 
 %Calculate Hamiltonian
-Hzeeman=(-gLande*0.05788)*(hvec(1)*Jxh+hvec(2)*Jyh+hvec(3)*Jzh);
-Ham=Hcfh+Hzeeman-h_dipol(1)*Jxh-h_dipol(2)*Jyh-h_dipol(3)*Jzh + A*(Ixh*Jxh + Iyh*Jyh + Izh*Jzh);
-% Ham=Hcfh+Hzeeman-h_dipol(1)*Jxh-h_dipol(2)*Jyh-h_dipol(3)*Jzh;
-% Ham=Hcfh+Hzeeman-h_dipol(1)*Jxh-h_dipol(2)*Jyh-h_dipol(3)*Jzh + A*(Izh*Jzh);
+Hzeeman = -ELEf*(hvec(1)*Jxh+hvec(2)*Jyh+hvec(3)*Jzh);
+% HzeemanI = -NUCf*(hvec(1)*Ixh+hvec(2)*Iyh+hvec(3)*Izh);
+Ham=Hcfh + Hzeeman - h_dipol(1)*Jxh - h_dipol(2)*Jyh - h_dipol(3)*Jzh + A*(Ixh*Jxh + Iyh*Jyh + Izh*Jzh);
+% Ham=Hcfh + Hzeeman + HzeemanI - h_dipol(1)*Jxh - h_dipol(2)*Jyh - h_dipol(3)*Jzh + A*(Ixh*Jxh + Iyh*Jyh + Izh*Jzh);
+% Ham=Hcfh + Hzeeman - h_dipol(1)*Jxh-h_dipol(2)*Jyh-h_dipol(3)*Jzh + A*(Izh*Jzh);
 
 %Diagonalize
 [v,e]=eig(Ham);
@@ -294,7 +298,7 @@ e=real(diag(e)); % Take only the real part of the eigen-energy to form a diagano
 e=e-min(e); % Normalize the energy amplitude to the lowest eigen-energy
 [e,n]=sort(e); % sort the energy from lowest to the highest
 v=v(:,n); % sort the eigen-vectors in its basis accordingly
-beta = 1/(0.08617*t); % [kB*T]^-1 in [meV]
+beta = 11.6/t; % [kB*T]^-1 in [meV]
 
 %Calculate Matrix elements and Moments
 if t==0 
@@ -305,7 +309,7 @@ if t==0
     jz=real(v(:,1)'*Jzh*v(:,1));
 else % Boltzman factor (with t in Kelvin)
     % energien korrigieren, damit positiv, sonst NaN Fehler mit exp()
-    z=exp(-e*beta)/sum(exp(-e*beta)); % density matrix element
+    z=exp(-e*beta)/sum(exp(-e*beta)); % Partition function
     jx=real(diag(v'*Jxh*v))'*z; % Calculate the expectation values
     jy=real(diag(v'*Jyh*v))'*z;
     jz=real(diag(v'*Jzh*v))'*z;

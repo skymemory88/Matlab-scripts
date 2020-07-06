@@ -1,5 +1,5 @@
 % function [relaxE,bestE,bestE2,C_v,angl,mmagsq,msq0,msqx,msqy,mmag,malt,lat_mom,params]=paraTloop(ion,params,inter,lattice,EQlat_mom)
-function [relaxE,bestE,bestE2,C_v,malt,lat_mom,params,tempMark]=paraTloop(ion,params,inter,lattice,EQlat_mom)
+function [relaxE,bestE,bestE2,C_v,malt,lat_mom,params,tempMark,tempf]=paraTloop(ion,params,inter,lattice,EQlat_mom)
 
 temp = params.temp;
 
@@ -20,6 +20,7 @@ index = 1;
 half_interval = 50*params.N_Er;
 tempMark = ones(ceil(params.Nitermeas/half_interval),1);
 prob = rand(size(tempMark));
+tempf = zeros(int8(size(temp,2)/numWkrs),1);
 
 % % angles in the XY plane
 % angl=zeros([size(temp,2),size(lattice,2)]);
@@ -51,7 +52,7 @@ spmd
         E_0 = energy0(ion,params,inter,lattice,EQlat_mom{ii});
     %     [relaxE(ii,:),Egs,Egs2,mag,~,~,~,~,templattice,~,lat_mom{ii,1}]=LiIonsF4_MC(ion,params.L,iterLim,inter,lattice,params.field,temp(ii),E_0,EQlat_mom{ii},field_change);
     %     [relaxE(ii,:),Egs,Egs2,mag,~,lat_mom{ii,1}]=LiIonsF4_MC(ion,params,inter,lattice,temp(ii),E_0,EQlat_mom{ii},numWkrs,worker.ID,field_change);
-        [relaxE(index,:,1),Egs,Egs2,mag,~,lat_mom,tempMark]=LiIonsF4_MC(ion,params,inter,lattice,temp(ii),E_0,EQlat_mom{ii},field_change,numWkrs,half_interval,tempMark,prob);    
+        [relaxE(index,:,1),Egs,Egs2,mag,~,lat_mom,tempMark,tempf(ii)]=LiIonsF4_MC(ion,params,inter,lattice,temp(ii),E_0,EQlat_mom{ii},field_change,numWkrs,half_interval,tempMark,prob);    
         % mean values over the MC steps
         bestE(index,1) = mean(Egs);
         bestE2(index,1) = mean(Egs2);
@@ -88,5 +89,5 @@ spmd
 
     end
 end
-clearvars -except relaxE bestE bestE2 C_v malt lat_mom params tempMark
+clearvars -except relaxE bestE bestE2 C_v malt lat_mom params tempMark tempf
 end

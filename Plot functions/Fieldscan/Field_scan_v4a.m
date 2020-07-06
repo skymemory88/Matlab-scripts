@@ -11,14 +11,14 @@ function Field_scan_v4a
     plotopt.ftsz = 12;
     plotopt.mksz = 3;
 
-    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_1 (2.5 x1 x 0.5 mm, rectangle)\20.08.2019';
+    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC162\SC162-1 (2.2 x 1.9 x 0.9 mm)\2020.05.24';
 %     filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC162/SC162-1 (2.2 x 1.9 x 0.9 mm)/2020.05.29';
     %The first line is for windows, the second line is for mac OS
-    filename = '2019_08_0010.dat';
+    filename = '2020_05_0003.dat';
     fileobj = fullfile(filepath,filename);
     
 % Operation options
-    opt  = 2;
+    opt  = 1;
 
     switch opt
         case 1
@@ -42,7 +42,9 @@ H = out.data.DCField1;
 HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
 T1 = out.data.Temperature1;
 % T2 = out.data.Temperature2;
-lck = out.data.lockin1;
+lck1 = out.data.lockin1;
+lck2 = out.data.lockin2;
+
 Temperature = mean(T1(H == min(H)));
 
 S11 = S11';
@@ -77,16 +79,22 @@ colorbar
 set(gca,'fontsize',plotopt.ftsz)
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
-xticks(linspace(field_l,field_h,5));
+xticks(linspace(field_l,field_h,6));
 title(num2str(Temperature,'S11 response at T = %3.3f K'));
 
 % Plot the temperature profile against magnetic field
 % hfig2 = setfig(12);
 figure
-plot(H(1:100:end),lck(1:100:end),'s-')
+plot(H(1:100:end),lck1(1:100:end),'s-')
 xlabel('DC Magnetic field')
 ylabel('Hall resistence')
 title('Hall resistance vs Field')
+
+figure
+plot(H(1:100:end),lck2(1:100:end),'x-')
+xlabel('DC Magnetic field')
+ylabel('Sample resistence')
+title('Sample resistance vs Field')
 
 figure
 plot(H(1:100:end),T1(1:100:end),'o-')
@@ -228,9 +236,11 @@ axis([field_l field_h freq_l freq_h]);
 
 % Plot frequency scan at line crossing
 figure
-plot(freq(1:10:end,Hpos),dB(1:10:end,Hpos),'-o');
+% plot(freq(1:10:end,Hpos),dB(1:10:end,Hpos),'-o');
+plot(freq(:,Hpos),dB(:,Hpos),'-o');
 xlabel('Frequency (GHz)');
 ylabel('S11 (dB)');
+legend(sprintf('Frequency cut at %.2f T',H0(Hpos)));
 title('Frequency scan at line crossing');
 
 clearvars B Delt hPara fPara wp wm spin fitPara H_res f_res Hpos gc

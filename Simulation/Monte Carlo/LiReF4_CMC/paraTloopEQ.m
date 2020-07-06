@@ -49,5 +49,5 @@ for ii = 1:size(params.temp,2)
     frelaxE(ii,:) = relaxE{idx}(ii,:);
     fEQlat_mom{ii} = EQlat_mom{idx}(ii);
 end
-    clearvars -except params lattice fEQlat_mom frelaxE N
+    clearvars -except params lattice fEQlat_mom frelaxE
 end

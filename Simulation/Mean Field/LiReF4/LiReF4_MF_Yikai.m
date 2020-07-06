@@ -8,7 +8,7 @@ strategies.damping=0.05; % damping factor. May reduce exponential fit efficiency
 strategies.expfit=true; % turn on fitting to an exponential.
 strategies.expfit_period=30; % period between exponential fit.
 strategies.expfit_deltaN=5; % The exponential fit points distance. Three points used: N, N-deltaN, N-2deltaN.
-strategies.symmetry = false; % Copy the state of one site to its crystal symmetry equivalent sites instead of calculating them individually
+strategies.symmetry = true; % Copy the state of one site to its crystal symmetry equivalent sites instead of calculating them individually
 
 global rundipole % Run dipole calculations or not
 rundipole = true;
@@ -17,24 +17,23 @@ global Options;
 Options.scantype = true; %Choose scan type: field scan (TRUE) or temperature scan (FALSE)
 Options.hyperfine = true; % Including/excluding hyperfine calculations
 Options.plotting = false; %Choose whether or not to plot the figures at the end
-Options.saving = true;
+Options.saving = true ;
 
 if Options.scantype == true
-%         temp = [0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.8 1.2 1.6 1.8 2];
-        temp = 0.200;
+%         temp = [0.1 0.12 0.15 0.2 0.24 0.3 0.35 0.4 0.45 0.5 0.8 1.2 1.6 1.8 2];
+        temp = 0.130;
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
-        Hmax = 9.0; % Maximum magnetic field
-        H_step = 0.025; % Field scan resolution
-        phi = 0; % ab-plane rotation, phi=0 means H along x (in radian)
-        theta = 0; % theta = 0 indicates a transverse magnetic field
-
+        Hmax = 17.0; % Maximum magnetic field
+        H_step = 0.05; % Field scan resolution
+        theta = 1.0/180*pi; % theta(in radian) = 0 indicates a transverse magnetic field
+        phi = 10.0/180*pi; % ab-plane rotation, phi(in radian) = 0 means H along x
+        
         % Calcualte each component of the DC magnetic field
         Hx = (Hmin:H_step:Hmax)*cos(phi)*cos(theta);
         Hy = (Hmin:H_step:Hmax)*sin(phi)*cos(theta);
         Hz = (Hmin:H_step:Hmax)*sin(theta);
         fields = [Hx;Hy;Hz];
-
 elseif Options.scantype == false
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         H = 0; % Static external magnetic field
@@ -133,7 +132,7 @@ end
 demagn=true; % Demagnetization factor included if TRUE
 alpha=0; % shape in calculating demagnetization factor is a needle (0), sphere (1)
 %% Calculate and save results inside the LiIonsF4 function
-[ion,history,E,V]=LiIonsF4(ion,temp,fields,phi,demagn,alpha);
+[ion,~,E,V]=LiIonsF4(ion,temp,fields,phi,theta,demagn,alpha);
 %% Plot data
 n = ion.prop~=0;
 if Options.plotting == true
@@ -146,9 +145,9 @@ if Options.plotting == true
     end
     
     for ii=1:size(ion.name,1)
-        J_H(:,:,ii)=squeeze(mean(ion.Js_hyp(:,:,:,:,ii),1)); % With hyperfine
+        J_H(:,:,ii)=squeeze(mean(ion.Js_hyp(:,:,:,ii),1)); % With hyperfine
         %         J_H(:,:,i)=squeeze(mean(ion.Js(:,:,:,:,i),1)); % Without hyperfine
-        Jnorm_H(:,ii)=squeeze(mean(ion.Jmom_hyp_norm(:,:,ii),1)); % with hyperfine
+        Jnorm_H(:,ii)=squeeze(mean(ion.Jmom_hyp_norm(:,ii),1)); % with hyperfine
         %         Jnorm_H(:,i)=squeeze(mean(ion.Jmom_norm(:,:,i),1)); % Without hyperfine
     end
     
@@ -170,8 +169,9 @@ if Options.plotting == true
         hold on
         p2_1 = plot(HH,J_H(:,:,n),'-','LineWidth', 2);
         p2_2 = plot(HH(1:10:end), J_H(:,1:10:end,n),'o','MarkerSize',4); % Add spaced markers to the <J> curves
+        p2_3 = plot(HH(1:10:end), Jnorm_H(1:10:end,n),'-s','MarkerSize',4);
         title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
-        legend('<J_{norm}>','<J_x>','<J_y>','<J_z>');
+        legend('<J_x>','<J_y>','<J_z>','<J_{norm}>');
         xlabel('Magnetic field (|B| [T])');
         ylabel('Spin moment <J>');
     else
@@ -186,8 +186,9 @@ if Options.plotting == true
         hold on
         p2_1 = plot(temp,J_H(:,:,n),'-','LineWidth', 2);
         p2_2 = plot(temp,J_H(:,:,n),'o','MarkerSize',4); % Add spaced markers to the <J> curves
+        p2_3 = plot(temp(1:10:end),Jnorm_H(1:10:end,n),'-s','MarkerSize',4);
         title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
-        legend('<J_{norm}>','<J_x>','<J_y>','<J_z>');
+        legend('<J_x>','<J_y>','<J_z>','<J_{norm}>');
         xlabel('Magnetic field (|B| [T])');
         ylabel('Spin moment <J>');
     end
@@ -201,16 +202,16 @@ if Options.saving == true
     vvv = squeeze(V);
     if Options.scantype == 1 && length(temp) == 1 % Field scan: Options.scantype=1, Temperature scan: Options.scantype=0
         elem = [ion.name(n)];
-        tit = strcat('Hscan_','Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$uDeg.mat', temp, phi*pi/180));
-        %     cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output')
-        save(char(tit),'ttt','fff','eee','vvv','ion','history')
+        tit = strcat('Hscan_','Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat', temp, theta*180/pi, phi*180/pi));
+%         cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
+        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I')
+        save(char(tit),'ttt','fff','eee','vvv','ion')
         % if more than one field value provided, the data is saved insied LiIonF4() function
     elseif Options.scantype == 0 && size(fields,2) == 1 % Field scan: Options.scantype=1, Temperature scan: Options.scantype=0
-        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output')
+        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I')
         elem = [ion.name(n)];
-        tit = strcat('Tscan_Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$uDeg.mat', temp, phi*pi/180));
-        save(char(tit),'ttt','fff','eee','vvv','ion','history')
+        tit = strcat('Tscan_Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat', temp, theta*180/pi, phi*180/pi));
+        save(char(tit),'ttt','fff','eee','vvv','ion')
     end
     cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4')
 end
