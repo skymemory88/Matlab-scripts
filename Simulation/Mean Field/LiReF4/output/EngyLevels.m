@@ -1,9 +1,9 @@
-function figure2a
+function EngyLevels
 % close all
 hold on
 clearvars
 % temp=[0.100, 0.300, 0.500, 0.800, 1.3];
-temp = 0.130;
+temp = 0.240;
 
 Options.Elevel = false;
 Options.Ediff = true;
@@ -11,8 +11,8 @@ Options.Espan = false;
 Options.savedata = false;
 
 color = ["black","red","blue","magenta","green","yellow","cyan"];
-theta = [1.0]; % Angle (in degrees) deviated from the transverse field direction
-phi = [10.0]; % Angle (in degrees) in a-b plane
+theta = [0.0]; % Angle (in degrees) deviated from the transverse field direction
+phi = [0.0]; % Angle (in degrees) in a-b plane
 marker = [":","-.","--","-"];
 % theta = 0;
 % color = {[255 127 0], [255 0 127], [127 0 255], [0 127 255], [0 255 127]} ;
@@ -132,7 +132,7 @@ for iter = 1:numel(temp)
         end
     end
 end
-lgd = legend(figs(1,1,:),lg);
+lgd = legend(figs(1,:,:),lg);
 lgd.FontSize = 12;
 if Options.savedata == true
     filename = strcat('sim_',num2str(temp*1000,'%u'),'mK_trans.mat','-v7.3');
