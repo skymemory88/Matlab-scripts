@@ -21,13 +21,13 @@ Options.saving = true ;
 
 if Options.scantype == true
 %         temp = [0.1 0.12 0.15 0.2 0.24 0.3 0.35 0.4 0.45 0.5 0.8 1.2 1.6 1.8 2];
-        temp = 0.130;
+        temp = [2.2 2.4 2.6 2.8 3];
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
-        Hmax = 17.0; % Maximum magnetic field
-        H_step = 0.05; % Field scan resolution
-        theta = 1.0/180*pi; % theta(in radian) = 0 indicates a transverse magnetic field
-        phi = 10.0/180*pi; % ab-plane rotation, phi(in radian) = 0 means H along x
+        Hmax = 5.0; % Maximum magnetic field
+        H_step = 0.02; % Field scan resolution
+        theta = 0.0/180*pi; % theta(in radian) = 0 indicates a transverse magnetic field
+        phi = 0.0/180*pi; % ab-plane rotation, phi(in radian) = 0 means H along x
         
         % Calcualte each component of the DC magnetic field
         Hx = (Hmin:H_step:Hmax)*cos(phi)*cos(theta);

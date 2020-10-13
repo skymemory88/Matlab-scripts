@@ -6,37 +6,38 @@ EQs = fullfile(store1,EQname);
 load(EQs);
 
 % [relaxE,bestE,bestE2,C_v,~,mmagsq,msq0,~,~,mmag,malt,lat_mom,params] = paraTloop(ion,params,inter,lattice,EQlat_mom);
-[relaxE,bestE,bestE2,C_v,malt,lat_mom,params,tempMark,TT] = paraTloop(ion,params,inter,lattice,EQlat_mom);
+[relaxE,relaxE2,bestE,bestE2,acc_rate,C_v,malt,lat_mom,params,TT] = paraTloop(ion,params,inter,lattice,EQlat_mom);
 
 % Gather all the data from different workers into arrays
-for ii = 1:size(TT,2)
-    TT{ii} = nonzeros(TT{ii});
-end
 TT = [TT{:}]';
 bestE = [bestE{:}]';
-bestE2 = [bestE2{:}]';
-relaxE = [relaxE{:}]';
+bestE2 = [bestE2{:}]'; 
+relaxE = {relaxE{:}};
+relaxE2 = {relaxE2{:}};
 malt = [malt{:}]';
 C_v = [C_v{:}]';
-lat_mom = {lat_mom{:}};
-tempMark = [tempMark{:}]';
+lat_mom = [lat_mom{:}];
+acc_rate = {acc_rate{:}};
 
-% TT = TT(:);
-% bestE = bestE(:);
-% bestE2 = bestE2(:);
+% % order all the arrays' elements by parallel worker indices (core 1, core 2, ... core n, core 1, core 2 ... core n)
+TT = TT(TT~=0);
+bestE = bestE(:);
+bestE2 = bestE2(:);
 % relaxE = relaxE(:)';
-% malt = malt(:);
-% C_v = C_v(:);
+% relaxE2 = relaxE2(:)';
+malt = malt(:);
+C_v = C_v(:);
 
-% [TT,sIdx] = sort(TT,'ascend');
+% order all arrays' elements by asending temperature
+% [~,sIdx] = sort(TT,'ascend');
 % bestE = bestE(sIdx);
 % bestE2 = bestE2(sIdx);
 % % relaxE = relaxE(sIdx)';
 % malt = malt(sIdx);
 % C_v = C_v(sIdx);
 
-% % specific heat (derivative of the energy with respect to temperature) --Yikai
-% C_fdt = diff(bestE)./diff(params.temp);
+% specific heat (derivative of the energy with respect to temperature) --Yikai
+C_fdt = diff(bestE)./diff(TT);
 
 % % susceptibility 
 % chi_v = zeros(3,3,length(params.temp));
@@ -55,8 +56,7 @@ tempMark = [tempMark{:}]';
 cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Test');
 filename=sprintf(['results_tempscan_',params.jobid,'.mat']);
 % save(filename,'relaxE','bestE','bestE2','C_fdt','C_v','chi_v','chi','mmagsq','angl','msq0','msqx','msqy','mmag','malt','params','lat_mom','-v7.3');
-% save(filename,'relaxE','bestE','bestE2','C_fdt','C_v','malt','lat_mom','params','TT','tempMark','-v7.3');
-save(filename,'relaxE','bestE','bestE2','C_v','malt','lat_mom','params','TT','tempMark','-v7.3');
+save(filename,'relaxE','relaxE2','bestE','bestE2','acc_rate','C_v','C_fdt','malt','lat_mom','params','TT','-v7.3');
 cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Monte Carlo\LiReF4_CMC');
 clearvars
 end

@@ -1,4 +1,4 @@
-function [d]=exchange(q,Jex)
+function [d]=exchange(q,Jex,a)
 
 % This function performs a brute force summation of
 % the q-dependent exchange coupling fo a non-Bravais lattice.
@@ -6,20 +6,24 @@ function [d]=exchange(q,Jex)
 % nr is the number of unit cells that should be summed
 % in each direction.
 
-% Parameters for LiHoF4
-% Unit vectors in aangstroms
-a=[5.162 0 0
-   0 5.162 0
-   0 0 10.70];
+% % Parameters for LiHoF4
+% % Unit vectors in aangstroms
+% a=[5.162 0 0
+%    0 5.162 0
+%    0 0 10.70];
+
 % Positions of the moments within the unit cell
 tau=[0 0 0
      0 1/2 1/4
      1/2 1/2 1/2
      1/2 0 3/4];
+ 
 %Parameters for Ho2Ti2O7
 %a=[10.12 0 0
 %   0 10.12 0
 %   0 0 10.12];
+
+% Positions of the moments within the unit cell
 %tau=[0   0   0
 %     0   1/2 1/2
 %     1/2 0 1/2

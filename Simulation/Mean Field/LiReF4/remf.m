@@ -22,7 +22,7 @@ if(isempty(dipole))
     dipole=dipole_direct([0 0 0],dip_range,ion.a{k});
     for i=1:size(ion.name,1)
         ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:))};
-        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i))};
+        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.a{k})};
     end
 end
 
@@ -30,7 +30,7 @@ if rundipole == true
     dipole=dipole_direct([0 0 0],dip_range,ion.a{k});
     for i=1:size(ion.name,1)
         ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:))};
-        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i))};
+        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.a{k})};
     end
     
     rundipole = false;

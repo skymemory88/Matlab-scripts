@@ -1,4 +1,4 @@
-function create_init_file(jobid)
+function create_init_file(jobid, LatticeSize)
 
 params.jobid=jobid;
 
@@ -29,17 +29,21 @@ params.temp(28:32)=linspace(0.16,0.25,5);
 % params.temp(34:40)=linspace(0.044,0.080,7);
 
 % Supercell size
-params.L=15;
+params.L = LatticeSize;
 
 params.prop=[1;0;0;0;0;0]; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
 num_abc=1; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
 
-params.NiterEQ = 5e2*4*params.L^3; % Thermalization steps (scaled according to the system size)
-params.Nitermeas = 2e3*4*params.L^3; % Sampling stemps
+params.NiterEQ = 5e4; % Thermalization steps (in unit of lattice size)
+params.Nitermeas = 1e6; % Sampling stemps (in unit of lattice size)
+params.pt_intv = 100; % Interval between parallel temperature trials
+params.meas_intv = 1000; % Interval between measurements
 
-% % for debugging
-% params.NiterEQ = 4*params.L^3; % Thermalization steps (scaled according to the system size)
-% params.Nitermeas = 10*4*params.L^3; % Sampling stemps
+% for debugging
+% params.NiterEQ = 5; % Thermalization steps (scaled according to the system size)
+% params.Nitermeas = 5; % Sampling stemps
+% params.pt_intv = 1; % Interval between parallel temperature trials
+% params.meas_intv = 1; % Interval between measurements
 
 % 1 for random, 2 for ordered, called in lat()
 params.init_Er=2;

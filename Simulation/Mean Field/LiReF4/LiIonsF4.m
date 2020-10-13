@@ -1,4 +1,4 @@
-function [ion,history,E,V]=LiIonsF4(ion,temp,field,~,theta,demagn,alpha)
+function [ion,history,E,V]=LiIonsF4(ion,temp,field,phi,theta,demagn,alpha)
 %Compute the magnetization and the alternated magnetization for a range
 %of temperatures and fields. (1-x) is the dilution. temp and h are the 
 %temperature and field arrays. xHypIso is the proportion of nuclear moments
@@ -22,6 +22,7 @@ ion_mom_init = ion.mom;
 ion.Jmom=zeros([3,length(temp),size(field,2),size(ion.name,1)]);
 ion.Jmom_norm=zeros([length(temp),size(field,2),size(ion.name,1)]);
 ion.Jmom_hyp=zeros([3,length(temp),size(field,2),size(ion.name,1)]);
+ion.Jmom_hyp_norm=zeros([length(temp),size(field,2),size(ion.name,1)]);
 
 ion.altJmom=zeros([3,length(temp),size(field,2),size(ion.name,1)]);
 ion.altJmom_hyp=zeros([3,length(temp),size(field,2),size(ion.name,1)]);

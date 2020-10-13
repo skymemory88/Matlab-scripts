@@ -1,7 +1,7 @@
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik');
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
 format long g;
-scan = importdata('G:\My Drive\File sharing\PhD projects\LiReF4\LiHoF4 project\Data\Experiment\LiHoF4\SC136\2020.02.19\detune_300K_air.dat',',',3);
+scan = importdata('G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.08.19\detune_300K_air.dat',',',3);
 
 freq11=scan.data(:,1);
 S11=scan.data(:,2);
@@ -17,17 +17,17 @@ bw11 = range(freq11(dB_S11 <= -3));
 f0 = freq11(Idx11);
 Q11 = freq11(Idx11)/bw11; %Calculate the quality factor
 
-% Option 2: Calculate Quality factors from custom lorentzian fit
-param = [bw11 f0 0 1];
-% Param = [1.Bandwidth 2.Resonant frequency 3.Noise floor 4.Scaling factor]
-low_bound = [min(freq11) min(freq11) -Inf -Inf];
-upr_bound = [max(freq11) max(freq11) Inf Inf];
-fdB_S11 = Lorentz_fit(freq11,dB_S11,param, [low_bound upr_bound]);
-param = coeffvalues(fdB_S11);
-fbw11 = param(1);
-ff0 = param(2);
-fQ11 = ff0/fbw11;
-clearvars param fbw11 fQ11 Idx11 bw11 f0 Q11
+% % Option 2: Calculate Quality factors from custom lorentzian fit
+% param = [bw11 f0 0 1];
+% % Param = [1.Bandwidth 2.Resonant frequency 3.Noise floor 4.Scaling factor]
+% low_bound = [min(freq11) min(freq11) -Inf -Inf];
+% upr_bound = [max(freq11) max(freq11) Inf Inf];
+% fdB_S11 = Lorentz_fit(freq11,dB_S11,param, [low_bound upr_bound]);
+% param = coeffvalues(fdB_S11);
+% fbw11 = param(1);
+% ff0 = param(2);
+% fQ11 = ff0/fbw11;
+% clearvars param fbw11 fQ11 Idx11 bw11 f0 Q11
 
 % % Option 3: Calculate Quality factors from spec1d lorentzian fit
 % zqf = medfilt1(dB_S11,10);
@@ -41,11 +41,11 @@ clearvars param fbw11 fQ11 Idx11 bw11 f0 Q11
 % disp(num2str(Q11_fit,'Calculated quality factor for curve 1 from fitting: %3.2f.'));
 % clear fbck s p zqf mag bw11 Idx11 pk;
 
-% freq21=scan.data(:,1);
-% S21=scan.data(:,4);
-% S21i=scan.data(:,5);
-% amp21=sqrt(S21.^2+S21i.^2);
-% dB_S21=mag2db(amp21);
+freq21=scan.data(:,1);
+S21=scan.data(:,4);
+S21i=scan.data(:,5);
+amp21=sqrt(S21.^2+S21i.^2);
+dB_S21=mag2db(amp21);
 % %psd = db2pow(dB_S21)./freq2;    %Calculate power density spectrum
 % %compl_21 = mag2db(1 - sqrt(S21.^2+S21i.^2));
 % bw21 = [];
@@ -69,28 +69,28 @@ clearvars param fbw11 fQ11 Idx11 bw11 f0 Q11
 % scan = importdata('transsmission_300K.dat',',',3);
 %For import from a second file.
 
-freq11_2=scan.data(:,1);
-S11_2=scan.data(:,4);
-S11i_2=scan.data(:,5);
-amp11_2=sqrt(S11_2.^2+S11i_2.^2);
-dB_S11_2=mag2db(amp11_2);
+% freq11_2=scan.data(:,1);
+% S11_2=scan.data(:,4);
+% S11i_2=scan.data(:,5);
+% amp11_2=sqrt(S11_2.^2+S11i_2.^2);
+% dB_S11_2=mag2db(amp11_2);
 % psd_2 = db2pow(-amp11_2)./freq11_2;    %Calculate power density spectrum
 
 % %Option 1: Calculate graphic Quality factors from peaking finding and -3 dB
-[~,Idx11_2] = min(amp11_2); %Find the peak and its corresponding index
-bw11_2 = range(freq11_2(dB_S11_2 <= -3));
-f0_2 = freq11_2(Idx11_2);
-Q11_2 = freq11_2(Idx11_2)/range(bw11_2); %Calculate the quality factor
-
-% Option 2: Calculate Quality factors from custom lorentzian fit
-param = [bw11_2 f0_2 0 1]; % Set up starting point of the parameters for the lorentzian fit
-% Param = [1.Bandwidth 2.Resonant frequency 3.Noise floor 4.Scaling factor]
-fdB_S11_2 = Lorentz_fit(freq11_2,dB_S11_2,param, [low_bound upr_bound]);
-param = coeffvalues(fdB_S11_2);
-fbw11_2 = param(1);
-ff0_2 = param(2);
-fQ11_2 = ff0_2/fbw11_2;
-clearvars Idx11_2 bw11_2 Q11_2 param fbw11_2 fQ11_2
+% [~,Idx11_2] = min(amp11_2); %Find the peak and its corresponding index
+% bw11_2 = range(freq11_2(dB_S11_2 <= -3));
+% f0_2 = freq11_2(Idx11_2);
+% Q11_2 = freq11_2(Idx11_2)/range(bw11_2); %Calculate the quality factor
+% 
+% % Option 2: Calculate Quality factors from custom lorentzian fit
+% param = [bw11_2 f0_2 0 1]; % Set up starting point of the parameters for the lorentzian fit
+% % Param = [1.Bandwidth 2.Resonant frequency 3.Noise floor 4.Scaling factor]
+% fdB_S11_2 = Lorentz_fit(freq11_2,dB_S11_2,param, [low_bound upr_bound]);
+% param = coeffvalues(fdB_S11_2);
+% fbw11_2 = param(1);
+% ff0_2 = param(2);
+% fQ11_2 = ff0_2/fbw11_2;
+% clearvars Idx11_2 bw11_2 Q11_2 param fbw11_2 fQ11_2
 
 % %Option 3: Calculate Quality factors from lorentzian fitting
 % zqf = medfilt1(dB_S11_2,10);
@@ -111,13 +111,13 @@ clearvars Idx11_2 bw11_2 Q11_2 param fbw11_2 fQ11_2
 
 plot(freq11,dB_S11,'-o','Markersize',1.5);
 hold on
-plot(fdB_S11,'red');
-%plot(freq21,dB_S21,'-x','Markersize',1.5);
+% plot(fdB_S11,'red');
+plot(freq21,dB_S21,'-x','Markersize',1.5);
 %plot(freq11,compl_11,'s', 'Markersize', 1.5);
 %plot(freq21,compl_21,'s', 'Markersize', 1.5);
 
-plot(freq11_2,dB_S11_2,'-+','Markersize',1.5);
-plot(fdB_S11_2,'red');
+% plot(freq11_2,dB_S11_2,'-+','Markersize',1.5);
+% plot(fdB_S11_2,'red');
 % %Mark down the resonant frequencies from numerical calculations with verticle lines
 %{
 plot(freq11_3,dB3,'s','Markersize',1.5);
@@ -131,7 +131,7 @@ plot(vline(:,1),vline(:,2),'r');
 %}
 title('S11 response at 300K');
 % legend(sprintf('Cavity (f_0 = 3.57 GHz), Q_g = %.2f and Q_f = %.2f', Q11, Q11_fit), sprintf('Active (f_0 = 3.40GHz), Q_g = %.2f and Q_f = %.2f', Q11_2, Q11_fit_2));
-legend(num2str(ff0/1e9, 'Cavity (f_0 = %3.2f GHz)'),num2str(ff0_2/1e9, 'Active (f_0 = %3.2f GHz)'));
+% legend(num2str(ff0/1e9, 'Cavity (f_0 = %3.2f GHz)'),num2str(ff0_2/1e9, 'Active (f_0 = %3.2f GHz)'));
 xlabel('Frequency (Hz)');ylabel('S11 (dB)');
 hold off
 clearvars

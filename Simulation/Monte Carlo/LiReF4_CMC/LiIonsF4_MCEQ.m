@@ -1,8 +1,9 @@
 function [energies,lattice,E_0,lat_mom]=LiIonsF4_MCEQ(params,ion,inter,lattice,T,E_0,lat_mom,field_change)
 
 N = params.N_Er; % Nb of spins
+iterMax = params.NiterEQ * N;
 estm = 0; % initiate an estimator
-energies=zeros(1,params.NiterEQ);% array for the energy per spin
+energies=zeros(1,iterMax);% array for the energy per spin
 
 for j=1:N
     lattice{j}.mom=lat_mom(1:3,j)';
@@ -11,7 +12,7 @@ for j=1:N
     lattice{j}.energy=lat_mom(6,j);
 end
 
-for iterations=1:params.NiterEQ
+for iterations=1:iterMax
     % Rotate one moment
     chosen=0;
     while(chosen==0)
@@ -46,9 +47,11 @@ for iterations=1:params.NiterEQ
         estm = var(energies(iterations-N+1:iterations))/N;
         if (abs(old_estm-estm) <= estm*0.0025) % When the estimator stops changing, then interrupt the calculation
             energies(iterations:end) = energies(iterations);
-            disp('Convergence reached, iterations terminated.')
+            disp('Convergence reached, iteration terminated.') % Stop the iteration if the energy converges
             break
-        end % Stop the iteration if the energy converges
+        elseif iterations == iterMax
+            disp('Maximum limit reached, iteration terminated.');
+        end
     end
 end
 energies = energies(1:N:end);

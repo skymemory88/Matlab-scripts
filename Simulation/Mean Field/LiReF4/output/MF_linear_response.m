@@ -1,12 +1,13 @@
 function MF_linear_response
 clearvars;
+Options.RPA = false;
 Options.plotting = false; % Decide whether or not to plot the data at the end
 Options.saving = true;
 
 % Temperatures = [0.08 0.1 0.12 0.15 0.2 0.24];
-Temperatures = 0.130;
-theta = 1.0;
-phi = 10.0;
+Temperatures = 1.7;
+theta = 0.0;
+phi = 0.0;
     for ii = 1:length(Temperatures)
         location = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I';
         filename = strcat('Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg', Temperatures(ii), theta, phi),'.mat');
@@ -18,6 +19,9 @@ phi = 10.0;
         fprintf('Calculating for T = %.3f.\n', Temperatures(ii));
 %         [fields, freq_total, rechi, imchi] = linear_response(eee,fff,ttt,vvv);
         [fields, freq_total, rechi, imchi, ~] = linear_response(eee,fff,ttt,vvv);
+        if Options.RPA == true
+            [fields, freq_total, rechi, imchi, ~] = RPA(fields, freq_total, rechi, imchi);
+        end
         if Options.saving == true
             save_file(fields,freq_total,rechi,imchi,ttt,theta,phi,location);
         end
@@ -101,7 +105,7 @@ function [fields, freq_total, rechi, imchi, JIz_exp]=linear_response(eee,fff,ttt
 E = eee;
 V = vvv;
 fields = vecnorm(fff);
-freq_total = (1:0.02:5);
+freq_total = (1:0.01:5);
 
 imchix = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
 imchiy = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
@@ -117,8 +121,8 @@ gLande_Ho=1.25;
 ELEf = gLande_Ho * 0.05788;     % Lande factor * Bohr magneton (meV T^-1)
 NUCf = 4.173 * 3.15245e-5;   % Nuclear Lande factor, mu/mu_N = 4.173
 % NUCf = 4.732 * 3.1519e-5;   % Original code
-gama = 0.0001; % define lifetime (meV)
-%     gama = 0.00005; 
+gama = 0.02; % define lifetime (meV)
+% gama = 0.00005; 
     
 %Initiate J operators
 Jz=diag(J:-1:-J); % Jz = -J, -J+1,...,J-1,J

@@ -14,10 +14,10 @@ function Field_scan_v3
     plotopt.mksz = 5;
 %% Read ZVL
     % set the path to the data file
-    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC127\SC127_1 (2.5 x1 x 0.5 mm, rectangle)\20.08.2019';
+    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC107 (4x5x2mm)\18.05.2019';
     % filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD projects/LiReF4/LiHoF4 project/Data/Experiment/LiHoF4/SC127/17.08.2019/';
     % The first line is for windows, the second line is for mac OS
-    filename = '2019_08_0010';
+    filename = '2019_05_0024';
 
     %Choose desired operation on the data
     opt  = 2;

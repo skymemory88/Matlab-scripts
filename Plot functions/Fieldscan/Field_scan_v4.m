@@ -1,4 +1,4 @@
-function Field_scan_v4a
+function Field_scan_v4
     format long;  
     addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions\');
     addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik\'));
@@ -12,10 +12,10 @@ function Field_scan_v4a
     plotopt.ftsz = 12;
     plotopt.mksz = 3;
 
-    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.10.12';
+    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.10.09';
 %     filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC127/SC127_2 (2.5 x 1 x 0.5 mm, triangle)/25.07.2020';
     %The first line is for windows, the second line is for mac OS
-    filename = '2020_10_0030.dat';
+    filename = '2020_10_0009.dat';
     nZVL = 1; % Number of dataset from ZVL
     fileobj = fullfile(filepath,filename);
     
@@ -24,7 +24,7 @@ function Field_scan_v4a
     dataobj = fullfile(datapath,dataname);
     
 % Operation options
-    opt  = 1;
+    opt  = 4;
 
     switch opt
         case 1
@@ -35,7 +35,7 @@ function Field_scan_v4a
             option2(fileobj, plotopt, nZVL)
         case 3
             % Data fitting and file saving (w/o plots)
-            option3(fileobj, nZVL)
+            option3(fileobj, plotopt, nZVL)
         case 4
             % Off-resonance measurement processing
             option4(fileobj, dataobj, plotopt, nZVL)
@@ -463,7 +463,7 @@ legend('Quality factor from Lorentzian fit', 'Quality factor from FWHM');
 title(num2str(Temperature,'Quality factor, T= %.3f'));
 end
 
-function option3(fileobj, nZVL)
+function option3(fileobj, plotopt, nZVL)
 %% Plot data
 %Set data range and parameters
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
@@ -566,11 +566,25 @@ f0 = f0(ia);
 Q0 = Q0(ia);
 dB0 = dB0(ia);
 
+figure
 f0 = medfilt1(f0,order); % apply median filter to remove some noise
 f0 = f0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 H0 = H0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+plot(H0(1:round(length(H0)/100):end),f0(1:round(length(f0)/100):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
+% hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
+xlabel('Field (T)');
+ylabel('Resonant frequency (GHz)');
+title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
+axis([field_l field_h freq_l freq_h]);
+
+figure
 dB0 = medfilt1(dB0); % apply median filter to remove some noise
 dB0 = dB0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+plot(H0(1:length(H0)/100:end), dB0(1:length(dB0)/100:end), 'o', 'MarkerSize', 2);
+xlabel('Field(T)');
+ylabel('S11 amplitute');
+title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
+set(gca,'fontsize',plotopt.ftsz)
 
 [~,Hpos] = max(dB0); % find the line crossing position on field axis
 hPara = [H0(Hpos), field_l, field_h];
@@ -675,7 +689,7 @@ clearvars c idx ia ii HM trunc1 trunc2 dupl nop
 figure
 cmap = pcolor(xq,yq,zq);
 hold on
-plot(H0,f0,'.r','MarkerSize',6);
+plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'.r','MarkerSize',6);
 set(cmap, 'edgeColor','none')
 shading interp;
 colorbar
@@ -693,7 +707,7 @@ ylabel('Temperature')
 title('Magnetic field vs Temperature')
 
 figure
-plot(H0,f0,'ok','MarkerSize',4);
+plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',4);
 hold on
 plot(mean(H0(f0==min(f0))), mean(f0(f0==min(f0))), 'o', 'MarkerFaceColor', 'red','MarkerSize',4);
 xlabel('Field (T)');
