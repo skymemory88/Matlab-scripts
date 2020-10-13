@@ -12,6 +12,8 @@
 
 **/*.dat
 
+**/*.jpg
+
 SpinW
 
 Plot functions/Fieldscan/Field_scan.m
