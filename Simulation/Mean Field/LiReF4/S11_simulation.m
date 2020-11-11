@@ -43,7 +43,7 @@ clearvars -except delta
 % w0 = 3.71;
 % filFctr = 5E-3;
 
-temp = 1.7; % temperature(s)
+temp = 1.2; % temperature(s)
 theta = 0.0; % angular deviation (in degrees) of the field angle from c-axis direction
 phi = 0.0; % angle (in degrees) in ab-plane rotation
 % alpha = linspace(0,pi,18); % Phase angle between coherent and dissipative couplings
@@ -56,18 +56,18 @@ field_pts = 601; % number of points along field axis
 field = linspace(field_l,field_h,field_pts); % sampling points along field axis
 
 %frequency parameters
-w0 = 4.755; % Resonant frequency for bare cavity
-freq_l = 4.71;
-freq_h = 4.77;
+w0 = 3.51; % Resonant frequency for bare cavity
+freq_l = 3.435;
+freq_h = 3.545;
 freq_pts = 601; % number of points along frequency axis
 freq = linspace(freq_l,freq_h,freq_pts); % frequency range
 
 f2E = 1/241.8; % Convert from GHz to meV
 kB = 0.08617; % [meV/K]
 filFctr = 0.02; % Calculated from COMSOL
-gamma_e = -0.05; % internal dissipation rate
-gamma_i = 0.99*gamma_e; % external dissipation rate
-Gamma = 0.015*gamma_e; % Coupling strength between the cavity field and the spin system
+gamma_e = -0.03; % internal dissipation rate
+gamma_i = 0.88*gamma_e; % external dissipation rate
+Gamma = 20*gamma_e; % Coupling strength between the cavity field and the spin system
 % Gamma = 0.001*0.004; % fix Gamma for checkpoint
 
 Option = 2; % Analysis options
@@ -307,16 +307,18 @@ for ii = 1:length(alpha)
     map = pcolor(field,freq,log(abs(S11_2))); % color plot of the S11 response
     map.EdgeColor = 'none';
     colorbar
-    % xlim([3 4.5])
-    % ylim([3.69 3.73])
+    xlim([field_l field_h])
+    ylim([freq_l freq_h])
     xlabel('Magnetic field (T)');
     ylabel('Frequency (GHz)');
     title(num2str(temp*1000,'Simulated data of S11 at %umK'));
-    caxis([-10 1])
+    caxis([-10 0])
     if Options.Ediff == true
         hold on
         yyaxis right
         levels = plot(field(:,1), Ediff(:,:), '--k'); % plot the transition levels on top of the S11 color map
     end
+    xlim([field_l field_h])
+    ylim([freq_l freq_h])
 end
 clearvars -except delta

@@ -1,19 +1,25 @@
-function MCmeasuretempscan(filein_id)
+function MCmeasuretempscan(filein_id,N_meas,N_stats,meas_intv,pt_intv)
 store1 = ('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Test\');
 % store2 = ('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Iteration limit');
 EQname = sprintf(['resultsEQ_',filein_id,'.mat']);
 EQs = fullfile(store1,EQname);
 load(EQs);
 
+tic;
+params.Nitermeas = N_meas; % Number of measurements
+params.meas_intv = meas_intv; % interval size in between measurements
+params.Niterstat = N_stats; % Number of statistical points for each measurement
+params.pt_intv = pt_intv; % Interval size in between parallel tempering attempts
+
 % [relaxE,bestE,bestE2,C_v,~,mmagsq,msq0,~,~,mmag,malt,lat_mom,params] = paraTloop(ion,params,inter,lattice,EQlat_mom);
-[relaxE,relaxE2,bestE,bestE2,acc_rate,C_v,malt,lat_mom,params,TT] = paraTloop(ion,params,inter,lattice,EQlat_mom);
+[relaxE,relaxE2,bestE,bestE2,acc_rate,C_v,malt,lat_mom,params,TT] = paraTloop2(ion,params,inter,lattice,EQlat_mom);
 
 % Gather all the data from different workers into arrays
 TT = [TT{:}]';
 bestE = [bestE{:}]';
 bestE2 = [bestE2{:}]'; 
-relaxE = {relaxE{:}};
-relaxE2 = {relaxE2{:}};
+% relaxE = {relaxE{:}};
+% relaxE2 = {relaxE2{:}};
 malt = [malt{:}]';
 C_v = [C_v{:}]';
 lat_mom = [lat_mom{:}];
@@ -23,21 +29,19 @@ acc_rate = {acc_rate{:}};
 TT = TT(TT~=0);
 bestE = bestE(:);
 bestE2 = bestE2(:);
-% relaxE = relaxE(:)';
-% relaxE2 = relaxE2(:)';
 malt = malt(:);
 C_v = C_v(:);
 
 % order all arrays' elements by asending temperature
-% [~,sIdx] = sort(TT,'ascend');
-% bestE = bestE(sIdx);
-% bestE2 = bestE2(sIdx);
-% % relaxE = relaxE(sIdx)';
-% malt = malt(sIdx);
-% C_v = C_v(sIdx);
+[temp,sIdx] = sort(TT,'ascend');
+bestE = bestE(sIdx);
+bestE2 = bestE2(sIdx);
+% relaxE = relaxE(sIdx)';
+malt = malt(sIdx);
+C_v = C_v(sIdx);
 
-% specific heat (derivative of the energy with respect to temperature) --Yikai
-C_fdt = diff(bestE)./diff(TT);
+% specific heat from differentiation of energy with respect to the temperature
+C_fdt = diff(bestE)./diff(temp);
 
 % % susceptibility 
 % chi_v = zeros(3,3,length(params.temp));
@@ -46,17 +50,19 @@ C_fdt = diff(bestE)./diff(TT);
 %     for b=1:3
 %         for t=1:length(params.temp)
 %             if(params.temp(t)~=0)
-%                 chi_v(a,b,t)=(mean(mmagsq(a,b,:,t))-mean(mmag(:,a,t))*mean(mmag(:,b,t)))/params.temp(t);
-%                 chi(a,b,t)=mean(mean(msq0(a,b,:,:,t)))/params.temp(t);
+%                 chi_v(a,b,t) = (mean(mmagsq(a,b,:,t))-mean(mmag(:,a,t))*mean(mmag(:,b,t)))/params.temp(t);
+%                 chi(a,b,t) = mean(mean(msq0(a,b,:,:,t)))/params.temp(t);
 %             end
 %         end
 %     end
 % end
+t_intv = datevec(toc/(60*60*24));
+fprintf('Total time cost: %$1u days %$2u hours %$3u minutes and %$4.2f seconds', t_intv(3), t_intv(4), t_intv(5), t_intv(6));
 
-cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Test');
-filename=sprintf(['results_tempscan_',params.jobid,'.mat']);
-% save(filename,'relaxE','bestE','bestE2','C_fdt','C_v','chi_v','chi','mmagsq','angl','msq0','msqx','msqy','mmag','malt','params','lat_mom','-v7.3');
-save(filename,'relaxE','relaxE2','bestE','bestE2','acc_rate','C_v','C_fdt','malt','lat_mom','params','TT','-v7.3');
-cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Monte Carlo\LiReF4_CMC');
+filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Test';
+filename = sprintf(['results_tempscan_',params.jobid,'_%$1u_%$2u_%$3u_%$4u.mat'],params.Nitermeas, params.Niterstat, params.meas_intv, params.pt_intv);
+fileobj = fullfile(filepath,filename);
+% save(fileobj,'relaxE','bestE','bestE2','C_fdt','C_v','chi_v','chi','mmagsq','angl','msq0','msqx','msqy','mmag','malt','params','lat_mom','-v7.3');
+save(fileobj,'relaxE','relaxE2','bestE','bestE2','acc_rate','C_v','C_fdt','malt','lat_mom','params','TT','temp','-v7.3');
 clearvars
 end

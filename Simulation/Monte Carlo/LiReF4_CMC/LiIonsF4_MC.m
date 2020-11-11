@@ -1,13 +1,12 @@
 % function [energies,Egs,Egs2,mag,magsq,sq0,sqx,sqy,lattice,E_0,lat_mom]=LiIonsF4_MC(ion,L,Niter,inter,lattice,field,T,E_0,lat_mom,field_change)
-function [Egs,Egs2,acc_rate,mag,lattice,lat_mom,tempMark,T,mark]=LiIonsF4_MC(ion,params,inter,lattice,T,E_0,lat_mom,field_change,numWkrs,tempMark,prob)
+function [Egs,Egs2,acc_rate,mag,lattice,lat_mom,tempMark,T,mark,p]=LiIonsF4_MC(ion,params,inter,lattice,T,E_0,lat_mom,field_change,numWkrs,tempMark,prob)
 
-% kB = 1/11.6; % Boltzmann constant
-N = params.N_Er;
-N_meas=int8(params.Nitermeas/params.meas_intv);
-iterMax = params.Nitermeas * N;
-energies=zeros(1,params.meas_intv*N);% array for the energy per spin
-% token = tempMark(1);
-%N_meas=1; % for debugging
+kB = 1/11.6; % Boltzmann constant
+N = params.N_Er; % Number of lattice sites
+N_meas = params.Nitermeas; % Number of measurements
+iterMax = N_meas * params.meas_intv * N; % Maximum iteration limit
+% energies = zeros(1,params.meas_intv);% array for the energy per spin
+% N_meas=1; % for debugging
 
 if iscell(lat_mom)
     lat_mom = lat_mom{:};
@@ -79,56 +78,102 @@ for iterations=1:iterMax
     end
     
     E_0 = E_0+acc*dE;
-    energies(mod(iterations-1,params.meas_intv*N)+1) = E_0/params.N_Er;  %Energy per site
-    
-    % take a measure of <E>, <E^2>, and form factors every meas_intv steps
-    if rem(iterations,params.meas_intv*N)==0
-        Egs(p)=energies(mod(iterations-1,params.meas_intv*N)+1); %Energy per site
-        Egs2(p)=(energies(mod(iterations-1,params.meas_intv*N)+1))^2; %Energy squared per site 
+%     energies(mod(iterations-1,params.meas_intv*N)+1) = E_0/N;  %Energy per site
+
+%% Parallel tempering
+    if params.pt_intv ~= inf % Determing wether or not to implement parallel tempering 
+        token = tempMark(1);
+        % Every params.pt_intv steps, perform a parallel tempering attempt (even and odd numbered workers' turns
+        % are mismatched by half interval) To use this procedure, it is necessary to ensure all cores are working
+        % at the same time throughtout (temperature points has to match the number of cores).
+        if rem(iterations,params.pt_intv*N)==0
+%             bestE = mean(energies(1:mod(iterations-1,params.meas_intv*N)+1));
+            fprintf('Parallel tempering attempt No.%u.\n',iterations/(params.pt_intv*N));
+            % Even numbered workers compare and exchange with the nearst neighbour on the left
+            if mod(labindex,2) == 0
+                left = mod(labindex-2,numWkrs)+1; % worker on the left
+    %                 fprintf('Exchanging with worker %u.\n',left); % For debugging
+                E_l = labSendReceive(left,left,E_0,1);
+                T_l = labSendReceive(left,left,T,2);
+                newToken = labSendReceive(left,left,token,3);
+                chance = exp( (E_0-E_l)*(1/kB/T-1/kB/T_l)/N );
+                fprintf('Criterion probability: %1$.3f, Transition probability: %2$.3f\n', prob(mark), chance); %checkpoint
+                if prob(mark) <= chance  
+                    fprintf(1,'Swaping with %d.\n',left);
+                    T = T_l;
+                    tempMark(mark) = newToken; %Mark down the swap on MC timeline
+                    token = newToken;
+                else
+                    tempMark(mark) = token;
+                    fprintf(2,'swap rejected.\n');
+                end
+    %             % Odd number workers compare and exchange with the nearst neighbour on the right
+            else
+                right = mod(labindex,numWkrs)+1; % worker on the right
+    %                 fprintf('Exchanging with worker %u.\n',right); % For debugging
+                E_r = labSendReceive(right,right,E_0,1);
+                T_r = labSendReceive(right,right,T,2);
+                newToken = labSendReceive(right,right,token,3);
+                chance = exp( (E_0-E_r)*(1/kB/T-1/kB/T_r)/N );
+                fprintf('Criterion probability: %1$.3f, Transition probability: %2$.3f\n', prob(mark), chance); %checkpoint
+                if prob(mark) <= chance
+                    fprintf(1,'Swaping with %d.\n',right);
+                    T = T_r;
+                    token = newToken;
+                else
+                    fprintf(2,'swap rejected.\n');
+                end
+                tempMark(mark) = token; %Mark down the swap on MC timeline
+            end
+            % Repeat the process but toward the opposite exchange direction
+            % Even number workers compare and exchange with the nearst neighbour on the right
+            if mod(labindex,2) == 0
+                right = mod(labindex,numWkrs)+1; % worker on the right
+    %                 fprintf('Exchanging with worker %u.\n',right); % For debugging
+                E_r = labSendReceive(right,right,E_0,1);
+                T_r = labSendReceive(right,right,T,2);
+                newToken = labSendReceive(right,right,token,3);
+                chance = exp( (E_0-E_r)*(1/kB/T-1/kB/T_r)/N );
+                fprintf('Criterion probability: %1$.3f, Transition probability: %2$.3f\n', prob(mark), chance); %checkpoint
+                if prob(mark) <= chance
+                    fprintf(1,'Swaping with %d.\n',right);
+                    T = T_r;
+                    token = newToken;
+                else
+                    fprintf(2,'swap rejected.\n');
+                end
+                tempMark(mark) = token; %Mark down the swap on MC timeline
+            % Odd number workers compare and exchange with the nearst neighbour on the left
+            else
+                left = mod(labindex-2,numWkrs)+1; % worker on the left
+    %                 fprintf('Exchanging with worker %u.\n',left); % For debugging
+                E_l = labSendReceive(left,left,E_0,1);
+                T_l = labSendReceive(left,left,T,2);
+                newToken = labSendReceive(left,left,token,3);
+                chance = exp( (E_0-E_l)*(1/kB/T-1/kB/T_l)/N );
+                fprintf('Criterion probability: %1$.3f, Transition probability: %2$.3f\n', prob(mark), chance); %checkpoint
+                if prob(mark) <= chance  
+                    fprintf(1,'Swaping with %d.\n',left);
+                    T = T_l;
+                    token = newToken;
+                else
+                    fprintf(2,'swap rejected.\n');
+                end
+                tempMark(mark) = token; %Mark down the swap on MC timeline
+            end
+            mark = mark + 1;
+        end
+    end
+%%   
+    % take a measurements of <E>, <E^2>, and form factors every meas_intv steps
+    if rem(iterations, params.meas_intv*N) == 0
+%         Egs(p)=energies(mod(iterations-1,params.meas_intv*N)+1); %Energy per site
+%         Egs2(p)=(energies(mod(iterations-1,params.meas_intv*N)+1))^2; %Energy squared per site 
+        Egs(p) = E_0; %Energy per site
+        Egs2(p) = E_0^2; %Energy squared per site 
         acc_rate(p) = accept/(params.meas_intv*N); % Calculate acceptance rate of the metropolis steps between measurements
         accept = 0; % reset acceptance count to zero
-%% Parallel tempering
-%         % Every params.pt_intv steps, perform a parallel tempering attempt (even and odd numbered workers' turns
-%         % are mismatched by half interval) To use this procedure, it is necessary to ensure all cores are working
-%         % at the same time throughtout (temperature points has to match the number of cores).
-%         if rem(iterations,params.pt_intv)==0
-%             % All workers compare and exchange with the nearst neighbour on the left
-%             if mod(mark,2) == 0
-%                 left = mod(labindex-2,numWkrs)+1; % worker on the left
-%                 E_l = labSendReceive(left,left,Egs(p),1);
-%                 T_l = labSendReceive(left,left,T,2);
-%                 newToken = labSendReceive(left,left,token,3);
-%                 chance = exp( (Egs(p)-E_l)*(1/kB/T-1/kB/T_l) );
-%                 fprintf('Criterion probability: %1$.3f, Transition probability: %2$.3f', prob(mark), chance); %checkpoint
-%                 if prob(mark) <= exp( (Egs(p)-E_l)*(1/kB/T-1/kB/T_l) )  
-%                     fprintf('Swaping with %d.\n',left);
-%                     T = T_l;
-%                     tempMark(mark) = newToken; %Mark down the swap on MC timeline
-%                     token = newToken;
-%                 else
-%                     tempMark(mark) = token;
-%                 end
-%             % All workers compare and exchange with the nearst neighbour on the right
-%             elseif mod(mark,2) ~= 0
-%                 right = mod(labindex,numWkrs)+1; % worker on the right
-%                 E_r = labSendReceive(right,right,Egs(p),1);
-%                 T_r = labSendReceive(right,right,T,2);
-%                 newToken = labSendReceive(right,right,token,3);
-%                 chance = exp( (Egs(p)-E_r)*(1/kB/T-1/kB/T_r) );
-%                 fprintf('Criterion probability: %1$.3f, Transition probability: %2$.3f', prob(mark), chance); %checkpoint
-%                 if prob(mark) <= exp( (Egs(p)-E_r)*(1/kB/T-1/kB/T_r) )
-%                     fprintf(', Swaping with %d.\n',right);
-%                     T = T_r;
-%                     tempMark(mark) = newToken; %Mark down the swap on MC timeline
-%                     token = newToken;
-%                 else
-%                     tempMark(mark) = token;
-%                     fprintf('\n');
-%                 end
-%             end
-%             mark = mark + 1;
-%         end
-%%
+        
         % magnetizations and magnetizations squared per type of site
         mag(:,1,p)=sum(lat_mom(1:3,1:4:end)/params.N_Er,2);
         mag(:,2,p)=sum(lat_mom(1:3,2:4:end)/params.N_Er,2);
@@ -149,5 +194,5 @@ for iterations=1:iterMax
     end
 end
 % clearvars -except energies Egs Egs2 mag magsq sq0 sqx sqy lattice E_0 lat_mom tempMark
-clearvars -except Egs Egs2 acc_rate mag lattice lat_mom tempMark T mark
+clearvars -except Egs Egs2 acc_rate mag lattice lat_mom tempMark T mark p
 return

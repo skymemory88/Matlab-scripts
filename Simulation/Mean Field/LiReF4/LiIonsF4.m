@@ -161,7 +161,7 @@ for j = 1:length(temp)
 % Save the data split by temperatures when they are multi-dimensional, otherwise save the data outside this function
     if Options.saving == true
         if size(field,2) >1 && length(temp) >1
-            cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output')
+            cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I')
             tit=strcat('Hscan_Li',[ion.name(ion.prop~=0)], 'F4_', sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg',temp(j),theta*pi/180,phi*pi/180),'.mat');
             save(char(tit),'ttt','fff','eee','vvv','-v7.3')
 %             save(char(tit),'ttt','fff','eee','vvv','h_mf2','-v7.3')

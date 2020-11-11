@@ -15,9 +15,9 @@ params.field=[0 0 0];
 
 % params.temp(1:6) = linspace(0.1,0.6,6); % for debugging
 
-params.temp(1:5)=linspace(0.05,0.1,5);
-params.temp(6:27)=linspace(0.11,0.15,22);
-params.temp(28:32)=linspace(0.16,0.25,5);
+params.temp(1:4)=linspace(0.05,0.1,4);
+params.temp(5:28)=linspace(0.11,0.15,24);
+params.temp(29:32)=linspace(0.16,0.25,4);
 % params.temp=0.01;
 % params.temp=zeros(1,40);
 % logtemp=logspace(0,-5,25);
@@ -35,9 +35,9 @@ params.prop=[1;0;0;0;0;0]; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
 num_abc=1; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
 
 params.NiterEQ = 5e4; % Thermalization steps (in unit of lattice size)
-params.Nitermeas = 1e6; % Sampling stemps (in unit of lattice size)
-params.pt_intv = 100; % Interval between parallel temperature trials
-params.meas_intv = 1000; % Interval between measurements
+% params.Nitermeas = 2e2; % Sampling steps (in unit of lattice size)
+% params.pt_intv = 100; % Interval between parallel temperature trials
+% params.meas_intv = 1000; % Interval between measurements
 
 % for debugging
 % params.NiterEQ = 5; % Thermalization steps (scaled according to the system size)

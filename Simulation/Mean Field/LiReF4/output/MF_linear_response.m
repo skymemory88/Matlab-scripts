@@ -5,7 +5,7 @@ Options.plotting = false; % Decide whether or not to plot the data at the end
 Options.saving = true;
 
 % Temperatures = [0.08 0.1 0.12 0.15 0.2 0.24];
-Temperatures = 1.7;
+Temperatures = 1.1;
 theta = 0.0;
 phi = 0.0;
     for ii = 1:length(Temperatures)
