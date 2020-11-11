@@ -21,7 +21,7 @@ Options.saving = true ;
 
 if Options.scantype == true
 %         temp = [0.1 0.12 0.15 0.2 0.24 0.3 0.35 0.4 0.45 0.5 0.8 1.2 1.6 1.8 2];
-        temp =  [1.77 1.78 1.79];
+        temp =  [1.783 1.786];
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
         Hmax = 5.0; % Maximum magnetic field
