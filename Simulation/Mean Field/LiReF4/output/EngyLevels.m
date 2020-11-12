@@ -2,15 +2,15 @@ function EngyLevels
 % close all
 hold on
 clearvars
-% temp=[0.100, 0.300, 0.500, 0.800, 1.3];
-temp = [1.7 1.75 1.77 1.78 1.79 1.8];
+temp = 1.783;
+% temp = [1.7 1.75 1.77 1.78 1.783 1.786 1.788 1.79];
 N_level = 7; % Number of levels to plot
 
 Options.Elevel = true;
 Options.Ediff = true;
 Options.Espan = false;
 Options.savedata = false;
-Options.savegif = true;
+Options.savegif = false;
 
 color = ["black","red","blue","magenta","green","yellow","cyan"];
 theta = [0.0]; % Angle (in degrees) deviated from the transverse field direction
@@ -120,12 +120,12 @@ for iter = 1:numel(temp)
                 box on;
                 xlim([min(fields) max(fields)]);
                 ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
-                tit4='Difference between energy levels';
-                title(tit4,'FontSize',15)
+                tit4='Difference between energy levels at';
+                title([tit4 sprintf('T = %.3f K',temp(iter))],'FontSize',15)
                 if Options.savegif == true
                     drawnow
                     frame = getframe(fig_dE);
-                    Ediff_frame{im_idx} = getframe(frame);
+                    Ediff_frame{im_idx} = frame2im(frame);
                 end
             end
             %% Frequency span of the transitions at each field
@@ -149,7 +149,9 @@ for iter = 1:numel(temp)
                 title(tit4,'FontSize',15)
             end
             lg(iter, iter2, iter3) = [num2str(temp(iter)*1000,"T = %u mK, A = A_{th}"),num2str(theta(iter2),", theta = %.1f"),char(176),num2str(phi(iter3),", phi = %.1f"),char(176)];
-            im_idx = im_idx + 1;
+            if Options.savegif == true
+                im_idx = im_idx + 1;
+            end
         end
     end
 end
@@ -162,7 +164,7 @@ end
 if Options.savegif == true
     filepath = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I';
     if Options.Elevel == true
-        filename = strcat('sim_',num2str(temp*1000,'%u'),'mK_E.gif');
+        filename = strcat('sim_',num2str(min(temp)*1000,'%u'),'-',num2str(max(temp)*1000,'%u'),'mK_Elevel.gif');
         fileobj = fullfile(filepath,filename);
         for ii = 1:length(Elevel_frame)
             [img,cmp] = rgb2ind(Elevel_frame{ii},256);
@@ -174,7 +176,7 @@ if Options.savegif == true
         end
     end
     if Options.Ediff == true
-        filename = strcat('sim_',num2str(temp*1000,'%u'),'mK_dE.gif');
+        filename = strcat('sim_',num2str(min(temp)*1000,'%u'),'-',num2str(max(temp)*1000,'%u'),'mK_Ediff.gif');
         fileobj = fullfile(filepath,filename);
         for ii = 1:length(Ediff_frame)
             [img,cmp] = rgb2ind(Ediff_frame{ii},256);

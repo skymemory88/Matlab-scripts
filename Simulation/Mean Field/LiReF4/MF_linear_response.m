@@ -1,11 +1,11 @@
 function MF_linear_response
 clearvars;
-Options.RPA = false;
-Options.plotting = false; % Decide whether or not to plot the data at the end
-Options.saving = true;
+Options.RPA = true; % Apply random phase approximation (RPA) correction
+Options.plotting = true; % Decide whether or not to plot the data at the end
+Options.saving = false;
 
 % Temperatures = [0.08 0.1 0.12 0.15 0.2 0.24];
-Temperatures = 1.1;
+Temperatures = 0.08;
 theta = 0.0;
 phi = 0.0;
     for ii = 1:length(Temperatures)
@@ -18,12 +18,21 @@ phi = 0.0;
         
         fprintf('Calculating for T = %.3f.\n', Temperatures(ii));
 %         [fields, freq_total, rechi, imchi] = linear_response(eee,fff,ttt,vvv);
-        [fields, freq_total, rechi, imchi, ~] = linear_response(eee,fff,ttt,vvv);
         if Options.RPA == true
-            [fields, freq_total, rechi, imchi, ~] = RPA(fields, freq_total, rechi, imchi);
+            [fields, freq_total, ~, ~, chi0r, chi0i, ~] = linear_response(eee,fff,ttt,vvv);
+            dip_range = 80;
+            qvec = [0 0 0];
+            [fields, freq_total, rechi, imchi] = RPA(qvec, fields, freq_total, chi0r, chi0i, dip_range);
+        else
+            [fields, freq_total, rechi0, imchi0, ~, ~, ~] = linear_response(eee,fff,ttt,vvv);
         end
+        
         if Options.saving == true
-            save_file(fields,freq_total,rechi,imchi,ttt,theta,phi,location);
+            if Options.RPA == true
+                save_file(fields,freq_total,rechi,imchi,ttt,theta,phi,location);
+            else
+                save_file(fields,freq_total,rechi0,imchi0,ttt,theta,phi,location);
+            end
         end
     end
 %% Plot the susceptibilities
@@ -100,7 +109,7 @@ savefile = fullfile(location,sname);
 save(savefile,'fields','freq_total','x1z','x2z','-v7.3');
 end
 
-function [fields, freq_total, rechi, imchi, JIz_exp]=linear_response(eee,fff,ttt,vvv)
+function [fields, freq_total, rechi0, imchi0, chi0r, chi0i, JIz_exp]=linear_response(eee,fff,ttt,vvv)
 % Calculation of susceptibilities
 E = eee;
 V = vvv;
@@ -114,6 +123,9 @@ imchiz = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
 rechi1x = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
 rechi1y = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
 rechi1z = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
+
+chi0r = zeros(3,3,4,length(freq_total(1,:)),length(fields(1,:)));
+chi0i = zeros(3,3,4,length(freq_total(1,:)),length(fields(1,:)));
 
 J=8;
 I=3.5;
@@ -188,32 +200,142 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
         JzhT = Jzh * ELEf;
         IzhT = Izh * NUCf;
 
-% Calculate susceptibilities along x-axis
+% Calculate susceptibilities along a-axis
         ttx  = v'  * (JxhT+IxhT) * v; 
         chi_tx  = (ttx) .* (ttx.') .* NN .* G;
         chi_t1x = (ttx) .* (ttx.') .* NN .* G1;
-        sss=sum(sum(chi_tx)); 
-        sss1=sum(sum(chi_t1x));
-        imchix  (m,k,1) =  real(sss)   ;
-        rechi1x (m,k,1) =  real(sss1)  ; 
+        xx=sum(sum(chi_tx)); 
+        xx1=sum(sum(chi_t1x));
+        imchix  (m,k,1) =  real(xx)   ;
+        rechi1x (m,k,1) =  real(xx1)  ; 
 
-% Calculate susceptibilities along y-axis
+% Calculate susceptibilities along b-axis
         tty  = v'  * (JyhT+IyhT) * v; 
         chi_ty  = (tty) .* (tty.') .* NN .* G;
         chi_t1y = (tty) .* (tty.') .* NN .* G1;
-        sss=sum(sum(chi_ty));
-        sss1=sum(sum(chi_t1y));
-        imchiy  (m,k,1) =  real(sss)   ;
-        rechi1y (m,k,1) =  real(sss1)  ;   
+        yy=sum(sum(chi_ty));
+        yy1=sum(sum(chi_t1y));
+        imchiy  (m,k,1) =  real(yy)   ;
+        rechi1y (m,k,1) =  real(yy1)  ;   
 
 % Calculate susceptibilities along c-axis
         ttz  = v'  * (JzhT+IzhT) * v;
         chi_tz  = (ttz) .* (ttz.') .* NN .* G;
         chi_t1z = (ttz) .* (ttz.') .* NN .* G1;
-        sss=sum(sum(chi_tz));
-        sss1=sum(sum(chi_t1z));
-        imchiz  (m,k,1) =  real(sss)   ;
-        rechi1z (m,k,1) =  real(sss1)  ;
+        zz=sum(sum(chi_tz));
+        zz1=sum(sum(chi_t1z));
+        imchiz  (m,k,1) =  real(zz)   ;
+        rechi1z (m,k,1) =  real(zz1)  ;
+        
+% Calculate susceptibilities along ab-axis
+%         chi_txy  = (ttx) .* (tty.') .* NN .* G;
+        chi_t1xy = (ttx) .* (tty.') .* NN .* G1;
+%         xy=sum(sum(chi_txy)); 
+        xy1=sum(sum(chi_t1xy));
+%         imchixy  (m,k,1) =  real(xy)   ;
+%         rechi1xy (m,k,1) =  real(xy1)  ; 
+
+% Calculate susceptibilities along ac-axis
+%         chi_txz  = (ttx) .* (ttz.') .* NN .* G;
+        chi_t1xz = (ttx) .* (ttz.') .* NN .* G1;
+%         xz=sum(sum(chi_txz));
+        xz1=sum(sum(chi_t1xz));
+%         imchixz  (m,k,1) =  real(xz)   ;
+%         rechi1xz (m,k,1) =  real(xz1)  ;   
+
+% Calculate susceptibilities along ba-axis
+%         chi_tyx  = (tty) .* (ttx.') .* NN .* G;
+        chi_t1yx = (tty) .* (ttx.') .* NN .* G1;
+%         yx=sum(sum(chi_tyx));
+        yx1=sum(sum(chi_t1yx));
+%         imchiyx  (m,k,1) =  real(yx)   ;
+%         rechi1yx (m,k,1) =  real(yx1)  ;
+        
+% Calculate susceptibilities along bc-axis
+%         chi_tyz  = (tty) .* (ttz.') .* NN .* G;
+        chi_t1yz = (tty) .* (ttz.') .* NN .* G1;
+%         yz=sum(sum(chi_tyz)); 
+        yz1=sum(sum(chi_t1yz));
+%         imchiyz  (m,k,1) =  real(yz)   ;
+%         rechi1yz (m,k,1) =  real(yz1)  ; 
+
+% Calculate susceptibilities along ca-axis
+%         chi_tzx  = (ttz) .* (ttx.') .* NN .* G;
+        chi_t1zx = (ttz) .* (ttx.') .* NN .* G1;
+%         zx=sum(sum(chi_tzx));
+        zx1=sum(sum(chi_t1zx));
+%         imchizx  (m,k,1) =  real(zx)   ;
+%         rechi1zx (m,k,1) =  real(zx1)  ;   
+
+% Calculate susceptibilities along cb-axis
+%         chi_tzy  = (ttz) .* (tty.') .* NN .* G;
+        chi_t1zy = (ttz) .* (tty.') .* NN .* G1;
+%         zy=sum(sum(chi_tzy));
+        zy1=sum(sum(chi_t1zy));
+%         imchizy  (m,k,1) =  real(zy)   ;
+%         rechi1zy (m,k,1) =  real(zy1)  ;
+
+        chi0i(:,:,:,m,k)=[xx xy xz
+                         yx yy yz
+                         zx zy zz];
+                     
+        chi0r(:,:,:,m,k)=[xx1 xy1 xz1
+                         yx1 yy1 yz1
+                         zx1 zy1 zz1];
+    end
+end
+imchi0.x = imchix;
+imchi0.y = imchiy;
+imchi0.z = imchiz;
+
+rechi0.x = rechi1x;
+rechi0.y = rechi1y;
+rechi0.z = rechi1z;
+end
+
+function [fields, freq_total, rechi, imchi] = RPA(qvec, fields, freq_total, chi0r, chi0i, dip_range)
+
+N = 4; % Number of magnetic atoms in unit cell
+chir = zeros(3,3,length(freq_total(1,:)),size(qvec,1),length(fields(1,:)));
+chii = zeros(3,3,length(freq_total(1,:)),size(qvec,1),length(fields(1,:)));
+D = zeros(3,3,N,N,size(qvec,1));
+
+imchix = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
+imchiy = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
+imchiz = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
+
+rechi1x = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
+rechi1y = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
+rechi1z = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
+
+for jj=1:size(qvec,1)
+     D(:,:,:,:,jj)=dipole_direct(qvec(jj,:),dip_range) + exchange(qvec(jj,:),ion.ex(2));
+end
+D=D*(6/5)^2*0.05368;
+
+for ii = 1:length(fields(1,:))
+    for kk = 1:length(freq_total(1,:))
+        for nq = 1:size(qvec,1)
+            M = zeros(3*N);
+            for n = 1:N
+                for m = 1:N
+                    M((n-1)*3+(1:3),(m-1)*3+(1:3)) = chi0i(:,:,n,kk,ii)*D(:,:,n,m,nq);
+                end
+            end
+            chir(:,:,kk,nq,ii) = 1/4*[eye(3) eye(3) eye(3) eye(3)]*...
+                ((eye(size(M))-M)\([chi0r(:,:,1,kk,ii);chi0r(:,:,2,kk,ii);chi0r(:,:,3,kk,ii);chi0r(:,:,4,kk,ii)]));
+            chii(:,:,kk,nq,ii) = 1/4*[eye(3) eye(3) eye(3) eye(3)]*...
+                ((eye(size(M))-M)\([chi0i(:,:,1,kk,ii);chi0i(:,:,2,kk,ii);chi0i(:,:,3,kk,ii);chi0i(:,:,4,kk,ii)]));
+            
+            imchix(kk,ii,1) =  real(chii(1,1,kk,nq,ii));
+            rechi1x(kk,ii,1) =  real(chir(1,1,kk,nq,ii));
+            
+            imchiy(kk,ii,1) =  real(chii(2,2,kk,nq,ii));
+            rechi1y(kk,ii,1) =  real(chir(2,2,kk,nq,ii));
+            
+            imchiz(kk,ii,1) =  real(chii(3,3,kk,nq,ii));
+            rechi1z(kk,ii,1) =  real(chir(3,3,kk,nq,ii));
+        end
     end
 end
 imchi.x = imchix;

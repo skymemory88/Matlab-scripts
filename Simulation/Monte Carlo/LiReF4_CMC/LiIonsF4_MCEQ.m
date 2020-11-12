@@ -45,7 +45,7 @@ for iterations=1:iterMax
     if mod(iterations,N) == 0
         old_estm = estm;
         estm = var(energies(iterations-N+1:iterations))/N;
-        if (abs(old_estm-estm) <= estm*0.0015) % When the estimator stops changing, then interrupt the calculation
+        if (abs(old_estm-estm) <= estm*params.convergence) % When the estimator stops changing, then interrupt the calculation
             energies(iterations:end) = energies(iterations);
             disp('Convergence reached, iteration terminated.') % Stop the iteration if the energy converges
             break
