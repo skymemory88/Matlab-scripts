@@ -37,6 +37,10 @@ phi = 0.0;
     end
 %% Plot the susceptibilities
 if Options.plotting == true
+    if Options.RPA == false
+        rechi = rechi0;
+        imchi = imchi0;
+    end
 % Color plot of the imaginary part of the susceptibility of x component
     figure (1);
     clf
@@ -114,7 +118,8 @@ function [fields, freq_total, rechi0, imchi0, chi0r, chi0i, JIz_exp]=linear_resp
 E = eee;
 V = vvv;
 fields = vecnorm(fff);
-freq_total = (1:0.01:5);
+freq_total = (1:0.05:5);
+% freq_total = (1:0.01:5);
 
 imchix = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
 imchiy = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
@@ -228,60 +233,62 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
         rechi1z (m,k,1) =  real(zz1)  ;
         
 % Calculate susceptibilities along ab-axis
-%         chi_txy  = (ttx) .* (tty.') .* NN .* G;
+        chi_txy  = (ttx) .* (tty.') .* NN .* G;
         chi_t1xy = (ttx) .* (tty.') .* NN .* G1;
-%         xy=sum(sum(chi_txy)); 
+        xy=sum(sum(chi_txy)); 
         xy1=sum(sum(chi_t1xy));
 %         imchixy  (m,k,1) =  real(xy)   ;
 %         rechi1xy (m,k,1) =  real(xy1)  ; 
 
 % Calculate susceptibilities along ac-axis
-%         chi_txz  = (ttx) .* (ttz.') .* NN .* G;
+        chi_txz  = (ttx) .* (ttz.') .* NN .* G;
         chi_t1xz = (ttx) .* (ttz.') .* NN .* G1;
-%         xz=sum(sum(chi_txz));
+        xz=sum(sum(chi_txz));
         xz1=sum(sum(chi_t1xz));
 %         imchixz  (m,k,1) =  real(xz)   ;
 %         rechi1xz (m,k,1) =  real(xz1)  ;   
 
 % Calculate susceptibilities along ba-axis
-%         chi_tyx  = (tty) .* (ttx.') .* NN .* G;
+        chi_tyx  = (tty) .* (ttx.') .* NN .* G;
         chi_t1yx = (tty) .* (ttx.') .* NN .* G1;
-%         yx=sum(sum(chi_tyx));
+        yx=sum(sum(chi_tyx));
         yx1=sum(sum(chi_t1yx));
 %         imchiyx  (m,k,1) =  real(yx)   ;
 %         rechi1yx (m,k,1) =  real(yx1)  ;
         
 % Calculate susceptibilities along bc-axis
-%         chi_tyz  = (tty) .* (ttz.') .* NN .* G;
+        chi_tyz  = (tty) .* (ttz.') .* NN .* G;
         chi_t1yz = (tty) .* (ttz.') .* NN .* G1;
-%         yz=sum(sum(chi_tyz)); 
+        yz=sum(sum(chi_tyz)); 
         yz1=sum(sum(chi_t1yz));
 %         imchiyz  (m,k,1) =  real(yz)   ;
 %         rechi1yz (m,k,1) =  real(yz1)  ; 
 
 % Calculate susceptibilities along ca-axis
-%         chi_tzx  = (ttz) .* (ttx.') .* NN .* G;
+        chi_tzx  = (ttz) .* (ttx.') .* NN .* G;
         chi_t1zx = (ttz) .* (ttx.') .* NN .* G1;
-%         zx=sum(sum(chi_tzx));
+        zx=sum(sum(chi_tzx));
         zx1=sum(sum(chi_t1zx));
 %         imchizx  (m,k,1) =  real(zx)   ;
 %         rechi1zx (m,k,1) =  real(zx1)  ;   
 
 % Calculate susceptibilities along cb-axis
-%         chi_tzy  = (ttz) .* (tty.') .* NN .* G;
+        chi_tzy  = (ttz) .* (tty.') .* NN .* G;
         chi_t1zy = (ttz) .* (tty.') .* NN .* G1;
-%         zy=sum(sum(chi_tzy));
+        zy=sum(sum(chi_tzy));
         zy1=sum(sum(chi_t1zy));
 %         imchizy  (m,k,1) =  real(zy)   ;
 %         rechi1zy (m,k,1) =  real(zy1)  ;
 
-        chi0i(:,:,:,m,k)=[xx xy xz
-                         yx yy yz
-                         zx zy zz];
-                     
-        chi0r(:,:,:,m,k)=[xx1 xy1 xz1
-                         yx1 yy1 yz1
-                         zx1 zy1 zz1];
+        for ionn = 1:4
+            chi0i(:,:,ionn,m,k)=[xx xy xz
+                                 yx yy yz
+                                 zx zy zz];
+            
+            chi0r(:,:,ionn,m,k)=[xx1 xy1 xz1
+                                 yx1 yy1 yz1
+                                 zx1 zy1 zz1];
+        end
     end
 end
 imchi0.x = imchix;
@@ -296,6 +303,10 @@ end
 function [fields, freq_total, rechi, imchi] = RPA(qvec, fields, freq_total, chi0r, chi0i, dip_range)
 
 N = 4; % Number of magnetic atoms in unit cell
+a = [5.175 0 0; 
+     0 5.175 0;
+     0 0 10.75]; % Lattice constant for LiHoF4
+ 
 chir = zeros(3,3,length(freq_total(1,:)),size(qvec,1),length(fields(1,:)));
 chii = zeros(3,3,length(freq_total(1,:)),size(qvec,1),length(fields(1,:)));
 D = zeros(3,3,N,N,size(qvec,1));
@@ -309,7 +320,7 @@ rechi1y = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
 rechi1z = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
 
 for jj=1:size(qvec,1)
-     D(:,:,:,:,jj)=dipole_direct(qvec(jj,:),dip_range) + exchange(qvec(jj,:),ion.ex(2));
+     D(:,:,:,:,jj)=dipole_direct(qvec(jj,:),dip_range,a) + exchange(qvec(jj,:),ion.ex(2));
 end
 D=D*(6/5)^2*0.05368;
 
@@ -327,14 +338,14 @@ for ii = 1:length(fields(1,:))
             chii(:,:,kk,nq,ii) = 1/4*[eye(3) eye(3) eye(3) eye(3)]*...
                 ((eye(size(M))-M)\([chi0i(:,:,1,kk,ii);chi0i(:,:,2,kk,ii);chi0i(:,:,3,kk,ii);chi0i(:,:,4,kk,ii)]));
             
-            imchix(kk,ii,1) =  real(chii(1,1,kk,nq,ii));
             rechi1x(kk,ii,1) =  real(chir(1,1,kk,nq,ii));
+            imchix(kk,ii,1) =  real(chii(1,1,kk,nq,ii));
             
-            imchiy(kk,ii,1) =  real(chii(2,2,kk,nq,ii));
             rechi1y(kk,ii,1) =  real(chir(2,2,kk,nq,ii));
+            imchiy(kk,ii,1) =  real(chii(2,2,kk,nq,ii));
             
-            imchiz(kk,ii,1) =  real(chii(3,3,kk,nq,ii));
             rechi1z(kk,ii,1) =  real(chir(3,3,kk,nq,ii));
+            imchiz(kk,ii,1) =  real(chii(3,3,kk,nq,ii));
         end
     end
 end
