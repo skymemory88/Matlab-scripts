@@ -29,7 +29,7 @@ spmd
         [relaxE(ii,:),~,~,EQlat_mom{ii}]=LiIonsF4_MCEQ(params,ion,inter,lattice,params.temp(ii),relaxE(ii,end)*params.N_Er,EQlat_mom{ii},field_change);
         if ii < size(params.temp,2)
             relaxE(ii+1,:) = relaxE(ii,:); % Seed the thermalization process of the next temperature point
-            EQlat_mom{ii+1} = EQlat_mom{ii}; % Seed the tehermalization process of the next temperature point
+            EQlat_mom{ii+1} = EQlat_mom{ii}; % Seed the the hermalization process of the next temperature point
         end
     end
 end

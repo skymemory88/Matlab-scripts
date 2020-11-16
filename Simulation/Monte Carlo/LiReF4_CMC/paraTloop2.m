@@ -5,7 +5,7 @@ temp = params.temp;
 N_meas = params.Nitermeas;
 N_stats = params.Niterstat;
 wforce = gcp(); % Start a new parallel pool if there isn't one
-numWkrs = wforce.NumWorkers;
+numWkrs = wforce.NumWorkers; % Retrieve the number of active workers in the parallel pool
 % numWkrs = 1; % For debugging
 fprintf('Total number of workers: %d.\n',numWkrs); %Checkpoint
 
@@ -28,8 +28,8 @@ prob = rand(size(tempMark));
 % angl=zeros([size(temp,2),size(lattice,2)]);
 
 % energy per spin, squared energy per spin and fluctuations
-Egs = double.empty(block,N_meas,0);
-Egs2 = double.empty(block,N_meas,0);
+Egs = double.empty(N_meas,block,0);
+Egs2 = double.empty(N_meas,block,0);
 bestE = double.empty(block,0); % Ground state energy
 bestE2 = double.empty(block,0); 
 C_v = double.empty(block,0); % Specific heat from F-D theorem
@@ -61,14 +61,16 @@ spmd
         alty_temp = zeros(1,N_stats,N_meas);
         lat_mom = EQlat_mom{ii+(labindex-1)*block};
         for jj = 1:N_meas
-            [E_0,~,~,acc_rate(index,:,jj,1),~,lattice,lat_mom,~,temp(ii+(labindex-1)*block),~] = rand_walk(params.meas_intv,params.pt_intv,ion,params,inter,lattice,temp(ii+(labindex-1)*block),E_0,lat_mom,field_change,numWkrs,tempMark(index,:),prob(index,:));
-            [E_0,Egs(index,jj,1),Egs2(index,jj,1),~,mag,lattice,lat_mom,~,temp(ii+(labindex-1)*block),~] = rand_walk(N_stats,inf,ion,params,inter,lattice,temp(ii+(labindex-1)*block),E_0,lat_mom,field_change,numWkrs,tempMark(index,:),prob(index,:));     
+%             [E_0,~,~,acc_rate(index,:,jj,1),~,lattice,lat_mom,~,temp(ii+(labindex-1)*block),~] = rand_walk(params.meas_intv,params.pt_intv,ion,params,inter,lattice,temp(ii+(labindex-1)*block),E_0,lat_mom,field_change,numWkrs,tempMark(index,:),prob(index,:));
+%             [E_0,Egs(jj,index,1),Egs2(jj,index,1),~,mag,lattice,lat_mom,~,temp(ii+(labindex-1)*block),~] = rand_walk(N_stats,inf,ion,params,inter,lattice,temp(ii+(labindex-1)*block),E_0,lat_mom,field_change,numWkrs,tempMark(index,:),prob(index,:));     
+            [E_0,~,~,acc_rate(index,:,jj,1),~,lattice,lat_mom,~,temp(ii+(labindex-1)*block),~] = rand_walk2(params.meas_intv,params.pt_intv,ion,params,inter,lattice,temp(ii+(labindex-1)*block),E_0,lat_mom,field_change,numWkrs,tempMark(index,:),prob(index,:));
+            [E_0,Egs(jj,index,1),Egs2(jj,index,1),~,mag,lattice,lat_mom,~,temp(ii+(labindex-1)*block),~] = rand_walk2(N_stats,inf,ion,params,inter,lattice,temp(ii+(labindex-1)*block),E_0,lat_mom,field_change,numWkrs,tempMark(index,:),prob(index,:));     
             altx_temp(1,:,jj) = sum(params.C(1:4,1).*permute(mag(1,1:4,:),[2 3 1])); % alternating magnetizations in x
             alty_temp(1,:,jj) = sum(params.C(1:4,2).*permute(mag(2,1:4,:),[2 3 1])); % alternating magnetizations in y
         end
         tempf(index,1) = temp(ii+(labindex-1)*block);
-        bestE(index,1) = mean(Egs(index,:,1),2); % Ground state energy (mean values over the MC steps)
-        bestE2(index,1) = mean(Egs2(index,:,1),2);
+        bestE(index,1) = mean(Egs(:,index,1)); % Ground state energy (mean values over the MC steps)
+        bestE2(index,1) = mean(Egs2(:,index,1));
 %         Egs = squeeze(Egs)';
 %         Egs2 = squeeze(Egs2)';
 %         Egs = Egs';

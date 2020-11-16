@@ -1,4 +1,4 @@
-function [E_0,Egs,Egs2,acc_rate,mag,lattice,lat_mom,tempMark,T,mark]=rand_walk(sweeps,pt_intv,ion,params,inter,lattice,T,E_0,lat_mom,field_change,numWkrs,tempMark,prob)
+function [E_0,Egs,Egs2,acc_rate,mag,lattice,lat_mom,tempMark,T,mark]=rand_walk2(sweeps,pt_intv,ion,params,inter,lattice,T,E_0,lat_mom,field_change,numWkrs,tempMark,prob)
 
 p=1; % measurement counters
 mark = 2; % parallel tempering counters
@@ -43,72 +43,75 @@ for j=1:N
     lattice{j}.energy = lat_mom(6,j);
 end
 
-accept = 0; % Initiate acceptance count
-for iterations=1:(sweeps*N)
-    % Rotate one moment at a randomly picked site
-    chosen = 0;
-    while(chosen == 0)
-        new_ion=randi(size(lattice,2),1,1); % Randomly select a site for spin-flip-trial
-        [alpha_new, beta_new] = random_angles;
-        [new_mom, new_E_Zee,field_change] = cl_eff_mod(alpha_new, beta_new, params.field, lattice{new_ion},field_change);
-        chosen = 1;
-    end
-    
-    % Computes the energy variation
-    dE = energy_update(ion,params.field,lattice,params.L,inter,new_ion,new_mom,new_E_Zee,lattice{new_ion}.energy);
-    acc = metropolis(dE,T); % Metropolis-Hastings
-    %fprintf('dE = %f meV, acc = %d \n',dE,acc)
-    %acc=glauber(dE,T); % Glauber rate
-    if acc == 1
-        lattice{new_ion}.mom=new_mom;
-        lattice{new_ion}.alpha=alpha_new;
-        lattice{new_ion}.beta=beta_new;
-        lattice{new_ion}.energy=new_E_Zee;
-        lat_mom(1:3,new_ion)=new_mom;
-        lat_mom(4,new_ion)=alpha_new;
-        lat_mom(5,new_ion)=beta_new;
-        lat_mom(6,new_ion)=new_E_Zee;
-        accept = accept + 1;
-    end
-    
-    E_0 = E_0+acc*dE;
-    
-    % take a measurements of <E>, <E^2>, and form factors every meas_intv steps
-    if mod(iterations,N) == 0
-        Egs(p) = (E_0/N);  %Energy per site
-        Egs2(p) = (E_0/N)^2; %Energy squared per site
-        acc_rate(p) = accept/N; % Calculate acceptance rate of the metropolis steps between measurements
-        accept = 0;
-        
-        % magnetizations and magnetizations squared per type of site
-        mag(:,1,p) = sum(lat_mom(1:3,1:4:end)/N,2);
-        mag(:,2,p) = sum(lat_mom(1:3,2:4:end)/N,2);
-        mag(:,3,p) = sum(lat_mom(1:3,3:4:end)/N,2);
-        mag(:,4,p) = sum(lat_mom(1:3,4:4:end)/N,2);
-        
-%         % Structural factor
-%         for m=1:4
-%             for mp=1:4
-%                 sq0(1:3,1:3,m,mp,p) = lat_mom(1:3,m:4:end).*phase0(m:4:end,mp:4:end).*lat_mom(1:3,mp:4:end)';
-%                 sqx(1:3,1:3,m,mp,p) = lat_mom(1:3,m:4:end).*phasex(m:4:end,mp:4:end).*lat_mom(1:3,mp:4:end)';
-%                 sqy(1:3,1:3,m,mp,p) = lat_mom(1:3,m:4:end).*phasey(m:4:end,mp:4:end).*lat_mom(1:3,mp:4:end)';
-%             end
-%             magsq(1:3,1:3,m,p) = sum((lat_mom(1:3,m:4:end)./N).*(lat_mom(1:3,1:4:end)./bestE),2);
-%         end
+new_ion = randi(N,N,1); % generate a repeat-avoiding sequency of random number as the lattice sites to update in one lattice sweep
 
-        p=p+1;
+accept = 0; % Initiate acceptance count
+for iterations=1:sweeps
+    % Implement single lattice sweep (self-avoiding random walk)
+    for ss = 1:N
+        % Rotate one moment at a randomly picked site
+        chosen = 0;
+        while(chosen == 0)
+            [alpha_new, beta_new] = random_angles();
+            [new_mom, new_E_Zee,field_change] = cl_eff_mod(alpha_new, beta_new, params.field, lattice{new_ion(ss)},field_change);
+            chosen = 1;
+        end
+        
+        % Computes the energy variation
+        dE = energy_update(ion,params.field,lattice,params.L,inter,new_ion(ss),new_mom,new_E_Zee,lattice{new_ion(ss)}.energy);
+        acc = metropolis(dE,T); % Metropolis-Hastings
+        %fprintf('dE = %f meV, acc = %d \n',dE,acc)
+        %acc=glauber(dE,T); % Glauber rate
+        if acc == 1
+            lattice{new_ion(ss)}.mom=new_mom;
+            lattice{new_ion(ss)}.alpha=alpha_new;
+            lattice{new_ion(ss)}.beta=beta_new;
+            lattice{new_ion(ss)}.energy=new_E_Zee;
+            lat_mom(1:3,new_ion(ss))=new_mom;
+            lat_mom(4,new_ion(ss))=alpha_new;
+            lat_mom(5,new_ion(ss))=beta_new;
+            lat_mom(6,new_ion(ss))=new_E_Zee;
+            accept = accept + 1;
+        end
+        E_0 = E_0+acc*dE;
     end
-%% Parallel tempering
-    if pt_intv ~= inf % Determing wether or not to implement parallel tempering 
+            
+    % take a measurements of <E>, <E^2>, and form factors after each lattice sweep
+    Egs(p) = (E_0/N);  %Energy per site
+    Egs2(p) = (E_0/N)^2; %Energy squared per site
+    acc_rate(p) = accept/N; % Calculate acceptance rate of the metropolis steps between measurements
+    accept = 0;
+    
+    % magnetizations and magnetizations squared per type of site
+    mag(:,1,p) = sum(lat_mom(1:3,1:4:end)/N,2);
+    mag(:,2,p) = sum(lat_mom(1:3,2:4:end)/N,2);
+    mag(:,3,p) = sum(lat_mom(1:3,3:4:end)/N,2);
+    mag(:,4,p) = sum(lat_mom(1:3,4:4:end)/N,2);
+    
+    %         % Structural factor
+    %         for m=1:4
+    %             for mp=1:4
+    %                 sq0(1:3,1:3,m,mp,p) = lat_mom(1:3,m:4:end).*phase0(m:4:end,mp:4:end).*lat_mom(1:3,mp:4:end)';
+    %                 sqx(1:3,1:3,m,mp,p) = lat_mom(1:3,m:4:end).*phasex(m:4:end,mp:4:end).*lat_mom(1:3,mp:4:end)';
+    %                 sqy(1:3,1:3,m,mp,p) = lat_mom(1:3,m:4:end).*phasey(m:4:end,mp:4:end).*lat_mom(1:3,mp:4:end)';
+    %             end
+    %             magsq(1:3,1:3,m,p) = sum((lat_mom(1:3,m:4:end)./N).*(lat_mom(1:3,1:4:end)./bestE),2);
+    %         end
+    
+    p=p+1;
+    new_ion = randi(N,N,1); % generate a new self-avoiding random walk sequency of the size of the lattice
+    
+    %% Parallel tempering
+    if pt_intv ~= inf % Determing wether or not to implement parallel tempering
         token = tempMark(1);
         % Every pt_intv steps, perform a parallel tempering attempt (even and odd numbered workers' turns
         % are mismatched by half interval) To use this procedure, it is necessary to ensure all cores are working
         % at the same time throughtout (temperature points has to match the number of cores).
         % the energy comparison is done with global energy, in accordance with function metropolis(dE,T)
-        if rem(iterations,pt_intv*N)==0
+        if rem(iterations,pt_intv)==0
             if mod(mark,2) == 0
-                fprintf('Parallel tempering attempt No.%u.\n',iterations/(pt_intv*N));
-%                 fprintf('Parallel tempering attempt No.%u, current iteration: %u/%u.\n',mark,iterations,(pt_intv*N));
+                fprintf('Parallel tempering attempt No.%u.\n',iterations/(pt_intv));
+                %                 fprintf('Parallel tempering attempt No.%u, current iteration: %u/%u.\n',mark,iterations,(pt_intv*N));
                 % Even numbered workers compare and exchange with the nearst neighbour on the left
                 if mod(labindex,2) == 0
                     left = mod(labindex-2,numWkrs)+1; % worker on the left
@@ -148,8 +151,8 @@ for iterations=1:(sweeps*N)
                 mark = mark + 1;
             else
                 % the same process but toward the opposite exchange direction
-                fprintf('Parallel tempering attempt No.%u.\n',iterations/(pt_intv*N));
-%                 fprintf('Parallel tempering attempt No.%u, current iteration: %u/%u.\n',mark,iterations,(pt_intv*N));
+                fprintf('Parallel tempering attempt No.%u.\n',iterations/(pt_intv));
+                %                 fprintf('Parallel tempering attempt No.%u, current iteration: %u/%u.\n',mark,iterations,(pt_intv*N));
                 % Even number workers compare and exchange with the nearst neighbour on the right
                 if mod(labindex,2) == 0
                     right = mod(labindex,numWkrs)+1; % worker on the right

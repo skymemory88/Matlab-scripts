@@ -19,12 +19,12 @@ Options.hyperfine = true; % Including/excluding hyperfine calculations
 Options.plotting = false; %Choose whether or not to plot the figures at the end
 Options.saving = true ;
 
-if Options.scantype == true
+if Options.scantype == true % Temperature scan
 %         temp = [0.1 0.12 0.15 0.2 0.24 0.3 0.35 0.4 0.45 0.5 0.8 1.2 1.6 1.8 2];
-        temp =  [1.783 1.786];
+        temp =  0.08;
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
-        Hmax = 5.0; % Maximum magnetic field
+        Hmax = 9.0; % Maximum magnetic field
         H_step = 0.02; % Field scan resolution
         theta = 0.0/180*pi; % theta(in radian) = 0 indicates a transverse magnetic field
         phi = 0.0/180*pi; % ab-plane rotation, phi(in radian) = 0 means H along x
@@ -34,11 +34,11 @@ if Options.scantype == true
         Hy = (Hmin:H_step:Hmax)*sin(phi)*cos(theta);
         Hz = (Hmin:H_step:Hmax)*sin(theta);
         fields = [Hx;Hy;Hz];
-elseif Options.scantype == false
+elseif Options.scantype == false % Field scan
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         H = 0; % Static external magnetic field
-        phi = 0; % ab-plane rotation, phi=0 means H along x (in radian)
-        theta = pi/2; % theta = 0 indicates a transverse magnetic field
+        theta = 0.0/180*pi; % theta(in radian) = 0 indicates a transverse magnetic field
+        phi = 0.0/180*pi; % ab-plane rotation, phi(in radian) = 0 means H along x
         Hx = H*cos(phi)*cos(theta);
         Hy = H*sin(phi)*cos(theta);
         Hz = H*sin(theta);

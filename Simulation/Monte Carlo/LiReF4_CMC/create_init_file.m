@@ -16,8 +16,8 @@ params.field=[0 0 0];
 % params.temp(1:6) = linspace(0.1,0.6,6); % for debugging
 
 params.temp(1:4)=linspace(0.05,0.1,4);
-params.temp(5:26)=linspace(0.11,0.15,22);
-params.temp(27:30)=linspace(0.16,0.25,4);
+params.temp(5:28)=linspace(0.11,0.15,24);
+params.temp(29:32)=linspace(0.16,0.25,4);
 % params.temp=0.01;
 % params.temp=zeros(1,40);
 % logtemp=logspace(0,-5,25);
@@ -30,7 +30,7 @@ params.temp(27:30)=linspace(0.16,0.25,4);
 
 % Supercell size
 params.L = LatticeSize;
-params.convergence = 0.001;
+params.convergence = 0.001; % Convergence criteria for thermalization steps
 params.prop=[1;0;0;0;0;0]; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
 num_abc=1; % {'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}
 

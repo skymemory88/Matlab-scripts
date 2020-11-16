@@ -64,10 +64,12 @@ freq = linspace(freq_l,freq_h,freq_pts); % frequency range
 
 f2E = 1/241.8; % Convert from GHz to meV
 kB = 0.08617; % [meV/K]
-filFctr = 0.02; % Calculated from COMSOL
-gamma_e = -0.03; % internal dissipation rate
-gamma_i = 0.88*gamma_e; % external dissipation rate
-Gamma = 20*gamma_e; % Coupling strength between the cavity field and the spin system
+filFctr = 0.01; % Calculated from COMSOL
+gama = 7e-4; % Spin state lifetime (meV)
+gamma_i = -0.01; % internal dissipation rate
+% gamma_i = -0.01; % internal dissipation rate
+gamma_e = 1.25*gamma_i; % external dissipation rate
+Gamma = 1*gamma_i; % Coupling strength between the cavity field and the spin system
 % Gamma = 0.001*0.004; % fix Gamma for checkpoint
 
 Option = 2; % Analysis options
@@ -234,7 +236,7 @@ elseif Option == 2
     clearvars temp_Ediff fff vvv eee
     
     % Load the susceptibilities from MF-linear response calculations
-    filename = strcat('LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat',temp,theta,phi));
+    filename = strcat('LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg_%4$.2e.mat',temp,theta,phi,gama));
     file = fullfile(location,filename);
     load(file,'-mat','fields','freq_total','x1z','x2z');
     
@@ -246,7 +248,7 @@ elseif Option == 2
         colorbar
         xlabel('Magnetic field (T)')
         ylabel('Frequency (GHz)')
-        title({'Real part of Susceptibility', 'in z direction'})
+        title({'Real part of $\chi$ in z direction'})
         
         figure
         hp2 = pcolor(fields(1,:),freq_total,log(x2z));
@@ -254,7 +256,7 @@ elseif Option == 2
         colorbar
         xlabel('Magnetic field (T)')
         ylabel('Frequency (GHz)')
-        title({'Imaginary part of Susceptibility (log scale)', 'in x direction'})
+        title({'Imaginary part of $\chi$ (log scale)', 'in x direction'})
     end
     
     [freq,field] = meshgrid(freq,field);

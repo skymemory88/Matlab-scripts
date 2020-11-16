@@ -5,7 +5,7 @@ EQname = sprintf(['resultsEQ_',filein_id,'.mat']);
 EQs = fullfile(store1,EQname);
 load(EQs);
 
-tic;
+t0 = tic;
 params.Nitermeas = N_meas; % Number of measurements
 params.meas_intv = meas_intv; % interval size in between measurements
 params.Niterstat = N_stats; % Number of statistical points for each measurement
@@ -18,8 +18,8 @@ params.pt_intv = pt_intv; % Interval size in between parallel tempering attempts
 TT = [TT{:}]';
 bestE = [bestE{:}]';
 bestE2 = [bestE2{:}]'; 
-% relaxE = {relaxE{:}};
-% relaxE2 = {relaxE2{:}};
+relaxE = {relaxE{:}};
+relaxE2 = {relaxE2{:}};
 malt = [malt{:}]';
 C_v = [C_v{:}]';
 lat_mom = [lat_mom{:}];
@@ -56,13 +56,15 @@ C_fdt = diff(bestE)./diff(temp);
 %         end
 %     end
 % end
-t_intv = datevec(toc/(60*60*24));
-fprintf('Total time cost: %$1u days %$2u hours %$3u minutes and %$4.2f seconds', t_intv(3), t_intv(4), t_intv(5), t_intv(6));
 
 filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Test';
-filename = sprintf(['results_tempscan_',params.jobid,'_%$1u_%$2u_%$3u_%$4u.mat'],params.Nitermeas, params.Niterstat, params.meas_intv, params.pt_intv);
+filename = sprintf(['results_tempscan_',params.jobid,'_%1$u_%2$u_%3$u_%4$u.mat'],params.Nitermeas, params.Niterstat, params.meas_intv, params.pt_intv);
 fileobj = fullfile(filepath,filename);
 % save(fileobj,'relaxE','bestE','bestE2','C_fdt','C_v','chi_v','chi','mmagsq','angl','msq0','msqx','msqy','mmag','malt','params','lat_mom','-v7.3');
 save(fileobj,'relaxE','relaxE2','bestE','bestE2','acc_rate','C_v','C_fdt','malt','lat_mom','params','TT','temp','-v7.3');
+
+t_intv = datevec(toc(t0)/(60*60*24));
+fprintf('Total time cost: %1$u days %2$u hours %3$u minutes and %4$.2f seconds', t_intv(3), t_intv(4), t_intv(5), t_intv(6));
+
 clearvars
 end
