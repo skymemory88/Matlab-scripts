@@ -1,9 +1,10 @@
-function [E_0,Egs,Egs2,acc_rate,mag,lattice,lat_mom,tempMark,T,p_count]=rand_walk2(sweeps,pt_intv,ion,params,inter,lattice,T,E_0,lat_mom,field_change,numWkrs,tempMark,prob)
+function [E_0,Egs,Egs2,acc_rate,mag,lattice,lat_mom,tempMark,T,p_count]=rand_walk3(sweeps,pt_intv,ion,params,inter,lattice,T,E_0,lat_mom,field_change,numWkrs,p_count,tempMark,prob)
 
 p=1; % measurement counters
 kB = 1/11.6; % Boltzmann constant [meV/K]
 N = params.N_Er; % Number of lattice sites
-p_count = 1; % parallel tempering counters
+% L_tot = (2*params.replicas(1)+1)*(2*replicas(2)+1)*(2*replicas(3)+1);
+% N_tot = N*((2*params.replicas(1)+1)*(2*replicas(2)+1)*(2*replicas(3)+1)); % Total number of ions including the replicas
 
 if iscell(lat_mom)
     lat_mom = lat_mom{:};
@@ -33,8 +34,8 @@ mag = zeros([3,4,sweeps]);
 
 % energies per spin and energies per spin squared
 Egs = zeros([1,sweeps]); % Store the eigen-energy at end of each lattice sweep
-Egs2 = zeros([1,sweeps]); % Store the square of eigen-energy at end of each lattice sweep
-acc_rate = zeros([1,sweeps]);
+Egs2 = zeros(size(Egs)); % Store the square of eigen-energy at end of each lattice sweep
+acc_rate = zeros([1,sweeps]); % Store the acceptance rate per lattice sweep
 
 for j=1:N
     lattice{j}.mom = lat_mom(1:3,j)';
@@ -78,7 +79,8 @@ for iterations=1:sweeps
             
     % take a measurements of <E>, <E^2>, and form factors after each lattice sweep
     Egs(p) = (E_0/N);  %Energy per site
-    Egs2(p) = (E_0/N)^2; %Energy squared per site
+%     Egs(p) = (E_0*L_tot/N_tot);  %Energy per site
+    Egs2(p) = Egs(p)^2; %Energy squared per site
     acc_rate(p) = accept/N; % Calculate acceptance rate of the metropolis steps between measurements
     accept = 0;
     
@@ -102,20 +104,26 @@ for iterations=1:sweeps
     new_ion = randi(N,N,1); % generate a new self-avoiding random walk sequency of the size of the lattice
     
     %% Parallel tempering
+    % Every pt_intv steps, perform a parallel tempering attempt (even and odd numbered workers' turns
+    % are mismatched by half interval) To use this procedure, it is necessary to ensure all cores are working
+    % at the same time throughtout (temperature points has to match the number of cores).
+    % the energy comparison is done with global energy, in accordance with function metropolis(dE,T)
     if pt_intv ~= inf % Determing wether or not to implement parallel tempering
         token = tempMark(p_count);
-        % Every pt_intv steps, perform a parallel tempering attempt (even and odd numbered workers' turns
-        % are mismatched by half interval) To use this procedure, it is necessary to ensure all cores are working
-        % at the same time throughtout (temperature points has to match the number of cores).
-        % the energy comparison is done with global energy, in accordance with function metropolis(dE,T)
+%         fprintf('Current token: %u.\n',token); % dor debugging
+%         E_l = E_0; % for debugging
+%         T_l = T; % for debugging
+%         E_r = E_0; % for debugging
+%         T_r = T; % for debugging
+%         newToken = token; % for debugging
         if rem(iterations,pt_intv)==0
             if mod(p_count,2) == 0
-                fprintf('Parallel tempering attempt No.%u.\n',iterations/(pt_intv));
+%                 fprintf('Parallel tempering attempt No.%u.\n',iterations/(pt_intv));
                 %                 fprintf('Parallel tempering attempt No.%u, current iteration: %u/%u.\n',p_count,iterations,(pt_intv*N));
                 % Even numbered workers compare and exchange with the nearst neighbour on the left
                 if mod(labindex,2) == 0
                     left = mod(labindex-2,numWkrs)+1; % worker on the left
-                    %                 fprintf('Exchanging with worker %u.\n',left); % For debugging
+%                    fprintf('Exchanging with worker %u.\n',left); % For debugging
                     E_l = labSendReceive(left,left,E_0,1);
                     T_l = labSendReceive(left,left,T,2);
                     newToken = labSendReceive(left,left,token,3);
@@ -131,7 +139,7 @@ for iterations=1:sweeps
                     %             % Odd number workers compare and exchange with the nearst neighbour on the right
                 else
                     right = mod(labindex,numWkrs)+1; % worker on the right
-                    %                 fprintf('Exchanging with worker %u.\n',right); % For debugging
+%                     fprintf('Exchanging with worker %u.\n',right); % For debugging
                     E_r = labSendReceive(right,right,E_0,1);
                     T_r = labSendReceive(right,right,T,2);
                     newToken = labSendReceive(right,right,token,3);
@@ -147,12 +155,12 @@ for iterations=1:sweeps
                 end
             else
                 % the same process but toward the opposite exchange direction
-                fprintf('Parallel tempering attempt No.%u.\n',iterations/(pt_intv));
+%                 fprintf('Parallel tempering attempt No.%u.\n',iterations/(pt_intv));
                 %                 fprintf('Parallel tempering attempt No.%u, current iteration: %u/%u.\n',p_count,iterations,(pt_intv*N));
                 % Even number workers compare and exchange with the nearst neighbour on the right
                 if mod(labindex,2) == 0
                     right = mod(labindex,numWkrs)+1; % worker on the right
-                    %                 fprintf('Exchanging with worker %u.\n',right); % For debugging
+%                     fprintf('Exchanging with worker %u.\n',right); % For debugging
                     E_r = labSendReceive(right,right,E_0,1);
                     T_r = labSendReceive(right,right,T,2);
                     newToken = labSendReceive(right,right,token,3);
@@ -168,7 +176,7 @@ for iterations=1:sweeps
                     % Odd number workers compare and exchange with the nearst neighbour on the left
                 else
                     left = mod(labindex-2,numWkrs)+1; % worker on the left
-                    %                 fprintf('Exchanging with worker %u.\n',left); % For debugging
+%                     fprintf('Exchanging with worker %u.\n',left); % For debugging
                     E_l = labSendReceive(left,left,E_0,1);
                     T_l = labSendReceive(left,left,T,2);
                     newToken = labSendReceive(left,left,token,3);

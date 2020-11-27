@@ -1,10 +1,25 @@
-function [d]=exchange(q,Jex,a)
+function [d]=exchange(q,Jex,a,n)
 
 % This function performs a brute force summation of
 % the q-dependent exchange coupling fo a non-Bravais lattice.
 % q=[h k l] is the q-vector given in Miller-indicies.
 % nr is the number of unit cells that should be summed
 % in each direction.
+
+% For N moments in the unit cell, there will be N 
+% coupling parameters J_ij. Many of these will be symmetry related
+% (e.g. J_ij=J_ji), so we just calculate J_1j. 
+% The result is a (3x3xN) matrix, where the first two dimensions
+% are the x,y and z components. The last dimension holds the coupling
+% between different ions in the unit cell.
+switch nargin
+    case 3    
+        N=1;
+    case 4
+        N = n;
+    otherwise
+        error('Incorrect number of input argument for exchange()!')
+end
 
 % % Parameters for LiHoF4
 % % Unit vectors in aangstroms
@@ -19,7 +34,7 @@ tau=[0 0 0
      1/2 0 3/4];
  
 %Parameters for Ho2Ti2O7
-%a=[10.12 0 0
+% a=[10.12 0 0
 %   0 10.12 0
 %   0 0 10.12];
 
@@ -57,15 +72,6 @@ qq=sqrt(sum(q.*q));
 
 % Kronecker delta in x,y,and z
 delta=[1 0 0;0 1 0;0 0 1];
-
-% For N moments in the unit cell, there will be N 
-% coupling parameters J_ij. Many of these will be symmetry related
-% (e.g. J_ij=J_ji), so we just calculate J_1j. 
-% The result is a (3x3xN) matrix, where the first two dimensions
-% are the x,y and z components. The last dimension holds the coupling
-% between different ions in the unit cell.
-
-N=1;
 
 hkl=zeros((2*N+1)^3,3);
 %hkl=[];

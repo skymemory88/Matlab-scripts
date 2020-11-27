@@ -21,13 +21,13 @@ Options.saving = true ;
 
 if Options.scantype == true % Temperature scan
 %         temp = [0.1 0.12 0.15 0.2 0.24 0.3 0.35 0.4 0.45 0.5 0.8 1.2 1.6 1.8 2];
-        temp =  0.08;
+        temp =  0.1;
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
-        Hmax = 9.0; % Maximum magnetic field
+        Hmax = 16.0; % Maximum magnetic field
         H_step = 0.02; % Field scan resolution
         theta = 0.0/180*pi; % theta(in radian) = 0 indicates a transverse magnetic field
-        phi = 0.0/180*pi; % ab-plane rotation, phi(in radian) = 0 means H along x
+        phi = 60.0/180*pi; % ab-plane rotation, phi(in radian) = 0 means H along x
         
         % Calcualte each component of the DC magnetic field
         Hx = (Hmin:H_step:Hmax)*cos(phi)*cos(theta);
@@ -204,15 +204,14 @@ if Options.saving == true
         elem = [ion.name(n)];
         tit = strcat('Hscan_','Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat', temp, theta*180/pi, phi*180/pi));
 %         cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I')
-        save(char(tit),'ttt','fff','eee','vvv','ion')
+        filepath = 'My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
         % if more than one field value provided, the data is saved insied LiIonF4() function
     elseif Options.scantype == 0 && size(fields,2) == 1 % Field scan: Options.scantype=1, Temperature scan: Options.scantype=0
-        cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I')
+        filepath = 'My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
         elem = [ion.name(n)];
         tit = strcat('Tscan_Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat', temp, theta*180/pi, phi*180/pi));
-        save(char(tit),'ttt','fff','eee','vvv','ion')
     end
+    save(fullfile(filepath,char(tit)),'ttt','fff','eee','vvv','ion')
     cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4')
 end
 end

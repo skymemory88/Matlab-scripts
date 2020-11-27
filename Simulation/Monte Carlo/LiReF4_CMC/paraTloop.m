@@ -1,5 +1,5 @@
 % function [relaxE,bestE,bestE2,C_v,angl,mmagsq,msq0,msqx,msqy,mmag,malt,lat_mom,params]=paraTloop(ion,params,inter,lattice,EQlat_mom)
-function [Egs,Egs2,bestE,bestE2,acc_rate,C_v,malt,lat_mom,params,tempf,meas]=paraTloop(ion,params,inter,lattice,EQlat_mom)
+function [relaxE,relaxE2,bestE,bestE2,acc_rate,C_v,malt,lat_mom,params,temp,meas]=paraTloop(ion,params,inter,lattice,EQlat_mom)
 
 temp = params.temp;
 wforce = gcp(); % Start a new parallel pool if there isn't one
@@ -91,9 +91,36 @@ spmd
     end
 end
 
-% for ii = 1:size(marker,3)
-%     marker(:,:,ii,1) = tempMark{ii};
-% end
+for ii = 1:size(marker,3)
+    marker(:,:,ii,1) = tempMark{ii};
+end
 
-clearvars -except Egs Egs2 acc_rate bestE bestE2 C_v malt lat_mom params tempf mark meas
+Gather all the data from different workers into arrays
+tempf = [tempf{:}]';
+bestE = [bestE{:}]';
+bestE2 = [bestE2{:}]'; 
+relaxE = {Egs{:}};
+relaxE2 = {Egs2{:}};
+malt = [malt{:}]';
+C_v = [C_v{:}]';
+lat_mom = [lat_mom{:}];
+acc_rate = {acc_rate{:}};
+
+% order all the arrays' elements by parallel worker indices (core 1, core 2, ... core n, core 1, core 2 ... core n)
+tempf = tempf(tempf~=0);
+bestE = bestE(:);
+bestE2 = bestE2(:);
+malt = malt(:);
+C_v = C_v(:);
+
+% order all arrays' elements by asending temperature
+[temp,sIdx] = sort(tempf,'ascend');
+bestE = bestE(sIdx);
+bestE2 = bestE2(sIdx);
+relaxE = relaxE(sIdx)';
+relaxE2 = relaxE2(sIdx)';
+malt = malt(sIdx);
+C_v = C_v(sIdx);
+
+clearvars -except relaxE relaxE2 acc_rate bestE bestE2 C_v malt lat_mom params temp mark meas
 end

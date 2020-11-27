@@ -2,11 +2,11 @@ function EngyLevels
 % close all
 hold on
 clearvars
-temp = 1.783;
+temp = 0.12;
 % temp = [1.7 1.75 1.77 1.78 1.783 1.786 1.788 1.79];
 N_level = 7; % Number of levels to plot
 
-Options.Elevel = true;
+Options.Elevel = false;
 Options.Ediff = true;
 Options.Espan = false;
 Options.savedata = false;
@@ -93,7 +93,7 @@ for iter = 1:numel(temp)
                     Ediff(i,:)=E(:,i+1)-E(:,i);
                 end
                 %         % Plot the lowest energy difference between the 8 levels
-                fig_dE = figure;
+%                 fig_dE = figure;
                 % frequency = { '1.682 GHz', '3.436 GHz', '3.924 GHz', '4.449 GHz', '5.604 GHz' } ;
                 figs(:, iter2, iter3) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle',marker(1), 'Color',color(iter3),'LineWidth',2);
                 %                 hold on

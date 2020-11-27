@@ -18,11 +18,12 @@ persistent dipole;
 global rundipole
 
 dip_range = 80; %The range over which the dipolar interaction is included
+nn = 3; % Number of magnetic ions in one unit cell
 if(isempty(dipole))
     dipole=dipole_direct([0 0 0],dip_range,ion.a{k});
     for i=1:size(ion.name,1)
         ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:))};
-        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.a{k})};
+        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.a{k},nn)};
     end
 end
 
@@ -30,7 +31,7 @@ if rundipole == true
     dipole=dipole_direct([0 0 0],dip_range,ion.a{k});
     for i=1:size(ion.name,1)
         ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:))};
-        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.a{k})};
+        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.a{k},nn)};
     end
     
     rundipole = false;

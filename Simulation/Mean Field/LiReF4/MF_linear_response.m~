@@ -1,18 +1,19 @@
-function MF_linear_response(TT,theta,phi,gama)
-% TT: temperatures (can be an array). theta: angle between the external field and c-axis. phi: inplane angle 
-% in ab-plane between the magnetic field and a/b-axis. gamma: lifetime of hyperfine levels.
-
-clearvars -except TT theta phi gamma;
-Options.RPA = false; % Apply random phase approximation (RPA) correction
-Options.plotting = false; % Decide whether or not to plot the data at the end
-Options.saving = true;
+function MF_linear_response
+clearvars;
+Options.RPA = true; % Apply random phase approximation (RPA) correction
+Options.plotting = true; % Decide whether or not to plot the data at the end
+Options.saving = false;
 
 % Temperatures = [0.08 0.1 0.12 0.15 0.2 0.24];
-Temperatures = TT;
+Temperatures = 1.2;
+theta = 0.0;
+phi = 0.0;
+% gama = 0.0001; % define lifetime (meV)
+gama = 1e-4; % hyperfine state lifetime (meV)
 
     for ii = 1:length(Temperatures)
-        location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
-%         location = '/Volumes/GoogleDrive/My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
+        location = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I';
+%         location = '/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Simulation/Mean Field/LiReF4/output/without Hz_I';
         filename = strcat('Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg', Temperatures(ii), theta, phi),'.mat');
         file = fullfile(location,filename);
         load(file,'-mat','eee','fff','ttt','vvv','ion'); % loads variables "fields", "temp", "E" and "V" 
@@ -67,7 +68,7 @@ colorbar
 legend(['\gamma =' num2str(gama,'%.2e')]);
 xlabel('Magnetic field (T)')
 ylabel('Frequency (GHz)')
-title({'Imaginary part of \chi (log scale) in x direction'})
+title({'Imaginary part of $\chi$ (log scale) in x direction'})
 
 % Color plot of the imaginary part of the susceptibility of y component
 fig1 = figure;
@@ -79,7 +80,7 @@ colorbar
 legend(['\gamma =' num2str(gama,'%.2e')]);
 xlabel('Magnetic field (T)')
 ylabel('Frequency (GHz)')
-title({'Imaginary part of \chi (log scale) in y direction'})
+title({'Imaginary part of $\chi$ (log scale) in y direction'})
 
 % Color plot the imaginary part of the susceptibilities of z component
 fig2 = figure;
@@ -91,7 +92,7 @@ colorbar
 legend(['\gamma =' num2str(gama,'%.2e')]);
 xlabel('Magnetic field (T)')
 ylabel('Frequency (GHz)')
-title({'Imaginary part of \chi (log scale) in z direction'})
+title({'Imaginary part of $\chi$ (log scale) in z direction'})
 
 % Plot the real part of the susceptibility of the z component
 fig3 = figure;
@@ -103,7 +104,7 @@ colorbar
 legend(['\gamma =' num2str(gama,'%.2e')]);
 xlabel('Magnetic field (T)')
 ylabel('Frequency (GHz)')
-title({'Real part of \chi in z direction'})
+title({'Real part of $\chi$ in z direction'})
 
 % % Plot the expectation value of <Jz+Iz>
 %     fig4 = figure;
@@ -173,12 +174,15 @@ Ixh=(Iph+Imh)/2;
 Iyh=(Iph-Imh)/2i;
 
 % Single out <Jz+Iz> calculations
+% Jz_exp = double.empty(0,length(fields(1,:)));
 JIz_exp = double.empty(0,length(fields(1,:)));
 for kk = 1:length(fields(1,:)) % calculate susceptibility for all fields
     v = squeeze(squeeze(V(kk,:,:,:))); % Obtain the corresponding eigen vectors
     JzhT = Jzh * ELEf;
     IzhT = Izh * NUCf;
+%     tz = v'  * JzhT * v;
     ttz  = v'  * (JzhT+IzhT) * v;
+%     Jz_exp(1,kk) = sqrt(sum(sum((tz) .* (tz.'))));
     JIz_exp(1,kk) = sqrt(sum(sum((ttz) .* (ttz.'))));
 end
 
@@ -190,6 +194,9 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
     parfor k = 1:length(fields(1,:)) % calculate susceptibility for all fields
         v = squeeze ( squeeze(V(k,:,:,:)) ); % Obtain the corresponding eigen vectors
         en = squeeze ( squeeze(E(k,:,:)) ); % Obtain the corresponding eigen energies in meV
+%       N = length(en);
+%       chi_t = zeros(1,N^2);
+%       ll = 1;
         beta = 11.6/ttt; %[meV^-1]
         z=sum(exp(-beta*en));
         zz=exp(-beta*en)/z;
@@ -284,14 +291,14 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
         zy1=sum(sum(chi_t1zy));
 %         imchizy  (m,k,1) =  real(zy)   ;
 %         rechi1zy (m,k,1) =  real(zy1)  ;
+
+        chi0i(:,:,m,k)=[xx xy xz
+            yx yy yz
+            zx zy zz];
         
         chi0r(:,:,m,k)=[xx1 xy1 xz1
-                        yx1 yy1 yz1
-                        zx1 zy1 zz1];
-                    
-        chi0i(:,:,m,k)=[xx xy xz
-                        yx yy yz
-                        zx zy zz];
+            yx1 yy1 yz1
+            zx1 zy1 zz1];
     end
 end
 imchi0.x = imchix;
@@ -309,7 +316,8 @@ a = [5.175 0 0;
      0 5.175 0;
      0 0 10.75]; % Lattice constant for LiHoF4
  
-chiq = zeros(3,3,length(freq_total(1,:)),size(qvec,1),length(fields(1,:)));
+chir = zeros(3,3,length(freq_total(1,:)),size(qvec,1),length(fields(1,:)));
+chii = zeros(3,3,length(freq_total(1,:)),size(qvec,1),length(fields(1,:)));
 D = zeros(3,3,N,N,size(qvec,1));
 
 imchix = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);
@@ -334,20 +342,31 @@ for ii = 1:length(fields(1,:))
             for n = 1:N
                 for m = 1:N
                     MM((n-1)*3+(1:3),(m-1)*3+(1:3)) = (chi0r(:,:,kk,ii) + 1i*chi0i(:,:,kk,ii))*D(:,:,n,m,nq);
+%                     MM((n-1)*3+(1:3),(m-1)*3+(1:3)) = (chi0r(:,:,kk,ii))*D(:,:,n,m,nq);
+%                     NN((n-1)*3+(1:3),(m-1)*3+(1:3)) = chi0i(:,:,kk,ii)*D(:,:,n,m,nq);
                 end
             end
              
-            chi = chi0r(:,:,kk,ii) + 1i*chi0i(:,:,kk,ii); 
-            chiq(:,:,kk,nq,ii) = 1/4*[eye(3) eye(3) eye(3) eye(3)]*((eye(size(MM))-MM)\([chi;chi;chi;chi]));
             
-            rechi1x(kk,ii,1) =  real(chiq(1,1,kk,nq,ii));
-            imchix(kk,ii,1) =  imag(chiq(1,1,kk,nq,ii));
+            chi(:,:, = chi0r(:,:,kk,ii) + 1i*chi0i(:,:,kk,ii); 
+            chir(:,:,kk,nq,ii) = 1/4*[eye(3) eye(3) eye(3) eye(3)]*...
+                ((eye(size(MM))-MM)\([chi0r(:,:,kk,ii);chi0r(:,:,kk,ii);chi0r(:,:,kk,ii);chi0r(:,:,kk,ii)]));
+%             chir(:,:,kk,nq,ii) = 1/4*[eye(3) eye(3) eye(3) eye(3)]*...
+%                 ((eye(size(MM))-MM)\([chi0r(:,:,kk,ii);chi0r(:,:,kk,ii);chi0r(:,:,kk,ii);chi0r(:,:,kk,ii)]));
+%             chii(:,:,kk,nq,ii) = 1/4*[eye(3) eye(3) eye(3) eye(3)]*...
+%                 ((eye(size(NN))-NN)\([chi0i(:,:,kk,ii);chi0i(:,:,kk,ii);chi0i(:,:,kk,ii);chi0i(:,:,kk,ii)]));
             
-            rechi1y(kk,ii,1) =  real(chiq(2,2,kk,nq,ii));
-            imchiy(kk,ii,1) =  imag(chiq(2,2,kk,nq,ii));
+            rechi1x(kk,ii,1) =  real(chir(1,1,kk,nq,ii));
+%             imchix(kk,ii,1) =  real(chii(1,1,kk,nq,ii));
+            imchix(kk,ii,1) =  imag(chir(1,1,kk,nq,ii));
             
-            rechi1z(kk,ii,1) =  real(chiq(3,3,kk,nq,ii));
-            imchiz(kk,ii,1) =  imag(chiq(3,3,kk,nq,ii));
+            rechi1y(kk,ii,1) =  real(chir(2,2,kk,nq,ii));
+%             imchiy(kk,ii,1) =  real(chii(2,2,kk,nq,ii));
+            imchiy(kk,ii,1) =  imag(chir(2,2,kk,nq,ii));
+            
+            rechi1z(kk,ii,1) =  real(chir(3,3,kk,nq,ii));
+%             imchiz(kk,ii,1) =  real(chii(3,3,kk,nq,ii));
+            imchiz(kk,ii,1) =  imag(chir(3,3,kk,nq,ii));
         end
     end
 end

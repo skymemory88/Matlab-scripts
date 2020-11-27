@@ -14,13 +14,13 @@ if mod(size(temp,2),numWkrs) == 0
     block = int8(size(temp,2)/numWkrs);
 %     block = size(temp,2); % for debugging
 else
-    error('Number of parallel threads mismatch the temperature dimension, parallel tempering will fail!');
+    error('Number of parallel threads mismatch the temperature dimension, parallel tempering will fail!\n');
 end
 
 % container for parallel tempering
 index = 1;
 acc_rate = double.empty(block,params.meas_intv,N_meas,0); % container for acceptance rate
-tempMark = ones(block,ceil(N_meas * params.meas_intv / params.pt_intv)+1);
+tempMark = zeros(block,ceil(N_meas * params.meas_intv / params.pt_intv)+1);
 % marker = double.empty(block,int8(params.Nitermeas/params.pt_intv)+1,numWkrs,0);
 prob = rand(size(tempMark));
 
@@ -96,7 +96,7 @@ spmd
 
         index = index + 1;
 %         toc(t);
-%         fprintf('Time of parallel tempering attempt: %d.\n', mark)
+%         fprintf('Time of parallel tempering attempt: %d.\n', p_count)
     end
 end
 

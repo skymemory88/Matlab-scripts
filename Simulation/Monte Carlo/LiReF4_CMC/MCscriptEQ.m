@@ -34,7 +34,7 @@ a=[{[5.162 0 0; 0 5.162 0; 0 0 10.70]}      %Er
 B=[[60.2258   -0.1164   -4.3280   -0.0019   -0.0850   -0.0227]      %Er
    [-60   0.35   3.6   0.0004   0.07   0.006]                       %Ho
    [646.2016   15.3409  116.4854   -0.0686  -15.1817    0.0000]     %Yb    
-%        [663   12.5   102   -0.62   -16   0]                             %Yb
+   [663   12.5   102   -0.62   -16   0]                             %Yb
    [224.3   -1.85   -11.7   0.002   0.2645   0.1377]                %Tm
    [0 0 0 0 0 0]                                                    %Gd
    [0 0 0 0 0 0]]/1000.0;                                           %Y
@@ -55,7 +55,7 @@ params.C=[  1  1  1
         
 % number of replicates of the supercell in each dimension for dipole interaction calculation
 params.replicas=[10;10;10];
-% params.replicas=[5;5;5];
+% params.replicas=[2;2;2];
 params.abc=a{num_abc}; 
 
 ion=cell(size(name,1), 1);
@@ -95,9 +95,10 @@ end
 
 % cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Boundary condition test');
 % cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Iteration limit');
-cd('G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Test');
-filename=sprintf(['resultsEQ_',params.jobid,'.mat']);
-save(filename,'inter','lattice','relaxE','params','ion','EQlat_mom','-v7.3');
+filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiErF4 project\Quantum Monte Carlo\Test';
+filename = sprintf(['resultsEQ_',params.jobid,'.mat']);
+fullpath = fullfile(filepath,filename);
+save(fullpath,'inter','lattice','relaxE','params','ion','EQlat_mom','-v7.3');
 cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Monte Carlo\LiReF4_CMC');
 
 

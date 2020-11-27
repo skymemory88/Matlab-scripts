@@ -43,34 +43,34 @@ clearvars -except delta
 % w0 = 3.71;
 % filFctr = 5E-3;
 
-temp = 1.2; % temperature(s)
+temp = 0.12; % temperature(s)
 theta = 0.0; % angular deviation (in degrees) of the field angle from c-axis direction
-phi = 0.0; % angle (in degrees) in ab-plane rotation
+phi = 60.0; % angle (in degrees) in ab-plane rotation
 % alpha = linspace(0,pi,18); % Phase angle between coherent and dissipative couplings
 alpha = 0;
 
 % field parameters
 field_l = 0;
-field_h = 3;
+field_h = 16;
 field_pts = 601; % number of points along field axis
 field = linspace(field_l,field_h,field_pts); % sampling points along field axis
 
 %frequency parameters
-w0 = 3.51; % Resonant frequency for bare cavity
-freq_l = 3.435;
-freq_h = 3.545;
+w0 = 3.65; % Resonant frequency for bare cavity
+freq_l = 3.605;
+freq_h = 3.695;
 freq_pts = 601; % number of points along frequency axis
 freq = linspace(freq_l,freq_h,freq_pts); % frequency range
 
 f2E = 1/241.8; % Convert from GHz to meV
 kB = 0.08617; % [meV/K]
 filFctr = 0.01; % Calculated from COMSOL
-gama = 7e-4; % Spin state lifetime (meV)
-gamma_i = -0.01; % internal dissipation rate
+gama = 5e-5; % Spin state lifetime (meV)
+gamma_i = -0.001; % internal dissipation rate
 % gamma_i = -0.01; % internal dissipation rate
-gamma_e = 1.25*gamma_i; % external dissipation rate
-Gamma = 1*gamma_i; % Coupling strength between the cavity field and the spin system
-% Gamma = 0.001*0.004; % fix Gamma for checkpoint
+gamma_e = 1.05*gamma_i; % external dissipation rate
+Gamma = 0.05*gamma_i; % Coupling strength between the cavity field and the spin system
+% Gamma = 0.001*0.001; % fix Gamma for checkpoint
 
 Option = 2; % Analysis options
 Options.Ediff = false; % Plot energy levels on top
@@ -186,7 +186,7 @@ w0 = repmat(w0,1,size(freq,2)); % expand the resonant frequency to a matrix for 
 [freq,field] = meshgrid(freq,field);
 elseif Option == 2
 %% Option 2 Load existing susceptibilities and interpolate
-    location = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I';
+    location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
     filename = ['Hscan_LiHoF4_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat',temp,theta,phi)];
     file = fullfile(location,filename);
     load(file,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
@@ -314,7 +314,8 @@ for ii = 1:length(alpha)
     xlabel('Magnetic field (T)');
     ylabel('Frequency (GHz)');
     title(num2str(temp*1000,'Simulated data of S11 at %umK'));
-    caxis([-10 0])
+%     caxis('auto')
+    caxis([-5 0.5])
     if Options.Ediff == true
         hold on
         yyaxis right
