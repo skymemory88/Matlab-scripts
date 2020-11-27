@@ -38,16 +38,21 @@
 % ylabel('S11 response');
 %% 2D color plot of S11
 clearvars -except delta
-% freq_l = 3.685; % for use in mathematica
-% freq_h = 3.735;
-% w0 = 3.71;
-% filFctr = 5E-3;
 
 temp = 0.12; % temperature(s)
+
+% Crystal parameters
 theta = 0.0; % angular deviation (in degrees) of the field angle from c-axis direction
 phi = 60.0; % angle (in degrees) in ab-plane rotation
-% alpha = linspace(0,pi,18); % Phase angle between coherent and dissipative couplings
-alpha = 0;
+alpha = [0 pi];
+% alpha = [0 pi/6 pi/4 pi/2 pi/3 pi];% Phase angle (in radians) between coherent and dissipative couplings (can be an array)
+% alpha = linspace(0,pi,15);
+filFctr = 0.01; % Calculated from COMSOL
+gama = 1e-4; % Spin state lifetime (meV)
+gamma_i = -0.0015; % internal dissipation rate
+gamma_e = 1.2*gamma_i; % external dissipation rate
+% Gamma = 150*gamma_i; % Coupling strength between the cavity field and the spin system
+% Gamma = 1; % fix Gamma for checkpoint
 
 % field parameters
 field_l = 0;
@@ -57,20 +62,12 @@ field = linspace(field_l,field_h,field_pts); % sampling points along field axis
 
 %frequency parameters
 w0 = 3.65; % Resonant frequency for bare cavity
-freq_l = 3.605;
+freq_l = 3.575;
 freq_h = 3.695;
 freq_pts = 601; % number of points along frequency axis
 freq = linspace(freq_l,freq_h,freq_pts); % frequency range
-
 f2E = 1/241.8; % Convert from GHz to meV
 kB = 0.08617; % [meV/K]
-filFctr = 0.01; % Calculated from COMSOL
-gama = 5e-5; % Spin state lifetime (meV)
-gamma_i = -0.001; % internal dissipation rate
-% gamma_i = -0.01; % internal dissipation rate
-gamma_e = 1.05*gamma_i; % external dissipation rate
-Gamma = 0.05*gamma_i; % Coupling strength between the cavity field and the spin system
-% Gamma = 0.001*0.001; % fix Gamma for checkpoint
 
 Option = 2; % Analysis options
 Options.Ediff = false; % Plot energy levels on top
@@ -262,10 +259,11 @@ elseif Option == 2
     [freq,field] = meshgrid(freq,field);
     x1 = interp2(fields,freq_total,x1z,field,freq);
     x2 = interp2(fields,freq_total,x2z,field,freq);
-    w0 = w0./(sqrt(1+filFctr.*(x1+1i*x2)));
+    
+    % Calculate frequency shift due to dielectric filling
+%     w0 = w0./(sqrt(1+filFctr.*(x1+1i*x2)));
 %     w0 = w0./(sqrt(1+filFctr.*x1)); % Use only real part of the susceptibility
 %     w0 = w0./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
-%     w0 = w0./(sqrt(1+filFctr.*(0.0+0.0))); % Equivalent to empty cavity
 elseif Option == 3
 %% Option 3: Calculate susceptabilities for resonant frequency shift (takes long time)
     location = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output';
@@ -283,7 +281,7 @@ elseif Option == 3
 %     w0 = w0./(sqrt(1+filFctr.*x1)); % Use only real part of the susceptibility
     % w0 = w0./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
 end
-%   % Calculate the spin terms in the denominator
+%% Calculate the spin terms in the denominator without susceptibilities
 %   life = 1/(200*abs(gamma_e)); % define spin level lifetime (meV-1)
 %   % life = 0.0001;
 %   % life = 0.00005;
@@ -301,9 +299,13 @@ end
 %   end
 % S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + spin_term); % Calculate the S11 response using spin turms
 % S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + Gamma.*x2); % Calculate the S11 response using susceptibilites
+%%
+Gamma = filFctr*(x2-1i*x1); % Coupling strength between the spin system and cavity field
 for ii = 1:length(alpha)
-%     S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + (1+exp(1i*alpha(ii)))*Gamma^2.*x2);
-    S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + Gamma^2.*x2);
+%     S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + (1+exp(1i*alpha(ii)))/2*Gamma^2.*x2);
+%     S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + Gamma^2.*x2);
+    S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + exp(1i*alpha(ii))*Gamma);
+%     S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + Gamma);
 %     close all
     figure
     map = pcolor(field,freq,log(abs(S11_2))); % color plot of the S11 response
