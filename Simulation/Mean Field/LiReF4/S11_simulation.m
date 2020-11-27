@@ -44,11 +44,11 @@ temp = 0.12; % temperature(s)
 % Crystal parameters
 theta = 0.0; % angular deviation (in degrees) of the field angle from c-axis direction
 phi = 60.0; % angle (in degrees) in ab-plane rotation
-alpha = [0 pi];
+% alpha = [0 pi];
 % alpha = [0 pi/6 pi/4 pi/2 pi/3 pi];% Phase angle (in radians) between coherent and dissipative couplings (can be an array)
-% alpha = linspace(0,pi,15);
+alpha = linspace(0,pi,20);
 filFctr = 0.01; % Calculated from COMSOL
-gama = 1e-4; % Spin state lifetime (meV)
+gama = 1.5e-4; % Spin state lifetime (meV)
 gamma_i = -0.0015; % internal dissipation rate
 gamma_e = 1.2*gamma_i; % external dissipation rate
 % Gamma = 150*gamma_i; % Coupling strength between the cavity field and the spin system
