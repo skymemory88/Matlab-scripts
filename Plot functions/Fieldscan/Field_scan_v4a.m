@@ -12,10 +12,10 @@ function Field_scan_v4a
     plotopt.ftsz = 12;
     plotopt.mksz = 3;
 
-    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.11.27';
+    filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.11.28';
 %     filepath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC199/2020.11.05';
     %The first line is for windows, the second line is for mac OS
-    filename = '2020_11_0040.dat';
+    filename = '2020_11_0045.dat';
     nZVL = 1; % Number of dataset from ZVL
     fileobj = fullfile(filepath,filename);
     
@@ -346,12 +346,12 @@ case 1 % Option_1 Interpolate data along only the frequency axis.
             colormap(hsv);
     end
 case 2 % Option_2 Interpolate the data along both axis.
-%             FdB  = TriScatteredInterp(HH,freq,dB);
+%    FdB  = TriScatteredInterp(HH,freq,dB);
     FdB = scatteredInterpolant(HH_temp, freq_temp, dB_temp);
-    %     FrS  = TriScatteredInterp(HH,freq,real(S11));
-    %     FiS  = TriScatteredInterp(HH,freq,imag(S11));
-    %     FTT1 = TriScatteredInterp(HH,freq,TT1);
-    %     FTT2 = TriScatteredInterp(HH,freq,TT2);
+%     FrS  = TriScatteredInterp(HH,freq,real(S11));
+%     FiS  = TriScatteredInterp(HH,freq,imag(S11));
+%     FTT1 = TriScatteredInterp(HH,freq,TT1);
+%     FTT2 = TriScatteredInterp(HH,freq,TT2);
     figure
     hold on
     box on

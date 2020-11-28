@@ -14,14 +14,15 @@ global rundipole % Run dipole calculations or not
 rundipole = true;
 %% define temp / field scan
 global Options;
-Options.scantype = true; %Choose scan type: field scan (TRUE) or temperature scan (FALSE)
+Options.scantype = 'field'; %Choose scan type: field scan or temperature scan
 Options.hyperfine = true; % Including/excluding hyperfine calculations
 Options.plotting = false; %Choose whether or not to plot the figures at the end
 Options.saving = true ;
 
-if Options.scantype == true % Temperature scan
+switch Options.scantype % Temperature scan
+    case 'field'
 %         temp = [0.1 0.12 0.15 0.2 0.24 0.3 0.35 0.4 0.45 0.5 0.8 1.2 1.6 1.8 2];
-        temp =  0.1;
+        temp =  0.17;
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         Hmin = 0.0; % Minimum magnetic field
         Hmax = 16.0; % Maximum magnetic field
@@ -34,7 +35,8 @@ if Options.scantype == true % Temperature scan
         Hy = (Hmin:H_step:Hmax)*sin(phi)*cos(theta);
         Hz = (Hmin:H_step:Hmax)*sin(theta);
         fields = [Hx;Hy;Hz];
-elseif Options.scantype == false % Field scan
+    case 'temp'
+        temp = 0:0.04:2.0 ; %  range of temperatures
         hypFr = 1.0; % Scaling factor for hyperfine interaction
         H = 0; % Static external magnetic field
         theta = 0.0/180*pi; % theta(in radian) = 0 indicates a transverse magnetic field
@@ -42,10 +44,9 @@ elseif Options.scantype == false % Field scan
         Hx = H*cos(phi)*cos(theta);
         Hy = H*sin(phi)*cos(theta);
         Hz = H*sin(theta);
-        temp = 0:0.04:2.0 ; %  range of temperatures
         fields = [Hx;Hy;Hz];
-else
-    error('Options.scantype must equal to 0 or 1')
+    otherwise
+        error('Options.scantype must be either temperature-scan or field-scan')
 end
 %% define LiRF4
 
@@ -136,12 +137,13 @@ alpha=0; % shape in calculating demagnetization factor is a needle (0), sphere (
 %% Plot data
 n = ion.prop~=0;
 if Options.plotting == true
-    if Options.scantype == true % For field scan
-        J_H=zeros([3,size(fields,2),size(ion.name,1)]);
-        Jnorm_H=zeros([size(fields,2),size(ion.name,1)]);
-    else % for temperature scan
-        J_H=zeros([3,size(temp,2),size(ion.name,1)]);
-        Jnorm_H=zeros([size(temp,2),size(ion.name,1)]);
+    switch Options.scantype
+        case 'field'
+            J_H=zeros([3,size(fields,2),size(ion.name,1)]);
+            Jnorm_H=zeros([size(fields,2),size(ion.name,1)]);
+        case 'temp' % for temperature scan
+            J_H=zeros([3,size(temp,2),size(ion.name,1)]);
+            Jnorm_H=zeros([size(temp,2),size(ion.name,1)]);
     end
     
     for ii=1:size(ion.name,1)
@@ -157,40 +159,41 @@ if Options.plotting == true
     end
     
     %Plot spin moments
-    if Options.scantype == true % For field scan 
-        figure
-        hold on
-        p1 = plot(HH(1:10:end),Jnorm_H(1:10:end,n),'-o','Color', 'black', 'LineWidth', 2, 'MarkerSize',4);
-        title(sprintf('Norm of spin moments for %s', char(ion.name(n))));
-        xlabel('Magnetic field (|B| [T])');
-        ylabel('Spin moment norm <J_n>');
-        
-        figure
-        hold on
-        p2_1 = plot(HH,J_H(:,:,n),'-','LineWidth', 2);
-        p2_2 = plot(HH(1:10:end), J_H(:,1:10:end,n),'o','MarkerSize',4); % Add spaced markers to the <J> curves
-        p2_3 = plot(HH(1:10:end), Jnorm_H(1:10:end,n),'-s','MarkerSize',4);
-        title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
-        legend('<J_x>','<J_y>','<J_z>','<J_{norm}>');
-        xlabel('Magnetic field (|B| [T])');
-        ylabel('Spin moment <J>');
-    else
-        figure
-        hold on
-        p1 = plot(temp,ion.altJmom(:,:,n),'-o','Color', 'black', 'LineWidth', 2, 'MarkerSize',4);
-        title(sprintf('Alternating spin moments for %s', char(ion.name(n))));
-        xlabel('Temperature (K)');
-        ylabel('Alternating Spin moment <altJ_n>');
-        
-        figure
-        hold on
-        p2_1 = plot(temp,J_H(:,:,n),'-','LineWidth', 2);
-        p2_2 = plot(temp,J_H(:,:,n),'o','MarkerSize',4); % Add spaced markers to the <J> curves
-        p2_3 = plot(temp(1:10:end),Jnorm_H(1:10:end,n),'-s','MarkerSize',4);
-        title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
-        legend('<J_x>','<J_y>','<J_z>','<J_{norm}>');
-        xlabel('Magnetic field (|B| [T])');
-        ylabel('Spin moment <J>');
+    switch Options.scantype
+        case 'field' % For field scan
+            figure
+            hold on
+            p1 = plot(HH(1:10:end),Jnorm_H(1:10:end,n),'-o','Color', 'black', 'LineWidth', 2, 'MarkerSize',4);
+            title(sprintf('Norm of spin moments for %s', char(ion.name(n))));
+            xlabel('Magnetic field (|B| [T])');
+            ylabel('Spin moment norm <J_n>');
+            
+            figure
+            hold on
+            p2_1 = plot(HH,J_H(:,:,n),'-','LineWidth', 2);
+            p2_2 = plot(HH(1:10:end), J_H(:,1:10:end,n),'o','MarkerSize',4); % Add spaced markers to the <J> curves
+            p2_3 = plot(HH(1:10:end), Jnorm_H(1:10:end,n),'-s','MarkerSize',4);
+            title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
+            legend('<J_x>','<J_y>','<J_z>','<J_{norm}>');
+            xlabel('Magnetic field (|B| [T])');
+            ylabel('Spin moment <J>');
+        case 'temp'
+            figure
+            hold on
+            p1 = plot(temp,ion.altJmom(:,:,n),'-o','Color', 'black', 'LineWidth', 2, 'MarkerSize',4);
+            title(sprintf('Alternating spin moments for %s', char(ion.name(n))));
+            xlabel('Temperature (K)');
+            ylabel('Alternating Spin moment <altJ_n>');
+            
+            figure
+            hold on
+            p2_1 = plot(temp,J_H(:,:,n),'-','LineWidth', 2);
+            p2_2 = plot(temp,J_H(:,:,n),'o','MarkerSize',4); % Add spaced markers to the <J> curves
+            p2_3 = plot(temp(1:10:end),Jnorm_H(1:10:end,n),'-s','MarkerSize',4);
+            title(sprintf('Expectation values of spin moments for %s', char(ion.name(n))));
+            legend('<J_x>','<J_y>','<J_z>','<J_{norm}>');
+            xlabel('Magnetic field (|B| [T])');
+            ylabel('Spin moment <J>');
     end
 end
 %% Save the data files
@@ -200,18 +203,21 @@ if Options.saving == true
     fff = fields;
     ttt = temp;
     vvv = squeeze(V);
-    if Options.scantype == 1 && length(temp) == 1 % Field scan: Options.scantype=1, Temperature scan: Options.scantype=0
-        elem = [ion.name(n)];
-        tit = strcat('Hscan_','Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat', temp, theta*180/pi, phi*180/pi));
-%         cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
-        filepath = 'My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
-        % if more than one field value provided, the data is saved insied LiIonF4() function
-    elseif Options.scantype == 0 && size(fields,2) == 1 % Field scan: Options.scantype=1, Temperature scan: Options.scantype=0
-        filepath = 'My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
-        elem = [ion.name(n)];
-        tit = strcat('Tscan_Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat', temp, theta*180/pi, phi*180/pi));
+    switch  Options.scantype
+        case 'temp'
+            if length(temp) == 1 % Field scan: Options.scantype=1, Temperature scan: Options.scantype=0
+                elem = [ion.name(n)];
+                filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
+                % if more than one field value provided, the data is saved insied LiIonF4() function
+                tit = strcat('Hscan_','Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat', temp, theta*180/pi, phi*180/pi));
+                %         cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output')
+            end
+        case 'field'
+            if size(fields,2) == 1 % Field scan: Options.scantype=1, Temperature scan: Options.scantype=0
+                filepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
+                elem = [ion.name(n)];
+                tit = strcat('Tscan_Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat', temp, theta*180/pi, phi*180/pi));
+            end
     end
     save(fullfile(filepath,char(tit)),'ttt','fff','eee','vvv','ion')
-    cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4')
-end
 end
