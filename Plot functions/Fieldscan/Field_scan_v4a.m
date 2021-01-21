@@ -15,7 +15,7 @@ function Field_scan_v4a
     loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.11.27';
 %     loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC199/2020.11.05';
     %The first line is for windows, the second line is for mac OS
-    loadname = '2020_11_0039.dat';
+    loadname = '2020_11_0038.dat';
     opt = 2;% Analysis options
     nZVL = 1; % Number of dataset from ZVL
     fileobj = fullfile(loadpath,loadname);
@@ -401,16 +401,16 @@ end
 
 Qf = double.empty(length(Hx),0);
 zq(isnan(zq))=0;
-switch 2 % Pick Lorentzian fit function from either custom function of spec1d
+switch 2 % Pick fitting function from either (1) custom function of (2) spec1d
     case 1 %Option 1: Custom function
         parfor ii = 1:length(Hx)
             % fitting by Input-output formalism
-            % Param = {'kpe', 'w0', 'Gc', 'Br', 'gma'}
-            param = [FWHM(ii) ff0(ii) 0.01 Br 0.01]; % Fitting parameter starting point
-            bound_l = [1e-4 freq_l -1 Br*0.5 -1];
-            bound_h = [1e-2 freq_h 1 Br*1.5 1];
+            % Fitting parameter starting point
+            param = [FWHM(ii) ff0(ii) 1e-3 Br 1e-3]; % Param = {'kpe', 'w0', 'Gc', 'Br', 'gma'}
+            bound_l = [0 freq_l 0 Br*0.5 0]; % lower bound of fitting parameters
+            bound_h = [inf freq_h 5 Br*1.5 0.1]; % upper bound of fitting parameters
             % Set up boundaries for the fitting parameters
-            fit = iptopt(yq(:,ii),-zq(:,ii),Hx(ii),param,bound_l,bound_h);
+            fit = iptopt(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h);
             if mod(ii,20) == 0
                 worker = getCurrentTask();
                 fprintf('Current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
@@ -461,7 +461,7 @@ axis([field_l field_h freq_l freq_h]);
 hold on
 f0 = medfilt1(f0,order); % apply median filter to remove some noise
 % hfig1 = plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',2,'MarkerFaceColor','black');
-plot(H0, f0, 'o', 'MarkerSize', 2);
+plot(H0, f0, 'ok', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
 title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));

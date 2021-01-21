@@ -363,37 +363,29 @@ end
 
 switch 2 % Pick Lorentzian fit function from either custom function of spec1d
     case 1 %Option 1: Custom function
-%         ff0_2 = double.empty(length(ff0),0);
-        parfor ii = 1:length(Hx)
-            % Single Lorentzian function fit
-            param = [FWHM(ii) ff0(ii) 0 1]; % Fitting parameter starting point
-            % Param = [1.Bandwidth 2.Resonant frequency 3.Noise floor 4.Scaling factor]
-            bound = [1e-4 freq_l -5 0 1 freq_h 0 -min(dB0)];
+%        parfor ii = 1:length(Hx)
+            % fitting by Input-output formalism
+            % Fitting parameter starting point
+            param = [FWHM(ii) ff0(ii) 1e-3 Br 1e-3]; % Param = {'kpe', 'w0', 'Gc', 'Br', 'gma'}
+            bound_l = [0 freq_l 0 Br*0.5 0]; % lower bound of fitting parameters
+            bound_h = [inf freq_h 5 Br*1.5 0.1]; % upper bound of fitting parameters
             % Set up boundaries for the fitting parameters
-            fit = Lorentz_fit(yq(:,ii), -zq(:,ii),param, bound);
+            fit = iptopt(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h);
             if mod(ii,20) == 0
                 worker = getCurrentTask();
                 fprintf('Current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
             end
-%             % Double Lorentzian function fit
-%             param = [FWHM(ii) ff0(ii) 0 1 FWHM(ii) freq_l+freq_h-ff0(ii) 0 1];
-%             fit = Dbl_Lortz(yq(:,ii), -zq(:,ii), param);
-            
             param = coeffvalues(fit);
-            
-%             ff0_2(ii) = param(6);            
-%             Qf_2(ii) = param(6)/param(5);    
             ff0(ii) = param(2);
             Qf(ii) = param(2)/param(1);
         end
     case 2 %Option 2: spec1d package
         parfor ii = 1:length(Hx)
-            s = spec1d(yq(:,ii), -zq(:,ii), max(zq(:,ii))*0.001); %starting point for the (Lorentzian) fitting parameters(p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
-%             %Additional parameters for lorentzian fitting
-%             fix = [1 1 1 1];
-%             p = [-1 ff0(ii) mean(FWHM) base];
-%             [~, fbck] = fits(s, 'lorz', p, fix);
-            [~, fbck] = fits(s, 'lorz');
+            s = spec1d(yq(:,ii), -zq(:,ii), max(-zq(:,ii)))*0.001; % create spec1d object
+            %starting point for the (Lorentzian) fitting parameters
+            p = [0.1 ff0(ii) FWHM(ii) min(zq(:,ii))]; % (p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
+            fix = [0 0 0 0]; % Denoting if the fitting parameters are fixed
+            [~, fbck] = fits(s, 'lorz', p, fix);
             ff0(ii) = fbck.pvals(2); % Retrieve the resonant frequency from fitted data
             Qf(ii) = abs(fbck.pvals(2)/fbck.pvals(3)/2); %Calculate the quality factor
 %             chi(ii) = 1/Qf(ii);
