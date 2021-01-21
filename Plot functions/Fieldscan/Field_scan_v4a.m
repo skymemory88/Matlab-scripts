@@ -401,14 +401,14 @@ end
 
 Qf = double.empty(length(Hx),0);
 zq(isnan(zq))=0;
-switch 1 % Pick Lorentzian fit function from either custom function of spec1d
+switch 2 % Pick Lorentzian fit function from either custom function of spec1d
     case 1 %Option 1: Custom function
         parfor ii = 1:length(Hx)
             % fitting by Input-output formalism
             % Param = {'kpe', 'w0', 'Gc', 'Br', 'gma'}
             param = [FWHM(ii) ff0(ii) 0.01 Br 0.01]; % Fitting parameter starting point
-            bound_l = [1e-4 freq_l -inf Br*0.5 -inf];
-            bound_h = [1e-2 freq_h inf Br*1.5 inf];
+            bound_l = [1e-4 freq_l -1 Br*0.5 -1];
+            bound_h = [1e-2 freq_h 1 Br*1.5 1];
             % Set up boundaries for the fitting parameters
             fit = iptopt(yq(:,ii),-zq(:,ii),Hx(ii),param,bound_l,bound_h);
             if mod(ii,20) == 0
@@ -421,12 +421,12 @@ switch 1 % Pick Lorentzian fit function from either custom function of spec1d
         end
     case 2 %Option 2: spec1d package
         parfor ii = 1:length(Hx)
-            s = spec1d(yq(:,ii), -zq(:,ii), max(zq(:,ii))*0.001); %starting point for the (Lorentzian) fitting parameters(p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
-            %Additional parameters for lorentzian fitting
-%             fix = [1 1 1 1];
-%             p = [-1 ff0(ii) mean(FWHM) 0];
-%             [~, fbck] = fits(s, 'lorz', p, fix);
-            [~, fbck] = fits(s, 'lorz');
+            s = spec1d(yq(:,ii), -zq(:,ii), max(-zq(:,ii)))*0.001; % create spec1d object
+            %starting point for the (Lorentzian) fitting parameters
+            p = [0.1 ff0(ii) FWHM(ii) min(zq(:,ii))]; % (p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
+            fix = [0 0 0 0]; % Denoting if the fitting parameters are fixed
+            [~, fbck] = fits(s, 'lorz', p, fix);
+%             [~, fbck] = fits(s, 'lorz');
             ff0(ii) = fbck.pvals(2); % Retrieve the resonant frequency from fitted data
             Qf(ii) = abs(fbck.pvals(2)/fbck.pvals(3)/2); %Calculate the quality factor
 %             chi(ii) = 1/Qf(ii);
@@ -751,11 +751,10 @@ switch 2 % Pick Lorentzian fit function from either custom function of spec1d
         Qf = double.empty(0,size(xq,2)); % Quality factor from fitting
         zq(isnan(zq))=0;
         parfor ii = 1:size(xq,2)
-            s = spec1d(yq(:,ii), -zq(:,ii), max(-zq(:,ii))*0.001); %starting point for the (Lorentzian) fitting parameters(p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
-%              s = spec1d(freq(:,ii), -dB(:,ii), max(dB(:,ii))*0.001); %starting point for the (Lorentzian) fitting parameters(p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
-%             %Additional parameters for lorentzian fitting
-%             fix = [1 1 1 1];
-%             p = [-1 ff0(ii) mean(FWHM) base];
+            s = spec1d(yq(:,ii), -zq(:,ii), max(-zq(:,ii)))*0.001; % create spec1d object
+%             %starting point for the (Lorentzian) fitting parameters
+%             p = [0.1 ff0(ii) FWHM(ii) min(zq(:,ii))]; % (p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
+%             fix = [0 0 0 0]; % Denoting if the fitting parameters are fixed
 %             [~, fbck] = fits(s, 'lorz', p, fix);
             [~, fbck] = fits(s, 'lorz');
 %             ff0(ii) = fbck.pvals(2); % Retrieve the resonant frequency from fitted data
