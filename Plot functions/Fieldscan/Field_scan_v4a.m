@@ -7,16 +7,17 @@ function Field_scan_v4a
     %The first line is for windows, the second line is for mac OS
 
     % Figure plot options:
-    plotopt.plot = false; % Plot option in analysis part (Option 3)
-    plotopt.lnwd = 2;
-    plotopt.ftsz = 12;
-    plotopt.mksz = 3;
-
-    loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.11.27';
+    Options.plot = false; % Plot option in analysis part (Option 3)
+    Options.lnwd = 2;
+    Options.ftsz = 12;
+    Options.mksz = 3;
+    Options.fitfunc = 1; % Pick fitting function from either (1) custom function of (2) spec1d
+    
+    loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC107 (4x5x2mm)\19.05.2019';
 %     loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC199/2020.11.05';
     %The first line is for windows, the second line is for mac OS
-    loadname = '2020_11_0038.dat';
-    opt = 2;% Analysis options
+    loadname = '2019_05_0025.dat';
+    opt = 4;% Analysis options
     nZVL = 1; % Number of dataset from ZVL
     fileobj = fullfile(loadpath,loadname);
 
@@ -28,23 +29,23 @@ function Field_scan_v4a
     switch opt
         case 1
             % Simple color plot of S11 (+ S21)
-            option1(fileobj, plotopt, nZVL)
+            option1(fileobj, Options, nZVL)
         case 2
             % On-resonance measurement processing (w/ plots)
-            option2(fileobj, plotopt, nZVL)
+            option2(fileobj, Options, nZVL)
         case 3
             % Data fitting and file saving (w/o plots)
             option3(fileobj, nZVL)
         case 4
             % Off-resonance measurement processing
-            option4(fileobj, dataobj, plotopt, nZVL)
+            option4(fileobj, dataobj, Options, nZVL)
         case 5
             % Temperature scan
-            option5(fileobj, plotopt, nZVL)
+            option5(fileobj, Options, nZVL)
     end
 end
 
-function option1(fileobj, plotopt, nZVL)
+function option1(fileobj, Options, nZVL)
 
 out = readdata_v4(fileobj,nZVL);
 freq = out.data.ZVLfreq/1e9;
@@ -101,7 +102,7 @@ if nZVL > 1
     set(cmap, 'edgeColor','none')
     shading interp;
     colorbar
-    set(gca,'fontsize',plotopt.ftsz)
+    set(gca,'fontsize',Options.ftsz)
     xlabel('Field (T)');
     ylabel('Frequency (GHz)');
     xticks(linspace(field_l,field_h,6));
@@ -115,7 +116,7 @@ cmap = pcolor(xq,yq,zq);
 set(cmap, 'edgeColor','none')
 shading interp;
 colorbar
-set(gca,'fontsize',plotopt.ftsz)
+set(gca,'fontsize',Options.ftsz)
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
 xticks(linspace(field_l,field_h,6));
@@ -127,7 +128,7 @@ cmap1 = pcolor(xq,yq,imag(zq1));
 set(cmap1, 'edgeColor','none')
 shading interp;
 colorbar
-set(gca,'fontsize',plotopt.ftsz)
+set(gca,'fontsize',Options.ftsz)
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
 xticks(linspace(field_l,field_h,6));
@@ -161,7 +162,7 @@ title('Magnetic field vs Temperature')
 end
 % End of option 1
 
-function option2(fileobj, plotopt, nZVL)
+function option2(fileobj, Options, nZVL)
 %Set data range and parameters
 order = 4; % set to what order the median filters is applied
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
@@ -201,44 +202,49 @@ ylabel('Temperature')
 title('Magnetic field vs Temperature')
 
 %% Code For R&S ZVL-6
-% % Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
-% % step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
-% trunc1 = find(freq==freq_l,1,'first'); 
-% trunc2 = find(freq==freq_l,1,'last')-1; 
-% S11_temp = S11(trunc1:trunc2);
-% dB_temp = mag2db(abs(S11_temp));
-% freq_temp = freq(trunc1:trunc2);
-% HH_temp = HH(trunc1:trunc2);
-% 
-% % Step 2: remove duplicates
-% dupl = find(diff(freq_temp) == 0.0);
-% freq_temp(dupl+1)=[];
-% dB_temp(dupl+1)=[];
-% HH_temp(dupl+1)=[];
+% Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
+% step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
+trunc1 = find(freq==freq_l,1,'first'); 
+trunc2 = find(freq==freq_l,1,'last')-1; 
+S11_temp = S11(trunc1:trunc2);
+freq_temp = freq(trunc1:trunc2);
+HH_temp = HH(trunc1:trunc2);
 
-% dif = nonzeros(diff(freq)); % Extract from raw data the step size in frequency scan
-% dif = dif(dif>0); % Keep only positive steps
-% step = min (dif); % Calculate the value of the frequency scan step
-% nop = ceil(abs(freq_h-freq_l)/step); %compute how many points pers complete frequency scan.
-% dB = reshape(dB_temp,nop,[]);  
-% freq = reshape(freq_temp,nop,[]);
-% HH = reshape(HH_temp,nop,[]);
-
-%% Temperary code for Keysight PNA-x N5242B
-S11_temp = S11;
+% Step 2: remove duplicates
+dupl = find(diff(freq_temp) == 0.0);
+freq_temp(dupl+1)=[];
+S11_temp(dupl+1)=[];
+HH_temp(dupl+1)=[];
 dB_temp = mag2db(abs(S11_temp));
-dB_temp = dB_temp - max(dB_temp,[],'all'); % Shift the data to compensate changes in RE(impedence) at low temperatures
-freq_temp = freq;
-HH_temp = HH;
 
 dif = diff(freq); % frequency increments
 resets = find(dif<=0.9*(freq_l-freq_h)); % Find the termination point of a complete scans (10% error)
 nop = mean(diff(resets)); % Set the number of points per frequency scan
-dB = reshape(mag2db(abs(S11)),nop,[]);  %reshape the matrix so that each complete frequency scan occupy one column
-dB = dB - max(dB,[],'all'); % Shift the data to compensate changes in RE(impedence) at low temperatures
-freq = reshape(freq,nop,[]);
-HH = reshape(HH,nop,[]);
-% % end of temporary code
+
+% % Alternative way of finding number of points per complete frequency scan
+% dif = nonzeros(diff(freq)); % Extract from raw data the step size in frequency scan
+% dif = dif(dif>0); % Keep only positive steps
+% step = min (dif); % Calculate the value of the frequency scan step
+% nop = ceil(abs(freq_h-freq_l)/step); %compute how many points pers complete frequency scan.
+
+dB = reshape(dB_temp,nop,[]);  
+freq = reshape(freq_temp,nop,[]);
+HH = reshape(HH_temp,nop,[]);
+%% Temperary code for Keysight PNA-x N5242B
+% S11_temp = S11;
+% dB_temp = mag2db(abs(S11_temp));
+% dB_temp = dB_temp - max(dB_temp,[],'all'); % Shift the data to compensate changes in RE(impedence) at low temperatures
+% freq_temp = freq;
+% HH_temp = HH;
+% 
+% dif = diff(freq); % frequency increments
+% resets = find(dif<=0.9*(freq_l-freq_h)); % Find the termination point of a complete scans (10% error)
+% nop = mean(diff(resets)); % Set the number of points per frequency scan
+% dB = reshape(mag2db(abs(S11)),nop,[]);  %reshape the matrix so that each complete frequency scan occupy one column
+% dB = dB - max(dB,[],'all'); % Shift the data to compensate changes in RE(impedence) at low temperatures
+% freq = reshape(freq,nop,[]);
+% HH = reshape(HH,nop,[]);
+%% end of temporary code for PNA-x N5242B
 clearvars dif out step
 
 %Find all the resonant peaks
@@ -308,7 +314,7 @@ plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','Marke
 hold on
 wp = fitP.wc + Delt./2 + sqrt(Delt.^2+4*fitP.g^2)/2;
 wm = fitP.wc + Delt./2 - sqrt(Delt.^2+4*fitP.g^2)/2;
-plot(B,wm,'-r',B,wp,'-r','LineWidth',plotopt.lnwd);
+plot(B,wm,'-r',B,wp,'-r','LineWidth',Options.lnwd);
 % hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
@@ -376,7 +382,7 @@ switch 2 %choose data interpolation method and plot the color map of S11 respons
 end
 clearvars *_temp;
 
-set(gca,'fontsize',plotopt.ftsz)
+set(gca,'fontsize',Options.ftsz)
 axis([field_l field_h freq_l freq_h]);
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
@@ -400,17 +406,24 @@ switch 2 % Use interpolated data or raw data to extract quality factor
 end
 
 Qf = double.empty(length(Hx),0);
+gamma = double.empty(length(Hx),0);
+Gc = double.empty(length(Hx),0);
 zq(isnan(zq))=0;
-switch 2 % Pick fitting function from either (1) custom function of (2) spec1d
-    case 1 %Option 1: Custom function
+switch Options.fitfunc % Pick fitting function from either (1) custom function of (2) spec1d
+    case 1 %Option 1: Custom function by Input-output formalism
         parfor ii = 1:length(Hx)
-            % fitting by Input-output formalism
             % Fitting parameter starting point
             param = [FWHM(ii) ff0(ii) 1e-3 Br 1e-3]; % Param = {'kpe', 'w0', 'Gc', 'Br', 'gma'}
-            bound_l = [0 freq_l 0 Br*0.5 0]; % lower bound of fitting parameters
-            bound_h = [inf freq_h 5 Br*1.5 0.1]; % upper bound of fitting parameters
             % Set up boundaries for the fitting parameters
-            fit = iptopt(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h);
+            bound_l = [0 ff0(ii) 0 field_l 0]; % lower bound of fitting parameters
+            bound_h = [inf ff0(ii) 5 field_h 5]; % upper bound of fitting parameters
+            fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h);
+
+%             param = [FWHM(ii) ff0(ii) 1e-3 1e-3 Br 1e-3]; % Param = {'kpe', 'w0', 'x1', 'x2', 'Br', 'gma'}
+%             bound_l = [0 freq_l 0 0 field_l 0]; % lower bound of fitting parameters
+%             bound_h = [inf freq_h 5 5 field_h 0.1]; % upper bound of fitting parameters
+%             fit = iptopt(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h);
+
             if mod(ii,20) == 0
                 worker = getCurrentTask();
                 fprintf('Current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
@@ -418,6 +431,8 @@ switch 2 % Pick fitting function from either (1) custom function of (2) spec1d
             param = coeffvalues(fit);
             ff0(ii) = param(2);
             Qf(ii) = param(2)/param(1);
+            Gc(ii) = param(3);
+            gamma(ii) = param(5);
         end
     case 2 %Option 2: spec1d package
         parfor ii = 1:length(Hx)
@@ -494,6 +509,19 @@ xlabel('Field (T)');
 ylabel('Q factor');
 legend('Quality factor from FWHM', 'Quality factor from Lorentzian fit');
 title(num2str(Temperature,'Quality factor, T= %.3f'));
+
+if Options.fitfunc == 1
+    figure
+    plot(Hx,Gc,'-o')
+    xlabel('Field (T)')
+    ylabel('Coupling strenght')
+    title('Fitting paramters from citting')
+    hold on
+    yyaxis right
+    plot(Hx, gamma,'-s')
+    ylabel('Spin lifetime')
+    legend('Ge','gamma')
+end
 end
 % End of option 2
 
@@ -617,7 +645,7 @@ save(tit,'H0','f0','dB0','hPara','fPara','fitPara');
 end
 % End of option 3
 
-function option4(fileobj, dataobj, plotopt, nZVL)
+function option4(fileobj, dataobj, Options, nZVL)
 % extract data from raw data file
 out = readdata_v4(fileobj, nZVL);
 freq = out.data.ZVLfreq/1e9;
@@ -728,17 +756,19 @@ H0 = H0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 
 clearvars c idx ia ii HM trunc1 trunc2 dupl nop
 
-switch 2 % Pick Lorentzian fit function from either custom function of spec1d
+switch Options.fitfunc % Pick Lorentzian fit function from either custom function of spec1d
     case 1 %Option 1: Custom function
         Qf = double.empty(0,length(H0)); % Quality factor from fitting
+        Gc = double.empty(length(H0),0); % Coupling strength
+        gamma = double.empty(length(H0),0); % Spin level linewidth
         parfor ii = 1:length(H0)
             % fitting by Input-output formalism
             % Param = {'kpe', 'w0', 'Gc', 'Br', 'gma'}
-            param = [FWHM(ii) f0(ii) 0.01 Br 0.1]; % Fitting parameter starting point
-            bound_l = [1e-4 freq_l 0 field_l 0];
-            bound_h = [1e-2 freq_h 1 field_h 1];
+            param = [FWHM(ii) f0(ii) 0.01 field_l*0.1 0.1]; % Fitting parameter starting point
+            bound_l = [1e-4 freq_l 0 0 0];
+            bound_h = [1e-2 freq_h 1 field_h*10 1];
             % Set up boundaries for the fitting parameters
-            fit = iptopt(freq(:,ii),-dB(:,ii),H0(ii),param,bound_l,bound_h);
+            fit = iptopt_0(freq(:,ii),-dB(:,ii),H0(ii),param,bound_l,bound_h);
             if mod(ii,20) == 0
                 worker = getCurrentTask();
                 fprintf('Current magnetic field: %1$3.2f. on core %2$u.\n', H0(ii), worker.ID);
@@ -746,6 +776,8 @@ switch 2 % Pick Lorentzian fit function from either custom function of spec1d
             param = coeffvalues(fit);
 %             ff0(ii) = param(2);
             Qf(ii) = param(2)/param(1);
+            Gc(ii) = param(3);
+            gamma(ii) = param(5);
         end
     case 2 %Option 2: spec1d package
         Qf = double.empty(0,size(xq,2)); % Quality factor from fitting
@@ -775,7 +807,7 @@ plot(H0,f0,'.r','MarkerSize',6);
 set(cmap, 'edgeColor','none')
 shading interp;
 colorbar
-set(gca,'fontsize',plotopt.ftsz)
+set(gca,'fontsize',Options.ftsz)
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
 xticks(linspace(field_l,field_h,6));
@@ -809,6 +841,19 @@ ylabel('1/Q');
 title(num2str(Temperature,'Inverse of Q factor at T = %3.3f K'));
 legend('Minimum search','Lorentzian fit');
 
+if Options.fitfunc == 1
+    figure
+    plot(H0,Gc,'-o')
+    xlabel('Field (T)')
+    ylabel('Coupling strenght')
+    title('Fitting paramters from citting')
+    hold on
+    yyaxis right
+    plot(H0, gamma,'-s')
+    ylabel('Spin lifetime')
+    legend('Ge','gamma')
+end
+
 % Save the data
 phase(1,1) = Temperature;
 phase(1,2) = mean(H0(f0==min(f0)));
@@ -822,7 +867,7 @@ end
 end
 % End of option 4
 
-function option5(fileobj, plotopt, nZVL)
+function option5(fileobj, Options, nZVL)
 % extract data from raw data file
 out = readdata_v4(fileobj, nZVL);
 freq = out.data.ZVLfreq/1e9;
@@ -920,7 +965,7 @@ plot(T0,f0,'.r','MarkerSize',6);
 set(cmap, 'edgeColor','none')
 shading interp;
 colorbar
-set(gca,'fontsize',plotopt.ftsz)
+set(gca,'fontsize',Options.ftsz)
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
 xticks(linspace(temp_l,temp_h,6));
