@@ -1,4 +1,4 @@
-function [fitresult, gof] = iptopt_0(x, y, field, P0, low, upr)
+function [fitresult, gof] = iptopt_0(x, y, field, P0, low, upr, weight)
 %CREATEFIT(omega,S11)
 %  S11 input-output fit:
 %      X Input : frequency
@@ -21,6 +21,7 @@ opts.Display = 'Off';
 opts.StartPoint = [P0(1) P0(2) P0(3) P0(4) P0(5)];
 opts.Lower = [low(1) low(2) low(3) low(4) low(5)];
 opts.Upper = [upr(1) upr(2) upr(3) upr(4) upr(5)];
+opts.Weights = weight;
 
 % Fit model to data.
 [fitresult, gof] = fit( xData, yData, ft, 'problem', field, opts);
@@ -33,5 +34,3 @@ legend( h, 'y vs. x', 'S11_inptopt_fit', 'Location', 'NorthEast', 'Interpreter',
 xlabel( 'x', 'Interpreter', 'none' );
 ylabel( 'y', 'Interpreter', 'none' );
 grid on
-
-
