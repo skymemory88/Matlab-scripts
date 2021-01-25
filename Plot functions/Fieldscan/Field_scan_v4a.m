@@ -13,10 +13,10 @@ function Field_scan_v4a
     Options.mksz = 3;
     Options.fitfunc = 1; % Pick fitting function from either (1) custom function of (2) spec1d
     
-    loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.11.26';
+    loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.11.25';
 %     loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC199/2020.11.05';
     %The first line is for windows, the second line is for mac OS
-    loadname = '2020_11_0033.dat';
+    loadname = '2020_11_0031.dat';
     opt = 2;% Analysis options
     nZVL = 1; % Number of dataset from ZVL
     fileobj = fullfile(loadpath,loadname);
@@ -163,7 +163,6 @@ ylabel('Temperature')
 title('Magnetic field vs Temperature')
 end
 % End of option 1
-
 function option2(fileobj, Options, nZVL)
 %Set data range and parameters
 order = 4; % set to what order the median filters is applied
@@ -193,8 +192,10 @@ S11 = S11(rows);
 
 freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
 freq_h = max(freq);
-field_l = min(H);  % set field range, l: lower limit, h: higher limit
-field_h = max(H);
+% field_l = min(H);  % set field range, l: lower limit
+% field_h = max(H);  % set field range, h: lower limit
+field_l = 0;  % Manually set field range, l: lower limit
+field_h = 5;  % Manually set field range, h: lower limit
 
 %Plot the temperature vs magnetic field to check the temperature variation
 figure
@@ -208,9 +209,11 @@ title('Magnetic field vs Temperature')
 % step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
 trunc1 = find(freq==freq_l,1,'first'); 
 trunc2 = find(freq==freq_l,1,'last')-1; 
-S11_temp = S11(trunc1:trunc2);
-freq_temp = freq(trunc1:trunc2);
-HH_temp = HH(trunc1:trunc2);
+trunc3 = find(HH>=field_l,1,'first'); 
+trunc4 = find(HH<=field_h,1,'last'); 
+S11_temp = S11(max(trunc1,trunc3):min(trunc2,trunc4));
+freq_temp = freq(max(trunc1,trunc3):min(trunc2,trunc4));
+HH_temp = HH(max(trunc1,trunc3):min(trunc2,trunc4));
 
 % % Step 2: remove duplicates (Not for data since 2019)
 % dupl = find(diff(freq_temp) == 0.0);
@@ -220,7 +223,7 @@ HH_temp = HH(trunc1:trunc2);
 
 dif = diff(freq); % frequency increments
 resets = find(dif<=0.9*(freq_l-freq_h)); % Find the termination point of a complete scans (10% error)
-nop = mean(diff(resets)); % Set the number of points per frequency scan
+nop = round(mean(diff(resets))); % Set the number of points per frequency scan
 
 % % Alternative way of finding number of points per complete frequency scan
 % dif = nonzeros(diff(freq)); % Extract from raw data the step size in frequency scan
@@ -247,7 +250,7 @@ HH = reshape(HH_temp,nop,[]);
 % dB = dB - max(dB,[],'all'); % Shift the data to compensate changes in RE(impedence) at low temperatures
 % freq = reshape(freq,nop,[]);
 % HH = reshape(HH,nop,[]);
-%% end of temporary code for PNA-x N5242B
+%% Clean up raw data
 clearvars dif out step
 
 %Find all the resonant peaks
@@ -307,13 +310,14 @@ clearvars c idx ia ii HM T1 trunc1 trunc2 dupl nop
 hPara = [H0(Hpos), field_l, field_h];
 fPara = [(freq_l+freq_h)/2, freq_l, freq_h];
 [fitP,~] = wk_cpl_fit(H0,f0,hPara,fPara);
-% B0 = H0(Hpos);
-Br = fitP.x0;
+% Br0 = H0(Hpos); % Level crossing location from minimum search
+Brf = fitP.x0; % Level crossing location from perturbative fitting
+gc = fitP.g;
 
-% Coupling curve with fit parameters
+% Resonant frequency trace with fitting parameters
 B = linspace(field_l,field_h,100);
 spin = 7/2;
-Delt = -spin*(B-fitP.x0);
+Delt = -spin*(B-fitP.x0); % Assume linear relation near the line cross
 plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',4);
 hold on
 wp = fitP.wc + Delt./2 + sqrt(Delt.^2+4*fitP.g^2)/2;
@@ -335,7 +339,7 @@ ylabel('S11 (dB)');
 legend(sprintf('Frequency cut at %.2f T',H0(Hpos)));
 title('Frequency scan at line crossing');
 
-clearvars B Delt hPara fPara wp wm spin fitPara H_res f_res gc
+clearvars B Delt hPara fPara wp wm spin fitPara H_res f_res
 
 % Interpolate the data on a 2D grid for the colormap
 [xq,yq] = meshgrid(linspace(field_l,field_h,301),linspace(freq_l,freq_h,601));
@@ -412,32 +416,56 @@ end
 Qf = double.empty(length(Hx),0);
 gamma = double.empty(length(Hx),0);
 Gc = double.empty(length(Hx),0);
+B0 = double.empty(length(Hx),0);
 zq(isnan(zq))=0;
 switch Options.fitfunc % Pick fitting function from either (1) custom function of (2) spec1d
     case 1 %Option 1: Custom function by Input-output formalism
+        % Step 1: Fit the first time to extract an average value of gamma
         parfor ii = 1:length(Hx)
-            % Fitting parameter starting point
-            param = [FWHM(ii) ff0(ii) 1e-3 Br 1e-3]; % Param = {'kpe', 'w0', 'Gc', 'Br', 'gma'}
-            % Set up boundaries for the fitting parameters
-            bound_l = [FWHM(ii)*0.01 0 0 field_l 0.1]; % lower bound of fitting parameters
-            bound_h = [FWHM(ii)*100 5 10 field_h 1e4]; % upper bound of fitting parameters
+            param = [FWHM(ii) ff0(ii) gc Brf 1e3]; % starting value for Param = {'kpe', 'w0', 'Gc', 'Br', 'gma'}
+%             Set up boundaries for the fitting parameters
+            bound_l = [0 0 1e-5 Brf-0.5 1e-1]; % lower bound of fitting parameters
+            bound_h = [inf 10 1e2 Brf+0.5 1e6]; % upper bound of fitting parameters
             fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h);
 
 %             param = [FWHM(ii) ff0(ii) 1e-3 1e-3 Br 1e-3]; % Param = {'kpe', 'w0', 'x1', 'x2', 'Br', 'gma'}
 %             bound_l = [0 freq_l 0 0 field_l 0]; % lower bound of fitting parameters
 %             bound_h = [inf freq_h 5 5 field_h 0.1]; % upper bound of fitting parameters
 %             fit = iptopt(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h);
-
+            
             if mod(ii,20) == 0
                 worker = getCurrentTask();
-                fprintf('Current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
+                fprintf('First fit, current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
             end
             param = coeffvalues(fit);
+            FWHM(ii) = param(1);
             ff0(ii) = param(2);
             Qf(ii) = param(2)/param(1);
             Gc(ii) = param(3);
+%             B0(ii) = param(4);
             gamma(ii) = param(5);
         end
+        % Step 2: Fit the second time with gamma fixed at the average value of the first fit
+        gama = mean(gamma); % spin lifetime^-1 as fixed parameter
+        Brf = mean(B0);
+%         gc = mean(Gc); % Coupling strength between the cavity and the spin system
+%         parfor ii = 1:length(Hx)
+%             param = [FWHM(ii) ff0(ii) gc Brf gama]; % starting value for Param = {'kpe', 'w0', 'Gc', 'Br', 'gma'}
+%             % Set up boundaries for the fitting parameters
+%             bound_l = [FWHM(ii)*0.8 ff0(ii) 0 Brf gama]; % lower bound of fitting parameters, fix gammma
+%             bound_h = [FWHM(ii)*1.2 ff0(ii) inf Brf gama]; % upper bound of fitting parameters, fix gammma
+%             fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h);
+%             
+%             if mod(ii,20) == 0
+%                 worker = getCurrentTask();
+%                 fprintf('Second fit, current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
+%             end
+%             param = coeffvalues(fit);
+%             ff0(ii) = param(2);
+%             Qf(ii) = param(2)/param(1);
+%             Gc(ii) = param(3);
+% %             gamma(ii) = param(5);
+%         end
     case 2 %Option 2: spec1d package
         parfor ii = 1:length(Hx)
             s = spec1d(yq(:,ii), -zq(:,ii), max(-zq(:,ii)))*0.001; % create spec1d object
@@ -496,17 +524,17 @@ title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
 
 %Plot Quality factor from minimum search vs magnetic field
 figure
-H0 = H0(Q0 >=0);
-Q0 = Q0(Q0 >=0);
-Q0 = medfilt1(Q0, 10);
-Qplot2 = plot(H0(1:round(length(H0)/100):end), Q0(1:round(length(Q0)/100):end),'s-','MarkerSize',2);
+H0 = H0(Q0 >=0); %Remove unphysical points
+Q0 = Q0(Q0 >=0); %Remove unphysical points
+Q0 = medfilt1(Q0, order);
+Qplot1 = plot(H0(1:round(length(H0)/100):end), Q0(1:round(length(Q0)/100):end),'s-','MarkerSize',2);
 % plot(H0, Q0,'s-','MarkerSize',2);
 %Plot Quality factor from Lorentzian fit vs magnetic field
 hold on
 Hx = Hx(Qf >=0);
 Qf = Qf(Qf >=0); %Remove unphysical points
 Qf = medfilt1(Qf, order);
-Qplot1 = plot(Hx(1:round(length(Hx)/100):end), Qf(1:round(length(Qf)/100):end),'o-','MarkerSize',2);
+Qplot2 = plot(Hx(1:round(length(Hx)/100):end), Qf(1:round(length(Qf)/100):end),'o-','MarkerSize',2);
 % plot(Hx, Qf,'o-','MarkerSize',2);
 gca;
 xlabel('Field (T)');
@@ -517,14 +545,22 @@ title(num2str(Temperature,'Quality factor, T= %.3f'));
 if Options.fitfunc == 1
     figure
     plot(Hx,Gc,'-o')
+%     plot(Hx,medfilt1(Gc,order),'-o')
     xlabel('Field (T)')
-    ylabel('Coupling strenght')
-    title(num2str(Br,'Fitting paramters from fitting, B_0 = %.2f'))
+    ylabel('Coupling strength')
+    title(num2str(Brf,'Fitting paramters from fitting, B_0 = %.2f'))
     hold on
     yyaxis right
-    plot(Hx, gamma,'-s')
-    ylabel('Spin linewidth')
-    legend('Gc','gamma')
+    plot(Hx,gamma,'-s')
+%     plot(Hx, medfilt1(1./gamma,order),'-s')
+%     ylabel('Spin lifetime')
+    legend(['Gc, \tau_{avg} = ', num2str(1/gama,'%.2e')])
+%     legend(['Gc, \tau_0 = ', num2str(1/gama,'%.2e')],'\tau_1')
+%     legend(['\tau_0 = ', num2str(1/gama,'%.2e')]);
+%     figure
+%     plot(Hx, B0, '-o')
+%     xlabel('Field (T)')
+%     ylabel('Line cross field (T)')
 end
 end
 % End of option 2
@@ -849,9 +885,9 @@ if Options.fitfunc == 1
     title('Fitting paramters from citting')
     hold on
     yyaxis right
-    plot(H0, gamma,'-s')
+    plot(H0, 1./gamma,'-s')
     ylabel('Spin lifetime')
-    legend('Ge','gamma')
+    legend('Gc','\tau')
 end
 
 % Save the data
