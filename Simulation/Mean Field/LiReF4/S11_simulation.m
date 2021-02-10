@@ -39,40 +39,53 @@
 %% 2D color plot of S11
 clearvars -except delta
 
-temp = 0.12; % temperature(s)
+temp = 0.08; % temperature(s)
 
 % Crystal parameters
 theta = 0.0; % angular deviation (in degrees) of the field angle from c-axis direction
-phi = 60.0; % angle (in degrees) in ab-plane rotation
-% alpha = 0;
+phi = 45.0; % angle (in degrees) in ab-plane rotation
+alpha = 0; % Phase angle (in radians)
 % alpha = [0 pi/6 pi/4 pi/2 pi/3 pi];% Phase angle (in radians) between coherent and dissipative couplings (can be an array)
-alpha = linspace(0,pi,20);
-filFctr = 0.01; % Calculated from COMSOL
-gama = 1.5e-4; % Spin state lifetime (1.5e-4 meV appears to be the best)
-gamma_i = -0.0015; % internal dissipation rate
-gamma_e = 1.2*gamma_i; % external dissipation rate
+% alpha = linspace(0,pi,20);
+filFctr = 0.005; % Filling factor SC108: 0.112, SC200: 0.026
+% filFctr = [0.005 0.01 0.015 0.02 0.025 0.03 0.035 0.04];
+% gama = 1.1e-4; % Spin state linewidth (1.1e-4 meV appears to be the best)
+gama = 1.68e-4; % extract from SC200:2021_02_0003.dat)
+% gamma_i = 1.8e-4; % internal dissipation rate (extract from SC200:2021_02_0003.dat)
+% gamma_e = 8e-4; % external dissipation rate (extract from SC200:2021_02_0003.dat)
+gamma_i = 1e-4; % internal dissipation rate (extract from SC200:2021_02_0003.dat)
+gamma_e = 1e-3; % external dissipation rate (extract from SC200:2021_02_0003.dat)
 % Gamma = 150*gamma_i; % Coupling strength between the cavity field and the spin system
-% Gamma = 1; % fix Gamma for checkpoint
 
 % field parameters
-field_l = 5;
-field_h = 16;
+field_l = 0;
+field_h = 9;
 field_pts = 601; % number of points along field axis
 field = linspace(field_l,field_h,field_pts); % sampling points along field axis
 
 %frequency parameters
-w0 = 3.65; % Resonant frequency for bare cavity
-freq_l = 3.64;
-freq_h = 3.69;
-freq_pts = 601; % number of points along frequency axis
+w0 = 3.51; % Resonant frequency for bare cavity
+freq_l = 3.4;
+freq_h = 3.6;
+freq_pts = 801; % number of points along frequency axis
 freq = linspace(freq_l,freq_h,freq_pts); % frequency range
 f2E = 1/241.8; % Convert from GHz to meV
 kB = 0.08617; % [meV/K]
 
 Option = 2; % Analysis options
 Options.Ediff = false; % Plot energy levels on top
-Options.x1x2 = false;
+Options.trace = false; % Plot the trace of resonant frequency along field axis
+Options.x1x2 = false; % Plot the matrix elements of the susceptibilities
+Options.Q_1 = true; % Plot 1/Q plot along the field axis
 Options.savedata = false; % Save results to a file
+Options.savegif = false; % Save a series of color plots as a gif
+
+if Options.savegif == true
+%     im_t = numel(alpha); % a series with varying phase angle
+    im_t = numel(filFctr); % a series with varying filling factor
+    im_idx = 1;
+    S11_frame = []*im_t;
+end
 
 if Option == 1
 %% Option 1: Perturbative treatment of resonant frequency
@@ -183,7 +196,8 @@ w0 = repmat(w0,1,size(freq,2)); % expand the resonant frequency to a matrix for 
 [freq,field] = meshgrid(freq,field);
 elseif Option == 2
 %% Option 2 Load existing susceptibilities and interpolate
-    location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
+    location = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Simulations results/Matlab/Susceptibilities/without Hz_I/';
+%     location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
     filename = ['Hscan_LiHoF4_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat',temp,theta,phi)];
     file = fullfile(location,filename);
     load(file,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
@@ -259,13 +273,9 @@ elseif Option == 2
     [freq,field] = meshgrid(freq,field);
     x1 = interp2(fields,freq_total,x1z,field,freq);
     x2 = interp2(fields,freq_total,x2z,field,freq);
-    
-    % Calculate frequency shift due to dielectric filling
-%     w0 = w0./(sqrt(1+filFctr.*(x1+1i*x2)));
-%     w0 = w0./(sqrt(1+filFctr.*x1)); % Use only real part of the susceptibility
-%     w0 = w0./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
 elseif Option == 3
-%% Option 3: Calculate susceptabilities for resonant frequency shift (takes long time)
+
+    %% Option 3: Calculate susceptabilities for resonant frequency shift (takes long time)
     location = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output';
     filename = ['LHF_',num2str(temp,'%.3f.mat')];
     file = fullfile(location,filename);
@@ -277,9 +287,9 @@ elseif Option == 3
     x1 = x1';
     x2 = x2';
     [freq,field] = meshgrid(freq,field);
-    w0 = w0./(sqrt(1+filFctr.*(x1+1i*x2)));
+%     w0 = w0./(sqrt(1+filFctr.*(x1+1i*x2)));
 %     w0 = w0./(sqrt(1+filFctr.*x1)); % Use only real part of the susceptibility
-    % w0 = w0./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
+%     w0 = w0./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
 end
 %% Calculate the spin terms in the denominator without susceptibilities
 %   life = 1/(200*abs(gamma_e)); % define spin level lifetime (meV-1)
@@ -299,16 +309,14 @@ end
 %   end
 % S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + spin_term); % Calculate the S11 response using spin turms
 % S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + Gamma.*x2); % Calculate the S11 response using susceptibilites
-%%
-Gamma = filFctr*(x2-1i*x1); % Coupling strength between the spin system and cavity field
-for ii = 1:length(alpha)
-%     S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + (1+exp(1i*alpha(ii)))/2*Gamma^2.*x2);
-%     S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + Gamma^2.*x2);
-    S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + exp(1i*alpha(ii))*Gamma);
-%     S11_2 = 1 + 2*gamma_e./(1i.*(w0-freq) - gamma_i - gamma_e + Gamma);
-%     close all
-    figure
-    map = pcolor(field,freq,log(abs(S11_2))); % color plot of the S11 response
+%% Simulat S11 using input-output formalism
+for ii = 1:length(alpha) % varying phase angle
+% for ii = 1:length(filFctr) % varying filling factor
+%     Gamma = filFctr(ii)*(x1+1i*x2); % Coupling strength between the spin system and cavity field
+    Gamma = filFctr*(x1+1i*x2);
+    S11_2 = 1 + gamma_e./(1i.*(freq-w0) - (gamma_i + gamma_e) + exp(1i*alpha(ii))*1i*Gamma);
+    s_para = figure;
+    map = pcolor(field,freq,mag2db(abs(S11_2))); % color plot of the S11 response
     map.EdgeColor = 'none';
     colorbar
     xlim([field_l field_h])
@@ -316,8 +324,8 @@ for ii = 1:length(alpha)
     xlabel('Magnetic field (T)');
     ylabel('Frequency (GHz)');
     title(num2str(temp*1000,'Simulated data of S11 at %umK'));
-%     caxis('auto')
-    caxis([-5 0.5])
+    caxis('auto')
+%     caxis([-30 3])
     if Options.Ediff == true
         hold on
         yyaxis right
@@ -325,5 +333,57 @@ for ii = 1:length(alpha)
     end
     xlim([field_l field_h])
     ylim([freq_l freq_h])
+    if Options.trace
+       f0 = zeros(size(field,1),1);
+       mag11 = abs(S11_2);
+       for jj = 1:size(mag11,1)
+           f = freq(jj,:);
+           f0(jj) = f(mag11(jj,:)==min(mag11(jj,:)));
+       end
+       figure
+       plot(field(:,1),f0,'-k','lineWidth',1.5)
+       xlim([field_l field_h])
+       ylim([freq_l freq_h])
+       xlabel('Magnetic field (T)')
+       ylabel('Frequency (GHz)')
+    end
+    if Options.Q_1 == true
+        Q0 = zeros(size(field,1),1);
+        f0 = zeros(size(field,1),1);
+        mag11 = abs(S11_2);
+        for jj = 1:size(mag11,1)
+            [~,fidx] = min(mag11(jj,:));
+            f0(jj) = freq(jj,fidx);
+            Q0(jj) = f0(jj)/(gamma_e+gamma_i+imag(Gamma(jj,fidx)));
+        end
+        figure
+        plot(field(:,1),1./Q0,'-')
+       xlabel('Magnetic field (T)')
+       ylabel('1/Q')
+    end
+    if Options.savegif == true
+        drawnow
+        frame = getframe(s_para);
+        S11_frame{im_idx} = frame2im(frame);
+        im_idx = im_idx + 1;
+    end
 end
+
+if Options.savegif == true
+    saveloc = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\S11 parameters';
+    filename = strcat('S11_LiHoF4_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg_%4$.2e',temp,theta,phi,gama),...
+        sprintf('alpha=%1$d-%2$d.gif',min(alpha)*180/pi,max(alpha)*180/pi)); % Varying phase angle
+%     filename = strcat('S11_LiHoF4_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg_%4$.2e',temp,theta,phi,gama),...
+%         sprintf('FF=%1$.2f-%2$.2f.gif',min(filFctr),max(filFctr))); % Varying filling factor
+    fileobj = fullfile(saveloc,filename);
+    for ii = 1:length(S11_frame)
+        [img,cmp] = rgb2ind(S11_frame{ii},256);
+        if ii == 1
+            imwrite(img,cmp,fileobj,'gif','LoopCount',inf,'DelayTime',1);
+        else
+            imwrite(img,cmp,fileobj,'gif','WriteMode','append','DelayTime',1);
+        end
+    end
+end
+        
 clearvars -except delta
