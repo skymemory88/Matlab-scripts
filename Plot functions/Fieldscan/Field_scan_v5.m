@@ -14,9 +14,9 @@ function Field_scan_v5
     Options.fitfunc = 1; % Pick fitting function from either (1) custom function of (2) spec1d
     
 %     loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2021.02.05';
-    loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC200/2021.02.05';
+    loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC200/2021.02.10';
     %The first line is for windows, the second line is for mac OS
-    loadname = '2021_02_0003.dat';
+    loadname = '2021_02_0013.dat';
     opt = 2;% Analysis options
     nZVL = 1; % Number of dataset from ZVL
     fileobj = fullfile(loadpath,loadname);
@@ -195,9 +195,9 @@ S11 = S11(rows);
 freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
 freq_h = max(freq);
 field_l = min(H);  % set field range, l: lower limit
-% field_h = max(H);  % set field range, h: lower limit
+field_h = max(H);  % set field range, h: lower limit
 % field_l = 5;  % Manually set field range, l: lower limit
-field_h = 6;  % Manually set field range, h: lower limit
+% field_h = 6;  % Manually set field range, h: lower limit
 Hcut0 = field_l; % Field window for cavity parameter fit
 Hcut1 = 2; % Field window for cavity parameter fit
 Hcut2 = 2; % Field window for line-crossing fit
@@ -279,7 +279,7 @@ for ii = 1:size(dB,2) %Searching column minima (fixed field)
     H0(ii) = HH(idx,ii); 
     dB0(ii) = dB(idx,ii);
 %     HM = dB(idx,ii)*0.3;
-    HM = -abs(dB(idx,ii))*0.3;
+    HM = -abs(dB(idx,ii)-max(dB(:,ii)))*0.3;
     % Calculate quality factor using f0/FWHM
     if isnan(1/range(freq(dB(:,ii) <= HM)))
        Q0(ii) = 0;
@@ -290,8 +290,8 @@ for ii = 1:size(dB,2) %Searching column minima (fixed field)
        FWHM0(ii) = range(freq(dB(:,ii) <= HM));
     end
     if ii == bidx
-        [lidx, ~] = find(dB(:,ii) <= 0.3*HM,1,'first'); % left stitching point for background
-        [ridx, ~] = find(dB(:,ii) <= 0.3*HM,1,'last'); % right stitching point for background
+        lidx = find(dB(1:idx,ii) >= HM,1,'last'); % left stitching point for background
+        ridx = idx+ find(dB(idx:end,ii) >= HM,1,'first'); % right stitching point for background
         widx = ridx-lidx;
     end
 end
@@ -357,12 +357,12 @@ clearvars B Delt hPara fPara wp wm spin fitPara H_res f_res
 
 % Construct the background noise by stitching together zero-field-scan and anti-crossing
 bgd0 = mag(:,bidx); % zero-field frequency scan
-bgd1 = mag(lidx-3*widx:ridx+3*widx,Hpos-3); % center segment of frequency scan slightly away from the anti-crossing
+bgd1 = mag(lidx-3*widx:ridx+3*widx,Hpos); % center segment of frequency scan slightly away from the anti-crossing
 bgd0(lidx-3*widx:ridx+3*widx) = bgd1; % substitute the center segment of zero-field frequency scan with that from anti-crossing
 figure
 plot(freq(:,bidx),mag(:,bidx))
 hold on
-plot(freq(:,Hpos-3),mag(:,Hpos-3))
+plot(freq(:,Hpos),mag(:,Hpos))
 plot(freq(:,bidx),bgd0);
 xlabel('Frequency (GHz)')
 ylabel('S11 (dB)')
