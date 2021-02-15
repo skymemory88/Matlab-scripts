@@ -8,15 +8,17 @@ function Field_scan_v5a
 
     % Figure plot options:
     Options.plot = false; % Plot option in analysis part (Option 3)
-    Options.lnwd = 2;
+    Options.lnwd = 1.5;
     Options.ftsz = 12;
     Options.mksz = 3;
+    Options.order = 4;
+    Options.backmode = 1; % Background subtraction (0: no substraction. 1: substraction from stitching. 2: Substraction from loaded file)
     Options.fitfunc = 1; % Pick fitting function from either (1) custom function of (2) spec1d
     
-%     loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.12.07';
-    loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC200/2020.12.07';
+%     loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC108 (6x5x4.5mm)\2021.02.13';
+    loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC200/2021.02.14';
     %The first line is for windows, the second line is for mac OS
-    loadname = '2020_12_0016.dat';
+    loadname = '2021_02_0020.dat';
     opt = 2;% Analysis options
     nZVL = 1; % Number of dataset from ZVL
     fileobj = fullfile(loadpath,loadname);
@@ -29,19 +31,19 @@ function Field_scan_v5a
     switch opt
         case 1
             % Simple color plot of S11 (+ S21)
-            option1(fileobj, Options, nZVL)
+            option1(fileobj, Options, nZVL);
         case 2
             % On-resonance measurement processing (w/ plots)
-            option2(fileobj, Options, nZVL)
+            option2(fileobj, Options, nZVL);
         case 3
             % Data fitting and file saving (w/o plots)
-            option3(fileobj, nZVL)
+            option3(fileobj, Options, nZVL);
         case 4
             % Off-resonance measurement processing
-            option4(fileobj, dataobj, Options, nZVL)
+            option4(fileobj, dataobj, Options, nZVL);
         case 5
             % Temperature scan
-            option5(fileobj, Options, nZVL)
+            option5(fileobj, Options, nZVL);
     end
 end
 
@@ -53,11 +55,12 @@ S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
 H = out.data.DCField1;
 HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
 T1 = out.data.Temperature1; % Sample cell temperature
+Temperature = mean(T1(H == min(H)));
 % T2 = out.data.Temperature2; % Mixing chamber temperature
 lck1 = out.data.lockin1;
 lck2 = out.data.lockin2;
-
-Temperature = mean(T1(H == min(H)));
+order = Options.order;
+phaseP = false; % Option to plot phase
 
 S11 = S11';
 S11 = S11(:);
@@ -69,7 +72,6 @@ HH = HH(:); %the third argument is the number of frequency points in each line/s
 [rows,~,freq] = find(freq); % Remove nonsensical zeros from the frequency data
 HH = HH(rows);
 S11 = S11(rows);
-dB = mag2db(abs(S11));
 
 %Set data range and parameters
 freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
@@ -77,28 +79,108 @@ freq_h = max(freq);
 field_l = min(H);  %set field range, l: lower limit, h: higher limit
 field_h = max(H);
 
-% Could use "scatteredInterpolant()" to replace "TriScatteredInterp()" as recommended by MATLAB, but it may generate artifacts
-FdB = TriScatteredInterp(HH,freq,dB);
-FrS = TriScatteredInterp(HH,freq,real(S11)); %intrapolate the real part of S11 response on a 2D grid
-FiS = TriScatteredInterp(HH,freq,imag(S11)); %intrapolate the imaginary part of S11 response on a 2D grid
+%% Code For R&S ZVL-6
+% Clean up the raw data by removing incomplete scans
+trunc1 = find(freq==freq_l,1,'first'); 
+trunc2 = find(freq==freq_l,1,'last')-1; 
+trunc3 = find(HH>=field_l,1,'first'); % Truncate the data according to the set field range
+trunc4 = find(HH<=field_h,1,'last'); 
+S11_temp = S11(max(trunc1,trunc3):min(trunc2,trunc4));
+freq_temp = freq(max(trunc1,trunc3):min(trunc2,trunc4));
+HH_temp = HH(max(trunc1,trunc3):min(trunc2,trunc4));
+
+dif = diff(freq); % frequency increments
+resets = find(dif<=0.9*(freq_l-freq_h)); % Find the termination point of a complete scans (10% error)
+nop = round(mean(diff(resets))); % Set the number of points per frequency scan
+
+mag = abs(S11_temp);
+mag = reshape(mag,nop,[]);
+freq = reshape(freq_temp,nop,[]);
+HH = reshape(HH_temp,nop,[]);
 
 % Plot frequency-field colour map
-[xq,yq] = meshgrid(linspace(field_l,field_h,1000),linspace(freq_l,freq_h,1000)); %set the X and Y range
-zq = FdB(xq,yq);
-zq1 = FrS(xq,yq)+1i*FiS(xq,yq);
+[xq,yq] = meshgrid(linspace(field_l,field_h,600),linspace(freq_l,freq_h,800)); %set the X and Y range
+% Could use "scatteredInterpolant()" to replace "TriScatteredInterp()" as recommended by MATLAB, but it may generate artifacts
+FaS = scatteredInterpolant(HH_temp,freq_temp,abs(S11_temp));
+zq = FaS(xq,yq);
+
+clearvars dif step
+
+%Find all the resonant peaks
+f0 = zeros(size(mag,2),1);
+H0 = zeros(size(mag,2),1);
+mag0 = zeros(size(mag,2),1);
+%find the indices to the minima (resonant frequency) of each complete frequency scan until the end of the data
+[~,bidx] = min( HH(1,:) ); % find the column index for zero-field frequency scan
+for ii = 1:size(mag,2) %Searching column minima (fixed field)
+    [~,idx] = min( mag(:,ii) );
+    if(length(idx)>1)
+        disp(num2str(H0(ii),'multiple minima found at H = %.3f'))
+    end
+    f0(ii) = freq(idx,ii);
+    H0(ii) = HH(idx,ii); 
+    mag0(ii) = mag(idx,ii);
+    HM = ( max(mag(:,ii))+min(mag(:,ii)) )/2; % 
+    if ii == bidx
+        lidx = find(mag(1:idx,ii) >= 1.3*HM,1,'last'); % left stitching point for background
+        ridx = idx+ find(mag(idx:end,ii) >= 1.3*HM,1,'first'); % right stitching point for background
+        widx = ridx-lidx; % FWHM of the central peak
+    end
+end
+
+% For noisy data, we need to remove duplicates of minima
+[~,ia,~] = unique(H0,'stable');
+f0 = f0(ia);
+mag0 = mag0(ia);
+
+f0 = medfilt1(f0,order); % apply median filter to remove some noise
+f0 = f0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+mag0 = mag0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+[~,Hpos] = max(mag0); % find the line crossing position on field axis
+
+if Options.backmode == 1% Construct the background noise by stitching together zero-field-scan and anti-crossing
+    bgd0 = mag(:,bidx); % zero-field frequency scan
+    n = 1; % multiples of the half width to be replaced during stitching
+    bgd1 = mag(lidx-n*widx:ridx+n*widx,Hpos); % center segment of frequency scan slightly away from the anti-crossing
+    bgd0(lidx-n*widx:ridx+n*widx) = bgd1; % substitute the center segment of zero-field frequency scan with that from anti-crossing
+    figure
+    plot(freq(:,bidx),mag(:,bidx))
+    hold on
+    plot(freq(:,Hpos),mag(:,Hpos))
+    plot(freq(:,bidx),bgd0);
+    xlabel('Frequency (GHz)')
+    ylabel('S11')
+    legend('B = 0','B = Br','Stitched')
+    [bf0,trimIdx] = unique(freq(:,bidx));
+    bgd0 = bgd0(trimIdx);
+elseif Options.backmode == 2% load background data from existing file.
+    backpath = ('/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/Cavity resonator/D24mm_T5mm_G_flex/SuperCoax calibration');
+    backfile = ('background.mat');
+    load(fullfile(backpath,backfile),'bf0','bgd0');
+    [bf0,trimIdx] = unique(freq(:,bidx));
+    bgd0 = bgd0(trimIdx);
+end
+bgd0 = interp1(bf0,bgd0,yq(:,1));
+clearvars c idx ia lidx ridx widx ii HM trunc1 trunc2 dupl nop bf0
+
+bgdM = repmat(bgd0,1,size(zq,2));
+zq = zq - bgdM + 1;
 
 % Plot additional data if there are more than one set of data from VNA
 if nZVL > 1
     S21 = out.data.ZVLreal2 + 1i*out.data.ZVLimag2;
     S21 = S21';
     S21 = S21(:);
-    dB2 = mag2db(abs(S21));
-    FdB2 = TriScatteredInterp(HH,freq,dB2);
-    zq2 = FdB2(xq,yq);
+%     dB2 = mag2db(abs(S21));
+    mag2 = abs(S21);
+    FaS2 = TriScatteredInterp(HH,freq,mag2);
+%     FdB2 = TriScatteredInterp(HH,freq,dB2);
+%     zq2 = FdB2(xq,yq);
+    zq2 = FaS2(xq,yq);
     
     % Plot the interpolated frequency response data in a field scan using color map
     figure
-    cmap = pcolor(xq,yq,zq2);
+    cmap = pcolor(xq,yq,mag2db(zq2));
     set(cmap, 'edgeColor','none')
     shading interp;
     colorbar
@@ -107,35 +189,38 @@ if nZVL > 1
     ylabel('Frequency (GHz)');
     xticks(linspace(field_l,field_h,6));
     title(num2str(Temperature,'S21 response at T = %3.3f K'));
-
 end
 
 % Plot the interpolated frequency response data in a field scan using color map
 figure
-cmap = pcolor(xq,yq,zq);
+cmap = pcolor(xq,yq,mag2db(zq));
 set(cmap, 'edgeColor','none')
 shading interp;
-% caxis([-30 0])
+caxis([-20 1])
 colorbar
 set(gca,'fontsize',Options.ftsz)
 xlabel('Field (T)');
 ylabel('Frequency (GHz)');
 xticks(linspace(field_l,field_h,6));
-title(num2str(Temperature,'S11 response at T = %3.3f K'));
+title(num2str(Temperature,'S11 (dB) response at T = %3.3f K'));
 
 % Plot the interpolated imaginary part of the response function in a field scan using color map
-figure
-cmap1 = pcolor(xq,yq,imag(zq1));
-set(cmap1, 'edgeColor','none')
-shading interp;
-% caxis([-30 0])
-colorbar
-set(gca,'fontsize',Options.ftsz)
-xlabel('Field (T)');
-ylabel('Frequency (GHz)');
-xticks(linspace(field_l,field_h,6));
-title(num2str(Temperature,'Imaginary part of S11 at T = %3.3f K'));
-
+if phaseP == true
+    FrS = scatteredInterpolant(HH_temp,freq_temp,real(S11_temp)); %intrapolate the real part of S11 response on a 2D grid
+    FiS = scatteredInterpolant(HH_temp,freq_temp,imag(S11_temp)); %intrapolate the imaginary part of S11 response on a 2D grid
+    zq1 = FrS(xq,yq)+1i*FiS(xq,yq);
+    figure
+    cmap1 = pcolor(xq,yq,imag(zq1));
+    set(cmap1, 'edgeColor','none')
+    shading interp;
+    % caxis([-30 0])
+    colorbar
+    set(gca,'fontsize',Options.ftsz)
+    xlabel('Field (T)');
+    ylabel('Frequency (GHz)');
+    xticks(linspace(field_l,field_h,6));
+    title(num2str(Temperature,'Imaginary part of S11 at T = %3.3f K'));
+end
 
 % Plot lock-in data if it isn't empty
 if any(lck1)
@@ -165,11 +250,14 @@ end
 % End of option 1
 function option2(fileobj, Options, nZVL)
 %Set data range and parameters
-order = 4; % set to what order the median filters is applied
+order = Options.order; % set to what order the median filters is applied
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
 % extract data from raw data file
-out = readdata_v4(fileobj, nZVL);
+if ~exist('out','var')
+    out = readdata_v4(fileobj, nZVL);
+end
+
 freq = out.data.ZVLfreq/1e9;
 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;  
 H = out.data.DCField1;
@@ -192,23 +280,24 @@ S11 = S11(rows);
 
 freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
 freq_h = max(freq);
-% field_l = min(H);  % set field range, l: lower limit
-% field_h = max(H);  % set field range, h: lower limit
-field_l = 0.03;  % Manually set field range, l: lower limit
-field_h = 4;  % Manually set field range, h: lower limit
+field_l = min(H);  % set field range, l: lower limit
+field_h = max(H);  % set field range, h: lower limit
+% field_l = 5;  % Manually set field range, l: lower limit
+% field_h = 6;  % Manually set field range, h: lower limit
 Hcut0 = field_l; % Field window for cavity parameter fit
-Hcut1 = 2; % Field window for cavity parameter fit
-Hcut2 = 2; % Field window for line-crossing fit
+Hcut1 = 1; % Field window for cavity parameter fit
+Hcut2 = 1; % Field window for line-crossing fit
 Hcut3 = field_h; % Field window for line-crossing fit
-% 2D grid for interpolating data for colormap
-[xq,yq] = meshgrid(linspace(field_l,field_h,301),linspace(freq_l,freq_h,601));
+spin = -7/2; % Sign and estimate value of the electronic spin's expectation value
+% Interpolate the data on a 2D grid for the colormap
+[xq,yq] = meshgrid(linspace(field_l,field_h,501),linspace(freq_l,freq_h,801));
 
-% %Plot the temperature vs magnetic field to check the temperature variation
-% figure
-% plot(H(1:round(length(T1)/100):end),T1(1:round(length(T1)/100):end),'o-')
-% xlabel('DC Magnetic field')
-% ylabel('Temperature')
-% title('Magnetic field vs Temperature')
+%Plot the temperature vs magnetic field to check the temperature variation
+figure
+plot(H(1:round(length(T1)/100):end),T1(1:round(length(T1)/100):end),'o-')
+xlabel('DC Magnetic field')
+ylabel('Temperature')
+title('Magnetic field vs Temperature')
 
 %% Code For R&S ZVL-6
 % Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
@@ -220,7 +309,6 @@ trunc4 = find(HH<=field_h,1,'last');
 S11_temp = S11(max(trunc1,trunc3):min(trunc2,trunc4));
 freq_temp = freq(max(trunc1,trunc3):min(trunc2,trunc4));
 HH_temp = HH(max(trunc1,trunc3):min(trunc2,trunc4));
-dB_temp = mag2db(abs(S11_temp));
 
 % % Step 2: remove duplicates (Not for data since 2019)
 % dupl = find(diff(freq_temp) == 0.0);
@@ -238,9 +326,9 @@ nop = round(mean(diff(resets))); % Set the number of points per frequency scan
 % step = min (dif); % Calculate the value of the frequency scan step
 % nop = ceil(abs(freq_h-freq_l)/step); %compute how many points pers complete frequency scan.
 
-
-S11_temp = reshape(S11_temp,nop,[]);
-dB = reshape(dB_temp,nop,[]); 
+mag_temp = abs(S11_temp);
+mag = reshape(mag_temp,nop,[]);
+% dB = reshape(mag2db(mag_temp),nop,[]);  
 freq = reshape(freq_temp,nop,[]);
 HH = reshape(HH_temp,nop,[]);
 %% Temperary code for Keysight PNA-x N5242B
@@ -257,155 +345,147 @@ HH = reshape(HH_temp,nop,[]);
 % dB = dB - max(dB,[],'all'); % Shift the data to compensate changes in RE(impedence) at low temperatures
 % freq = reshape(freq,nop,[]);
 % HH = reshape(HH,nop,[]);
-%% Separate background noise and data
-clearvars dif out step
+%% Clean up raw data
+clearvars dif step
 
-f0 = zeros(size(dB,2),1);
-H0 = zeros(size(dB,2),1);
-Q0 = zeros(size(dB,2),1);
-dB0 = zeros(size(dB,2),1);
-FWHM0 = zeros(size(dB,2),1);
-
-% % Option 1: Construct the background noise from the difference of the zero field frequency scan and its Lorentzian fit
-% [~,bidx] = min( HH(1,:) ); % find the column index for zero-field frequency scan
-% [~,fidx] = min( dB(:,bidx) ); % Find the row index for the peak in the frequency scan
-% HM = min(dB(:,bidx))*0.3; % Find half-max point
-% if isnan(1/range(freq(dB(:,bidx) <= HM)))
-%     disp('Zero-field frequency scan unuseable!')
-% elseif isempty(range(freq(dB(:,bidx) <= HM)))
-%     disp('Zero-field frequency cut unuseable!')
-% else
-%     FWHM0(bidx) = range(freq(dB(:,bidx) <= HM));
-% end
-% p0 = [FWHM0(bidx) FWHM0(bidx) freq(fidx,bidx)]; % starting value for the fitting parameters
-% bl = [-inf  -inf  0]; % lower bound of fitting parameters
-% bh = [ inf   inf  inf]; % upper bound of fitting parameters
-% fit0 = iptopt(freq(:,bidx),S11_temp(:,bidx)-max(S11_temp(:,bidx))+1.1,0,p0,bl,bh,zeros(size(freq(:,bidx),1),1),true);
-% p0 = coeffvalues(fit0);
-% ff0(bidx) = p0(3);
-% bgd1 = S11_temp(:,bidx)-0.3-fit0(freq(:,bidx));
-% [bfreq0,trimIdx] = unique(freq(:,bidx));
-% bgd1 = mag2db(abs(bgd0(trimIdx))); % convert to linear scale
-
-
+if Options.backmode == 1% Construct the background noise by stitching together zero-field-scan and anti-crossing
+    %Find the line crossing by tracing the resonant peaks
+    H0 = zeros(size(mag,2),1);
+    mag0 = zeros(size(mag,2),1);
+    [~,bidx] = min( HH(1,:) ); % find the column index for zero-field frequency scan
+    for ii = 1:size(mag,2) %Searching column minima (fixed field)
+        [~,idx] = min( mag(:,ii) );
+        if(length(idx)>1)
+            disp(num2str(H0(ii),'multiple minima found at H = %.3f'))
+        end
+        H0(ii) = HH(idx,ii);
+        mag0(ii) = mag(idx,ii);
+        HM = ( max(mag(:,ii))+min(mag(:,ii)) )/2; %
+        if ii == bidx
+            lidx = find(mag(1:idx,ii) >= 1.3*HM,1,'last'); % left stitching point for background
+            ridx = idx+ find(mag(idx:end,ii) >= 1.3*HM,1,'first'); % right stitching point for background
+            widx = ridx-lidx; % FWHM of the central peak
+        end
+    end
+    [~,Hpos] = max(mag0); % locate the anti-crossing by full/max reflection
+    bgd0 = mag(:,bidx); % zero-field frequency scan
+    n = 1; % multiples of the half width to be replaced during stitching
+    bgd1 = mag(lidx-n*widx:ridx+n*widx,Hpos); % center segment of frequency scan slightly away from the anti-crossing
+    bgd0(lidx-n*widx:ridx+n*widx) = bgd1; % substitute the center segment of zero-field frequency scan with that from anti-crossing
+    figure
+    plot(freq(:,bidx),mag(:,bidx))
+    hold on
+    plot(freq(:,Hpos),mag(:,Hpos))
+    plot(freq(:,bidx),bgd0);
+    xlabel('Frequency (GHz)')
+    ylabel('S11')
+    legend('B = 0','B = Br','Stitched')
+elseif Options.backmode == 2% load background data from existing file.
+    backpath = ('/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/Cavity resonator/D24mm_T5mm_G_flex/SuperCoax calibration');
+    backfile = ('background.mat');
+    load(fullfile(backpath,backfile),'bf0','bgd0');
+end
+%Find all the resonant peaks
+f0 = zeros(size(mag,2),1);
+Q0 = zeros(size(mag,2),1);
+FWHM0 = zeros(size(mag,2),1);
 %find the indices to the minima (resonant frequency) of each complete frequency scan until the end of the data
-[~,bidx] = min( HH(1,:) ); % find the column index for zero-field frequency scan
-for ii = 1:size(dB,2) %Searching column minima (fixed field)
-    [~,idx] = min( dB(:,ii) );
+for ii = 1:size(mag,2) %Searching column minima (fixed field)
+    [~,idx] = min( mag(:,ii)-bgd0 );
     if(length(idx)>1)
         disp(num2str(H0(ii),'multiple minima found at H = %.3f'))
     end
     f0(ii) = freq(idx,ii);
     H0(ii) = HH(idx,ii); 
-    dB0(ii) = dB(idx,ii);
-%     HM = dB(idx,ii)*0.3;
-%     HM = -abs(dB(idx,ii))*0.3;
-    HM = min(dB(idx,ii))*0.3; % Find half-max point
+    mag0(ii) = mag(idx,ii);
+    HM = ( max(mag(:,ii))+min(mag(:,ii)) )/2; % 
     % Calculate quality factor using f0/FWHM
-    if isnan(1/range(freq(dB(:,ii) <= HM)))
+    if isnan(1/range(freq(mag(:,ii) <= HM)))
        Q0(ii) = 0;
-    elseif isempty(range(freq(dB(:,ii) <= HM)))
+    elseif isempty(range(freq(mag(:,ii) <= HM)))
        Q0(ii) = 0;
     else
-       Q0(ii) = freq(idx,ii)/range(freq(dB(:,ii) <= HM));
-       FWHM0(ii) = range(freq(dB(:,ii) <= HM));
-    end
-    if ii == bidx
-       [lidx, ~] = find(dB(:,ii) <= HM,1,'first'); % left stitching point for background
-       [ridx, ~] = find(dB(:,ii) <= HM,1,'last'); % right stitching point for background
-       widx = ridx-lidx;
+       Q0(ii) = freq(idx,ii)/range(freq(mag(:,ii) <= HM));
+       FWHM0(ii) = range(freq(mag(:,ii) <= HM));
     end
 end
 Q0(isinf(Q0)) = NaN; % Cut out inf from the array
 [Q0,c] = rmmissing(Q0); % Cut out NaN from the array
 H0 = H0(~c); % Remove corresponding elements in H0 array as well
 f0 = f0(~c);
-dB0 = dB0(~c);
+mag0 = mag0(~c);
 FWHM0 = FWHM0(~c);
 
 % For noisy data, we need to remove duplicates of minima
 [H0,ia,~] = unique(H0,'stable');
 f0 = f0(ia);
 Q0 = Q0(ia);
-dB0 = dB0(ia);
+mag0 = mag0(ia);
 FWHM0 = FWHM0(ia);
 
 f0 = medfilt1(f0,order); % apply median filter to remove some noise
 f0 = f0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 H0 = H0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 Q0 = Q0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
-dB0 = dB0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
+mag0 = mag0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 FWHM0 = FWHM0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
-
-[~,Hpos] = max(dB0); % find the line crossing position on field axis
-% Hpos = 61; % Manually set the line crossing position (index)
-
-clearvars c idx ia ii HM T1 trunc1 trunc2 dupl nop wgt p0 bl bh fidx trimIdx
 
 % Fit the field dependent resonant frequency data with weak coupling function
 hPara = [H0(Hpos), field_l, field_h];
 fPara = [(freq_l+freq_h)/2, freq_l, freq_h];
-[fitP,~] = wk_cpl_fit(H0,f0,hPara,fPara);
-% Br0 = H0(Hpos); % Level crossing location from minimum search
+[fitP,~] = wk_cpl_fit(H0,f0,spin,hPara,fPara);
+% Brf = H0(Hpos); % Level crossing location from minimum search
+% Brf = 3.4;
 Brf = fitP.x0; % Level crossing location from perturbative fitting
 gc = fitP.g;
 
-% Option 2: construct the background noise by stitching together zero-field-scan and line crossing
-bgd0 = dB(:,bidx);
-bgd0(lidx-5*widx:ridx+5*widx) = dB(lidx-5*widx:ridx+5*widx,Hpos);
-[bf0,trimIdx] = unique(freq(:,bidx));
-bgd0 = interp1(bf0,bgd0(trimIdx),yq(:,1));
-
 % Resonant frequency trace with fitting parameters
 B = linspace(field_l,field_h,100);
-spin = 7/2;
-Delt = -spin*(B-fitP.x0); % Assume linear relation near the line cross
+Delt = spin*(B-Brf); % Assume linear relation near the line cross
 plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',4);
 hold on
 wp = fitP.wc + Delt./2 + sqrt(Delt.^2+4*fitP.g^2)/2;
 wm = fitP.wc + Delt./2 - sqrt(Delt.^2+4*fitP.g^2)/2;
 plot(B,wm,'-r',B,wp,'-r','LineWidth',Options.lnwd);
+hold on
+plot(B,Delt+fitP.wc,'--k');
 % hfig1 = plot(H0, f0, 'o', 'MarkerSize', 2);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
 title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
-legend(sprintf('gc = %.3f GHz',fitP.g));
+legend(sprintf('gc = %.3f GHz',fitP.g/2));
 axis([field_l field_h freq_l freq_h]);
 
-% % Plot frequency scan at line crossing
-% figure
-% % plot(freq(1:10:end,Hpos),dB(1:10:end,Hpos),'-o');
-% plot(freq(:,Hpos),dB(:,Hpos),'-o');
-% xlabel('Frequency (GHz)');
-% ylabel('S11 (dB)');
-% legend(sprintf('Frequency cut at %.2f T',H0(Hpos)));
-% title('Frequency scan at line crossing');
+% Plot frequency scan at line crossing
+figure
+% plot(freq(1:10:end,Hpos),mag2db(mag(1:10:end,Hpos)),'-o');
+plot(freq(:,Hpos),mag2db(mag(:,Hpos)),'-o');
+xlabel('Frequency (GHz)');
+ylabel('S11 (dB)');
+legend(sprintf('Frequency cut at %.2f T',H0(Hpos)));
+title('Frequency scan at line crossing');
+clearvars B Delt hPara fPara wp wm fitPara H_res f_res
 
-clearvars B Delt hPara fPara wp wm spin fitPara H_res f_res ridx lidx widx
-
-% % Interpolate the background noise at line crossing
-% [bfreq,trimIdx] = unique(freq(:,Hpos));
-% bdB = dB(trimIdx,Hpos);
-% bgd = interp1(bfreq,bdB,yq(:,1));
-% figure
-% plot(yq(:,1),bgd)
-% title('Background noise')
-% xlabel('Frequency (GHz)')
-% ylabel('S11 response (dB)')
+[bf0,trimIdx] = unique(freq(:,bidx));
+bgd0 = bgd0(trimIdx);
+bgd0 = interp1(bf0,bgd0,yq(:,1));
+mag0 = interp1(H0,mag0,xq(1,:)); % amplitude along resonant frequency trace
+[~,Hpos] = max(mag0); % find the line crossing position on field axis along interpolated data
+clearvars c idx ia lidx ridx widx ii HM T1 trunc1 trunc2 dupl nop bf0
 
 switch 2 %choose data interpolation method and plot the color map of S11 response
     case 1 % Option_1 Interpolate data along only the frequency axis.
-        interp_dB = zeros(size(yq,1),size(HH,2));
+        interp_amp = zeros(size(yq,1),size(HH,2));
         parfor ii = 1:size(HH,2)
-            interp_dB(:,ii) = interp1(freq(:,ii),dB(:,ii),yq(:,1));
+            interp_amp(:,ii) = interp1(freq(:,ii),mag(:,ii),yq(:,1));
         end
-        zq = interp_dB'; % For later use in lorentzian fitting
+        zq = interp_amp'; % For later use in lorentzian fitting
         HH = repmat(H0,1,size(xq,1));
         
         switch 1 % Choose plotting option
             case 1
                 %     plot single-direction interpolated data using pseudo-colormap
-                cmap0 = pcolor(HH(:,1),yq(:,1),interp_dB);
+                cmap0 = pcolor(HH(:,1),yq(:,1),mag2db(interp_amp));
                 set(cmap0, 'edgeColor','none')
                 shading interp;
                 colorbar
@@ -413,15 +493,16 @@ switch 2 %choose data interpolation method and plot the color map of S11 respons
                 %     plot single-direction interpolated data using scatter plot
                 yy = repmat(yq(:,1),1,length(H0));
                 yy = yy(:);
-                interp_dB = interp_dB(:);
+                interp_amp = interp_amp(:);
                 HH = HH';
                 HH = HH(:);
-                cmap0 = scatter3(HH,yy,interp_dB,2,interp_dB,'o','filled','MarkerEdgeColor','none');
+                cmap0 = scatter3(HH,yy,interp_amp,2,mag2db(interp_amp),'o','filled','MarkerEdgeColor','none');
                 colormap(hsv);
         end
     case 2 % Option_2 Interpolate the data along both axis.
         %    FdB  = TriScatteredInterp(HH,freq,dB);
-        FdB = scatteredInterpolant(HH_temp, freq_temp, dB_temp);
+        Fmag = scatteredInterpolant(HH_temp, freq_temp, mag_temp); % 2D interpolation of amplitude data
+%         FdB = scatteredInterpolant(HH_temp, freq_temp, dB_temp); % 2D interpolation of return loss data
         %     FrS  = TriScatteredInterp(HH,freq,real(S11));
         %     FiS  = TriScatteredInterp(HH,freq,imag(S11));
         %     FTT1 = TriScatteredInterp(HH,freq,TT1);
@@ -429,18 +510,19 @@ switch 2 %choose data interpolation method and plot the color map of S11 respons
         figure
         hold on
         box on               
-        zq = FdB(xq,yq);
+        zq = Fmag(xq,yq);
         
-        % Normalize the data to baseline (optional)
+        % Normalize the data to background noise
         bgdM = repmat(bgd0,1,size(zq,2));
-        zq = zq - bgdM;
+        zq = zq - bgdM + 1;
+%         zq = zq - 0.3; % Manually adjust the floor
         
-        cmap0 = pcolor(xq,yq,zq);
+        cmap0 = pcolor(xq,yq,mag2db(zq));
         set(cmap0, 'edgeColor','none')
         shading interp;
         colorbar
 %         caxis('auto')
-        caxis([max([min(dB0), -30]) max(max(dB0),0)+1]);
+        caxis([max([mag2db(min(mag0)), -30]) max(mag2db(max(mag0)),0)+1]);
 end
 % clearvars *_temp;
         
@@ -450,23 +532,10 @@ xlabel('Field (T)');
 ylabel('Frequency (GHz)');
 title(num2str(Temperature,'S11 response at T = %3.3f K'));
 
-%Fit each frequency scan to Lorentzian form to extract the quality factor
-%     figure
-disp(num2str(Temperature,'Fitting: T = %3.3f K'))
-
-switch 2 % Use interpolated data or raw data to extract quality factor
-    case 1 % Use raw data
-        Hx = H0;
-        yq = freq;
-        zq = dB;
-        ff0 = f0;
-        FWHM = FWHM0;
-    case 2 % Use interpolated data
-        Hx = xq(1,:);
-        ff0 = interp1(H0,f0,Hx,'pchip','extrap'); % Using spline interpolation to smooth the resonant frequency trace
-        FWHM = interp1(H0,FWHM0,Hx,'pchip','extrap');
-end
-
+% Use interpolated data to extract quality factor
+Hx = xq(1,:);
+ff0 = interp1(H0,f0,Hx,'pchip','extrap'); % Using spline interpolation to smooth the resonant frequency trace
+FWHM = interp1(H0,FWHM0,Hx,'pchip','extrap');
 Qf = double.empty(length(Hx),0);
 gamma = double.empty(length(Hx),0);
 Gc = double.empty(length(Hx),0);
@@ -476,7 +545,6 @@ weight = double.empty(size(zq,1),size(zq,2),0);
 for jj = 1:length(Hx)
     for ii = 1:length(zq(:,jj))
         weight(ii,jj,1) = abs(zq(ii,jj)-max(zq(:,jj)));
-%         weight(ii,jj,1) = 0;
     end
 end
 switch Options.fitfunc % Pick fitting function from either (1) custom function of (2) spec1d
@@ -487,30 +555,21 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
         kpe = double.empty(Hc1-Hc0,0);
         kpi = double.empty(Hc1-Hc0,0);
         w0 = double.empty(Hc1-Hc0,0);
-        B0 = double.empty(Hc1-Hc0,0);
+%         B0 = double.empty(Hc1-Hc0,0);
         parfor ii = Hc0:Hc1
-            zq(:,ii) = zq(:,ii)-max(zq(:,ii)); % shift the baseline to below 0  
-            % Fit using input-output formalism
-            param = [FWHM(ii) FWHM(ii) ff0(ii) 0 Brf 1e4]; % starting value for Param = {'kpe', 'kpi', 'w0', 'Gc', 'Br', 'gma'}
-%             Set up boundaries for the fitting parameters
-            bound_l = [ 0   0   0   0  Brf  1]; % lower bound of fitting parameters
-            bound_h = [inf inf inf  0  Brf  1]; % upper bound of fitting parameters
-            fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h,weight(:,ii),false);
-            
-%           % Fit using simple variation of Lorentzian function
-%             plt = false;
+            plt = false;
 %             % Selectively plot the fit for visual inspection
-%             figWin = [220:8:Hc1]; % The iteration window over which shows fitting graph
+%             figWin = [1 2 3 round((Hc1-Hc0)/2) Hc1]; % The iteration window over which shows fitting graph
 %             if ismember(ii,figWin) % Not useable in parallel mode (parfor)
 %                 plt = true;
 %             end
-
-%             param = [FWHM(ii) FWHM(ii) ff0(ii)]; % starting value for Param = {'kpe', 'kpi', 'w0', 'Gc', 'Br', 'gma'}
+            % Fit using input-output formalism
+            param = [FWHM(ii) FWHM(ii)/10  ff0(ii)  0   1e3]; % starting value for param = {'kpe', 'kpi', 'w0', 'Gc', 'gma', 'Br'}
 %             Set up boundaries for the fitting parameters
-%             bound_l = [-inf  -inf  ff0(ii)]; % lower bound of fitting parameters
-%             bound_h = [ inf   inf  ff0(ii)]; % upper bound of fitting parameters
-%             fit = iptopt(yq(:,ii),db2mag(zq(:,ii)),Hx(ii),param,bound_l,bound_h,weight(:,ii),plt);
-
+            bound_l = [ 0   0   0   0  1]; % lower bound of fitting parameters
+            bound_h = [inf inf inf  0  1]; % upper bound of fitting parameters
+            fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),Brf,spin,param,bound_l,bound_h,weight(:,ii),plt);
+ 
             if mod(ii,20) == 0
                 worker = getCurrentTask();
                 fprintf('First fit, current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
@@ -521,23 +580,10 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
             kpi(ii) = param(2);
             w0(ii) = param(3);
         end
-%         % checkpoint
-%         figure
-%         plot(Hx(Hc0:Hc1),kpe,'-o')
-%         legend('Amplitude')
-%         xlabel('Field (T)')
-%         figure
-%         plot(Hx(Hc0:Hc1),kpi,'-o')
-%         hold on
-%         yyaxis right
-%         plot(Hx(Hc0:Hc1),w0,'-s')
-%         legend('Real part','Imaginary part')
-%         xlabel('Field (T)')
-
 %% Step 2: fit the data for the second time with fixed "kpe" and "w0"
         kpe0 = mean(medfilt1(kpe));
 %         kemx = max(medfilt1(kpe));
-        kemn = min(medfilt1(kpe));
+%         kemn = min(medfilt1(kpe));
         kpi0 = mean(medfilt1(kpi));
 %         kimx = max(medfilt1(kpi));
 %         kimn = min(medfilt1(kpi));
@@ -545,27 +591,25 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
         Hc2 = find(Hx >= Hcut2, 1,'first');
         Hc3 = find(Hx <= Hcut3, 1, 'last');
         for ii = Hc2:Hc3
-            zq(:,ii) = zq(:,ii)-max(zq(:,ii)); % shift the baseline to below 0
+            % Selectively plot the fit for visual inspection
+            plt = false;
+            figWin = Hpos-30:6:Hpos+30; % The iteration window over which shows fitting graph
+            if ismember(ii,figWin) % Not useable in parallel mode (parfor)
+                plt = true;
+            end
 %             freq_r = range(yq(:,ii)); % Frequency range of the sweep
 %             dw = freq_r*1e-2;
             dw = 0;
-            param = [kpe0 kpi0 w0 gc Brf gc*1e-4]; % starting value for Param = {'kpe', 'w0', 'Gc', 'Br', 'gma'}
-            plt = false; % Display fit with data
+            param = [kpe0 kpi0 w0 gc gc*1e-2]; % starting value for Param = {'kpe', 'kpi', 'w0', 'Gc', 'gma'}
 %             Set up boundaries for the fitting parameters
-            bound_l = [kemn  kpi0  w0-dw   0    Brf   0 ]; % lower bound of fitting parameters
-            bound_h = [inf   kpi0  w0+dw  inf   Brf  inf]; % upper bound of fitting parameters
- 
+            bound_l = [kpe0  kpi0  w0-dw   0   0]; % lower bound of fitting parameters
+            bound_h = [kpe0  kpi0  w0+dw  inf inf]; % upper bound of fitting parameters            
+            fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),Brf,spin,param,bound_l,bound_h,weight(:,ii),plt);
+            
 %             if mod(ii,20) == 0
 %                 worker = getCurrentTask();
 %                 fprintf('Second fit, current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
 %             end
-            
-            % Selectively plot the fit for visual inspection
-            figWin = 220:5:280; % The iteration window over which shows fitting graph
-            if ismember(ii,figWin) % Not useable in parallel mode (parfor)
-                plt = true;
-            end
-            fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h,weight(:,ii),plt);
             
             param = coeffvalues(fit);
             kpe(ii) = param(1);
@@ -575,12 +619,9 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
 %             Qf(ii) = ff0(ii)/(param(1)+param(2));
             Qf(ii) = param(3)/(param(1)+param(2));
             Gc(ii) = param(4);
-%             B0(ii) = param(5);
-            gamma(ii) = param(6);
+            gamma(ii) = param(5);
         end
-        % Step 2: Fit the second time with gamma fixed at the average value of the first fit
 %         gama = mean(gamma); % spin lifetime^-1 as fixed parameter
-        Brf = mean(B0);
         
         figure
         plot(Hx,kpe,'-');
@@ -599,7 +640,7 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
         xlabel('Field (T)');
         title('Ratio of Dissipation rates');
         
-    case 2 %Option 2: spec1d package
+    case 2 %Option 2: use spec1d package to fit the data using Lorentzian form.
         parfor ii = 1:length(Hx)
             s = spec1d(yq(:,ii), -zq(:,ii), max(-zq(:,ii)))*0.001; % create spec1d object
             %starting point for the (Lorentzian) fitting parameters
@@ -623,7 +664,7 @@ cmap2 = copyobj(cmap0, gca);
 set(cmap2, 'edgeColor','none');
 shading interp;
 colorbar
-caxis([max([min(dB0), -30]) max(max(dB0),0)+1]);
+caxis([max([mag2db(min(mag0)), -30]) max(mag2db(max(mag0)),0)+1]);
 % caxis('auto');
 hold on
 plot(Hx(Hc2:round(length(Hx)/200):Hc3),ff0(Hc2:round(length(Hx)/200):Hc3),'or','MarkerSize',2,'MarkerFaceColor','red');
@@ -639,7 +680,7 @@ cmap3 = copyobj(cmap0, gca);
 set(cmap3, 'edgeColor','none');
 shading interp;
 colorbar
-caxis([max([min(dB0), -30]) max(max(dB0),0)]);
+caxis([max([mag2db(min(mag0)), -30]) max(mag2db(max(mag0)),0)+1]);
 % caxis('auto');
 axis([field_l field_h freq_l freq_h]);
 
@@ -656,10 +697,10 @@ axis([field_l field_h freq_l freq_h]);
 
 % Plot the peak amplitude from minimum search vs. magnetic field
 figure
-dB0 = medfilt1(dB0, order); % apply median filter to remove some noise
-plot(H0, dB0, 'o', 'MarkerSize', 2);
+mag0 = medfilt1(mag0, order); % apply median filter to remove some noise
+plot(xq(1,:), mag2db(mag0), 'o', 'MarkerSize', 2);
 xlabel('Field(T)');
-ylabel('S11 amplitute');
+ylabel('S11 (dB)');
 title(num2str(Temperature,'Minimal S11 at T = %3.3f K'));
 
 %Plot Quality factor from minimum search vs magnetic field
@@ -704,11 +745,11 @@ if Options.fitfunc == 1
 end
 end
 % End of option 2
-function option3(fileobj, nZVL)
+function option3(fileobj, Options, nZVL)
 %% Plot data
 %Set data range and parameters
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
-order = 4; % set to what order the median filters is applied
+order = Options.order; % set to what order the median filters is applied
 
 % extract data from raw data file
 out = readdata_v4(fileobj, nZVL);
@@ -745,8 +786,7 @@ freq_h = max(freq);
 field_l = min(H);  %set field range, l: lower limit, h: higher limit
 field_h = max(H);
 
-% Use the average of the subsequent difference to caculate frequency scan
-% step
+% Use the average of the subsequent difference to caculate frequency scan step
 dif = nonzeros(diff(freq));
 dif = dif(dif>0);
 step = mean(dif);
@@ -961,7 +1001,7 @@ switch Options.fitfunc % Pick Lorentzian fit function from either custom functio
         Qf = double.empty(0,size(xq,2)); % Quality factor from fitting
         zq(isnan(zq))=0;
         parfor ii = 1:size(xq,2)
-            s = spec1d(yq(:,ii), -zq(:,ii), max(-zq(:,ii)))*0.001; % create spec1d object
+            s = spec1d(yq(:,ii), db2mag(zq(:,ii)), max(db2mag(zq(:,ii))))*0.001; % create spec1d object
 %             %starting point for the (Lorentzian) fitting parameters
 %             p = [0.1 ff0(ii) FWHM(ii) min(zq(:,ii))]; % (p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
 %             fix = [0 0 0 0]; % Denoting if the fitting parameters are fixed
