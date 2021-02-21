@@ -1,8 +1,8 @@
 function MF_linear_response(TT,theta,phi,gama)
-% TT: temperatures (can be an array). theta: angle between the external field and c-axis. phi: inplane angle 
-% in ab-plane between the magnetic field and a/b-axis. gamma: lifetime of hyperfine levels.
+% TT: temperatures (can be an array). theta: angle between the external field and c-axis. 
+% phi: inplane angle in ab-plane between the magnetic field and a/b-axis. gamma: lifetime of hyperfine levels.
 
-clearvars -except TT theta phi gamma;
+clearvars -except TT theta phi gama;
 Options.RPA = false; % Apply random phase approximation (RPA) correction
 Options.plotting = false; % Decide whether or not to plot the data at the end
 Options.saving = true;
@@ -64,7 +64,7 @@ hp0 = pcolor(fields(1,:),freq_total,squeeze(log(imchi.x)));
 set(hp0, 'edgeColor','none')
 caxis([-23 2]);
 colorbar
-legend(['\gamma =' num2str(gama,'%.2e')]);
+legend(['\gamma =' num2str(gama,'%.2e meV')]);
 xlabel('Magnetic field (T)')
 ylabel('Frequency (GHz)')
 title({'Imaginary part of \chi (log scale) in x direction'})
@@ -76,7 +76,7 @@ hp1 = pcolor(fields(1,:),freq_total,squeeze(log(imchi.y)));
 set(hp1, 'edgeColor','none')
 caxis([-23 2]);
 colorbar
-legend(['\gamma =' num2str(gama,'%.2e')]);
+legend(['\gamma =' num2str(gama,'%.2e meV')]);
 xlabel('Magnetic field (T)')
 ylabel('Frequency (GHz)')
 title({'Imaginary part of \chi (log scale) in y direction'})
@@ -88,7 +88,7 @@ hp2 = pcolor(fields(1,:),freq_total,squeeze(log(imchi.z)));
 set(hp2, 'edgeColor','none')
 caxis([-23 2]);
 colorbar
-legend(['\gamma =' num2str(gama,'%.2e')]);
+legend(['\gamma =' num2str(gama,'%.2e meV')]);
 xlabel('Magnetic field (T)')
 ylabel('Frequency (GHz)')
 title({'Imaginary part of \chi (log scale) in z direction'})
@@ -100,7 +100,7 @@ hp3 = pcolor(fields(1,:),freq_total,squeeze(rechi.z));
 set(hp3, 'edgeColor','none')
 caxis([-23 2]);
 colorbar
-legend(['\gamma =' num2str(gama,'%.2e')]);
+legend(['\gamma =' num2str(gama,'%.2e meV')]);
 xlabel('Magnetic field (T)')
 ylabel('Frequency (GHz)')
 title({'Real part of \chi in z direction'})
@@ -131,7 +131,7 @@ function [fields, freq_total, rechi0, imchi0, chi0r, chi0i, JIz_exp]=linear_resp
 E = eee;
 V = vvv;
 fields = vecnorm(fff);
-freq_total = (1:0.01:5);
+freq_total = (0.5:0.01:5);
 % freq_total = (1:0.01:5);
 
 imchix = double.empty(length(freq_total(1,:)),length(fields(1,:)),0);

@@ -39,44 +39,54 @@
 %% 2D color plot of S11
 clearvars -except delta
 
-temp = 0.08; % temperature(s)
+temp = 0.13; % temperature(s)
 
 % Crystal parameters
 theta = 0.0; % angular deviation (in degrees) of the field angle from c-axis direction
-phi = 45.0; % angle (in degrees) in ab-plane rotation
+phi = 60.0; % angle (in degrees) in ab-plane rotation
 alpha = 0; % Phase angle (in radians)
 % alpha = [0 pi/6 pi/4 pi/2 pi/3 pi];% Phase angle (in radians) between coherent and dissipative couplings (can be an array)
 % alpha = linspace(0,pi,20);
-filFctr = 0.005; % Filling factor SC108: 0.112, SC200: 0.026
+
+% Filling factor
+filFctr = 0.026; %SC108: 0.112, SC200: 0.026
+% filFctr_1 = 0.004;
+% filFctr_2 = 0.15; % Filling factor for the second mode
 % filFctr = [0.005 0.01 0.015 0.02 0.025 0.03 0.035 0.04];
-% gama = 1.1e-4; % Spin state linewidth (1.1e-4 meV appears to be the best)
-gama = 1.68e-4; % extract from SC200:2021_02_0003.dat)
-% gamma_i = 1.8e-4; % internal dissipation rate (extract from SC200:2021_02_0003.dat)
-% gamma_e = 8e-4; % external dissipation rate (extract from SC200:2021_02_0003.dat)
-gamma_i = 1e-4; % internal dissipation rate (extract from SC200:2021_02_0003.dat)
-gamma_e = 1e-3; % external dissipation rate (extract from SC200:2021_02_0003.dat)
-% Gamma = 150*gamma_i; % Coupling strength between the cavity field and the spin system
+
+% Spin state linewidth
+% gama = 1.68e-4; % extract from SC200:2021_02_0003.dat)
+gama = 1.25e-4;
+
+% Cavity loss rates
+gamma_i = 1.8e-4; % internal dissipation rate (extract from SC200:2021_02_0003.dat)
+gamma_e = 1.6e-3; % external dissipation rate (extract from SC200:2021_02_0003.dat)
+% gamma_i = 1e-3;
+% gamma_e = 1e-2; 
+% gamma_i_2 = 1e-3;
+% gamma_e_2 = 5e-3;
 
 % field parameters
 field_l = 0;
-field_h = 9;
+field_h = 16;
 field_pts = 601; % number of points along field axis
 field = linspace(field_l,field_h,field_pts); % sampling points along field axis
 
 %frequency parameters
-w0 = 3.51; % Resonant frequency for bare cavity
-freq_l = 3.4;
-freq_h = 3.6;
+w0 = 3.65; % Resonant frequency for bare cavity
+% w2 = 4.2; % Dark mode of the cavity
+freq_l = 3.58;
+freq_h = 3.72;
 freq_pts = 801; % number of points along frequency axis
 freq = linspace(freq_l,freq_h,freq_pts); % frequency range
 f2E = 1/241.8; % Convert from GHz to meV
 kB = 0.08617; % [meV/K]
 
 Option = 2; % Analysis options
-Options.Ediff = false; % Plot energy levels on top
+Options.Ediff = true; % Plot energy levels on top
 Options.trace = false; % Plot the trace of resonant frequency along field axis
 Options.x1x2 = false; % Plot the matrix elements of the susceptibilities
-Options.Q_1 = true; % Plot 1/Q plot along the field axis
+Options.Q_1 = false; % Plot 1/Q plot along the field axis
 Options.savedata = false; % Save results to a file
 Options.savegif = false; % Save a series of color plots as a gif
 
@@ -144,8 +154,8 @@ if Options.Ediff == true
     ylabel('Energy difference (GHz)','FontSize',15);
     grid off
     box on;
-    xlim([min(fields) max(fields)]);
-    ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
+%     xlim([min(fields) max(fields)]);
+%     ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
     title('Difference between energy levels','FontSize',15);
 end
 % Calculate perturbed discpersion relations
@@ -196,8 +206,8 @@ w0 = repmat(w0,1,size(freq,2)); % expand the resonant frequency to a matrix for 
 [freq,field] = meshgrid(freq,field);
 elseif Option == 2
 %% Option 2 Load existing susceptibilities and interpolate
-    location = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Simulations results/Matlab/Susceptibilities/without Hz_I/';
-%     location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
+%     location = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Simulations results/Matlab/Susceptibilities/without Hz_I/';
+    location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
     filename = ['Hscan_LiHoF4_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat',temp,theta,phi)];
     file = fullfile(location,filename);
     load(file,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
@@ -292,6 +302,7 @@ elseif Option == 3
 %     w0 = w0./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
 end
 %% Calculate the spin terms in the denominator without susceptibilities
+%   Gamma = 150*gamma_i; % Coupling strength between the cavity field and the spin system
 %   life = 1/(200*abs(gamma_e)); % define spin level lifetime (meV-1)
 %   % life = 0.0001;
 %   % life = 0.00005;
@@ -313,10 +324,14 @@ end
 for ii = 1:length(alpha) % varying phase angle
 % for ii = 1:length(filFctr) % varying filling factor
 %     Gamma = filFctr(ii)*(x1+1i*x2); % Coupling strength between the spin system and cavity field
-    Gamma = filFctr*(x1+1i*x2);
-    S11_2 = 1 + gamma_e./(1i.*(freq-w0) - (gamma_i + gamma_e) + exp(1i*alpha(ii))*1i*Gamma);
+    Gamma = (x1+1i*x2);
+    S11_2 = 1 + gamma_e./(1i.*(freq-w0) - (gamma_i + gamma_e) + exp(1i*alpha(ii))*filFctr*1i*Gamma);
+%     S21_1 = gamma_e./(1i.*(freq-w0) - (gamma_i + gamma_e) + exp(1i*alpha(ii))*filFctr_1*1i*Gamma);
+%     S21_2 = gamma_e_2./(1i.*(freq-w2) - (gamma_i_2 + gamma_e_2) + exp(1i*(alpha(ii)))*1i*filFctr_2*Gamma);
+%     S21 = abs(S21_1 + S21_2);
     s_para = figure;
     map = pcolor(field,freq,mag2db(abs(S11_2))); % color plot of the S11 response
+%     map = pcolor(field,freq,mag2db(S21)); % color plot of the S21 response
     map.EdgeColor = 'none';
     colorbar
     xlim([field_l field_h])
