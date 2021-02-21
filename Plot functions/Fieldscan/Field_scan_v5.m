@@ -13,11 +13,11 @@ function Field_scan_v5
     Options.mksz = 3;
     Options.fitfunc = 1; % Pick fitting function from either (1) custom function of (2) spec1d
     
-%     loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2021.02.05';
-    loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC200/2021.02.10';
+%     loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC108 (6x5x4.5mm)\2021.02.13';
+    loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/Cavity resonator/D24mm_T5mm_G_flex/SuperCoax calibration';
     %The first line is for windows, the second line is for mac OS
-    loadname = '2021_02_0013.dat';
-    opt = 2;% Analysis options
+    loadname = '2021_01_0007.dat';
+    opt = 1;% Analysis options
     nZVL = 1; % Number of dataset from ZVL
     fileobj = fullfile(loadpath,loadname);
 
@@ -162,7 +162,7 @@ ylabel('Temperature')
 title('Magnetic field vs Temperature')
 end
 % End of option 1
-function [out] = option2(fileobj, Options, nZVL)
+function option2(fileobj, Options, nZVL)
 %Set data range and parameters
 order = 4; % set to what order the median filters is applied
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
@@ -199,9 +199,10 @@ field_h = max(H);  % set field range, h: lower limit
 % field_l = 5;  % Manually set field range, l: lower limit
 % field_h = 6;  % Manually set field range, h: lower limit
 Hcut0 = field_l; % Field window for cavity parameter fit
-Hcut1 = 2; % Field window for cavity parameter fit
-Hcut2 = 2; % Field window for line-crossing fit
+Hcut1 = 1; % Field window for cavity parameter fit
+Hcut2 = 1; % Field window for line-crossing fit
 Hcut3 = field_h; % Field window for line-crossing fit
+spin = -7/2; % Sign and estimate value of the electronic spin's expectation value
 % Interpolate the data on a 2D grid for the colormap
 [xq,yq] = meshgrid(linspace(field_l,field_h,501),linspace(freq_l,freq_h,801));
 
@@ -278,8 +279,7 @@ for ii = 1:size(dB,2) %Searching column minima (fixed field)
     f0(ii) = freq(idx,ii);
     H0(ii) = HH(idx,ii); 
     dB0(ii) = dB(idx,ii);
-%     HM = dB(idx,ii)*0.3;
-    HM = -abs(dB(idx,ii)-max(dB(:,ii)))*0.3;
+    HM = max(dB(:,ii))-3; % 
     % Calculate quality factor using f0/FWHM
     if isnan(1/range(freq(dB(:,ii) <= HM)))
        Q0(ii) = 0;
@@ -292,7 +292,7 @@ for ii = 1:size(dB,2) %Searching column minima (fixed field)
     if ii == bidx
         lidx = find(dB(1:idx,ii) >= HM,1,'last'); % left stitching point for background
         ridx = idx+ find(dB(idx:end,ii) >= HM,1,'first'); % right stitching point for background
-        widx = ridx-lidx;
+        widx = ridx-lidx; % FWHM of the central peak
     end
 end
 Q0(isinf(Q0)) = NaN; % Cut out inf from the array
@@ -317,20 +317,20 @@ dB0 = dB0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 FWHM0 = FWHM0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 
 [~,Hpos] = max(dB0); % find the line crossing position on field axis
-% Hpos = 61; % Manually set the line crossing position (index)
+% Hpos = 1010; % Manually set the anti-crossing location (index);
 
 % Fit the field dependent resonant frequency data with weak coupling function
-spin = 8; % Electronic spin
 hPara = [H0(Hpos), field_l, field_h];
 fPara = [(freq_l+freq_h)/2, freq_l, freq_h];
 [fitP,~] = wk_cpl_fit(H0,f0,spin,hPara,fPara);
 % Brf = H0(Hpos); % Level crossing location from minimum search
-Brf = fitP.x0; % Level crossing location from perturbative fitting
+% Brf = fitP.x0; % Level crossing location from perturbative fitting
+Brf = 3.67;
 gc = fitP.g;
 
 % Resonant frequency trace with fitting parameters
 B = linspace(field_l,field_h,100);
-Delt = -spin*(B-Brf); % Assume linear relation near the line cross
+Delt = spin*(B-Brf); % Assume linear relation near the line cross
 plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',4);
 hold on
 wp = fitP.wc + Delt./2 + sqrt(Delt.^2+4*fitP.g^2)/2;
@@ -353,12 +353,14 @@ xlabel('Frequency (GHz)');
 ylabel('S11 (dB)');
 legend(sprintf('Frequency cut at %.2f T',H0(Hpos)));
 title('Frequency scan at line crossing');
-clearvars B Delt hPara fPara wp wm spin fitPara H_res f_res
+clearvars B Delt hPara fPara wp wm fitPara H_res f_res
 
 % Construct the background noise by stitching together zero-field-scan and anti-crossing
+% Hpos = 1010;
 bgd0 = mag(:,bidx); % zero-field frequency scan
-bgd1 = mag(lidx-3*widx:ridx+3*widx,Hpos); % center segment of frequency scan slightly away from the anti-crossing
-bgd0(lidx-3*widx:ridx+3*widx) = bgd1; % substitute the center segment of zero-field frequency scan with that from anti-crossing
+n = 1; % multiples of the half width to be replaced during stitching
+bgd1 = mag(lidx-n*widx:ridx+n*widx,Hpos); % center segment of frequency scan slightly away from the anti-crossing
+bgd0(lidx-n*widx:ridx+n*widx) = bgd1; % substitute the center segment of zero-field frequency scan with that from anti-crossing
 figure
 plot(freq(:,bidx),mag(:,bidx))
 hold on
@@ -371,7 +373,7 @@ legend('B = 0','B = Br','Stitched')
 bgd0 = interp1(bf0,bgd0(trimIdx),yq(:,1));
 dB0 = interp1(H0,dB0,xq(1,:));
 [~,Hpos] = max(dB0); % find the line crossing position on field axis along interpolated data
-clearvars c idx ia ii HM T1 trunc1 trunc2 dupl nop bf0
+clearvars c idx ia lidx ridx widx ii HM T1 trunc1 trunc2 dupl nop bf0
 
 switch 2 %choose data interpolation method and plot the color map of S11 response
     case 1 % Option_1 Interpolate data along only the frequency axis.
@@ -477,11 +479,11 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
 %                 plt = true;
 %             end
             % Fit using input-output formalism
-            param = [FWHM(ii) FWHM(ii)/10  ff0(ii)  0   1e3]; % starting value for param = {'kpe', 'kpi', 'w0', 'Gc', 'gma'}
+            param = [FWHM(ii) FWHM(ii)/10  ff0(ii)  0   1e3]; % starting value for param = {'kpe', 'kpi', 'w0', 'Gc', 'gma', 'Br'}
 %             Set up boundaries for the fitting parameters
             bound_l = [ 0   0   0   0  1]; % lower bound of fitting parameters
             bound_h = [inf inf inf  0  1]; % upper bound of fitting parameters
-            fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),Brf,param,bound_l,bound_h,weight(:,ii),plt);
+            fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),Brf,spin,param,bound_l,bound_h,weight(:,ii),plt);
  
             if mod(ii,20) == 0
                 worker = getCurrentTask();
@@ -495,11 +497,11 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
         end
 %% Step 2: fit the data for the second time with fixed "kpe" and "w0"
         kpe0 = mean(medfilt1(kpe));
-%         kemx = max(medfilt1(kpe));
-%         kemn = min(medfilt1(kpe));
+        kemx = max(medfilt1(kpe));
+        kemn = min(medfilt1(kpe));
         kpi0 = mean(medfilt1(kpi));
-%         kimx = max(medfilt1(kpi));
-%         kimn = min(medfilt1(kpi));
+        kimx = max(medfilt1(kpi));
+        kimn = min(medfilt1(kpi));
         w0 = w0(end);
         Hc2 = find(Hx >= Hcut2, 1,'first');
         Hc3 = find(Hx <= Hcut3, 1, 'last');
@@ -515,9 +517,9 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
             dw = 0;
             param = [kpe0 kpi0 w0 gc gc*1e-2]; % starting value for Param = {'kpe', 'kpi', 'w0', 'Gc', 'gma'}
 %             Set up boundaries for the fitting parameters
-            bound_l = [kpe0  kpi0  w0-dw   0   0]; % lower bound of fitting parameters
-            bound_h = [kpe0  kpi0  w0+dw  inf inf]; % upper bound of fitting parameters            
-            fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),Brf,param,bound_l,bound_h,weight(:,ii),plt);
+            bound_l = [kemn  kimn  w0-dw   0   0]; % lower bound of fitting parameters
+            bound_h = [kemx  kimx  w0+dw  inf inf]; % upper bound of fitting parameters            
+            fit = iptopt_0(yq(:,ii),zq(:,ii),Hx(ii),Brf,spin,param,bound_l,bound_h,weight(:,ii),plt);
             
 %             if mod(ii,20) == 0
 %                 worker = getCurrentTask();
