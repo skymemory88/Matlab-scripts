@@ -1,25 +1,29 @@
 function EngyLevels
 % close all
-hold on
+% hold on
 clearvars
-temp = 0.12;
-% temp = [1.7 1.75 1.77 1.78 1.783 1.786 1.788 1.79];
+% temp =  [1.774 1.776 1.778 1.780 1.781 1.782 1.783 1.784 1.785 1.787];
+temp = 0.13;
 N_level = 7; % Number of levels to plot
 
+Options.RPA = false; % not enabled yet
 Options.Elevel = false;
 Options.Ediff = true;
 Options.Espan = false;
 Options.savedata = false;
 Options.savegif = false;
+Options.location =... % Location to load/save files
+    'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';           
 
 color = ["black","red","blue","magenta","green","yellow","cyan"];
-theta = [0.0]; % Angle (in degrees) deviated from the transverse field direction
-phi = [0.0]; % Angle (in degrees) in a-b plane
+theta = [0.0]; % Angle (in degrees) between magnetic field and c-axis in a-c plane
+phi = [30.0]; % Angle (in degrees) in a-b plane
 marker = [":","-.","--","-"];
 % theta = 0;
 % color = {[255 127 0], [255 0 127], [127 0 255], [0 127 255], [0 255 127]} ;
 lg = strings(1,numel(theta),numel(phi)); % Create an empty array for legends
-figs = gobjects(N_level,numel(theta),numel(phi));
+figs_E = gobjects(N_level+1,numel(theta),numel(phi));
+figs_dE = gobjects(N_level,numel(theta),numel(phi));
 if Options.savegif == true
     im_t = numel(temp)*numel(theta)*numel(phi);
     im_idx = 1;
@@ -33,10 +37,12 @@ end
 for iter = 1:numel(temp)
     for iter2 = 1:numel(theta)
         for iter3 = 1:numel(phi)
-            location = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I';
-            %         lname=[num2str(temp(iter),'%3.3f'),num2str(theta(iter2),'_%u'),'.mat'];
-            lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg',temp(iter),theta(iter2),phi(iter3)),'.mat'];
-            file = fullfile(location,lname);
+            if Options.RPA == true
+                lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg',temp(iter),theta(iter2),phi(iter3)),'.mat'];
+            else
+                lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg',temp(iter),theta(iter2),phi(iter3)),'.mat'];
+            end
+            file = fullfile(Options.location,lname);
             %         load(lname,'-mat','eee','fff');
             load(file,'-mat','eee','fff');
             
@@ -68,8 +74,8 @@ for iter = 1:numel(temp)
             %% Plot the lowest eight energy levels
             if Options.Elevel == true
                 fig_E = figure;
-                %                 hold on
-                plot(fields,E(:,1:8),'Color',[35 107 142]/255,'linewidth',2);
+                figs_E(:, iter2, iter3) = plot(fields,E(:,1:N_level+1),'Color',[35 107 142]/255,'linewidth',2);
+                hold on
                 set(gca,'fontsize',15);
                 % text(8,(j-1)*D+0.02,'0.1');
                 %         set(fig1,'position',[100 100 600 300])
@@ -77,7 +83,7 @@ for iter = 1:numel(temp)
                 ylabel('Energy (GHz)','FontSize',15)
                 grid off
                 box on;
-                %         ylim([2 5]);
+%                 ylim([0 10]);
                 tit1='Energy levels';
                 title(tit1,'FontSize',15)
                 legend(num2str(temp(iter)*1000,'T = %u mK,  A = A_{th}'))
@@ -93,34 +99,39 @@ for iter = 1:numel(temp)
                     Ediff(i,:)=E(:,i+1)-E(:,i);
                 end
                 %         % Plot the lowest energy difference between the 8 levels
-%                 fig_dE = figure;
                 % frequency = { '1.682 GHz', '3.436 GHz', '3.924 GHz', '4.449 GHz', '5.604 GHz' } ;
-                figs(:, iter2, iter3) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle',marker(1), 'Color',color(iter3),'LineWidth',2);
-                %                 hold on
-                %             hpcfr1 = plot(fields, Ediff,'Color','blue','linewidth',2);
-                %             hpcfr1 = plot(fields, Ediff(2:end,:),'Color','black','linewidth',2);
-                %             hpcfr1 = plot(fields, Ediff,'Color',[35 107 142]/255,'linewidth',2,'LineStyle','-');
-                %             legend(num2str(temp(iter),'T = %.2f K, A = A_{th}'),num2str(temp(iter),'T = %.2f K, A = A_{th}'))
-                %
-                %             % Plot the resonant frequency of a bare cavity
-                %             f_cav = 3.54; % Set resonant frequency of the bare cavity
-                %             plot([0 max(fields)],[f_cav f_cav],'-r','LineWidth',1.5);
-                %
-                %             % Load experimental data of line crossings and superimpose the plot onto the calculated data
-                %             load('f0_BC.mat');
-                %             plot(B(:,1),B(:,2),'ro','MarkerFaceColor','red');
-                %
-                %             yyaxis(gca,'left');
+%                 fig_dE = figure;
+%                 figs_dE(:, iter2, iter3) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle',marker(1), 'Color',color(iter3),'LineWidth',2);
+                figs_dE(:, iter2, iter3) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle',marker(1), 'Color','black','LineWidth',1.5);
+                hold on
+%                 hpcfr1 = plot(fields, Ediff,'Color','blue','linewidth',2);
+%                 hpcfr1 = plot(fields, Ediff(2:end,:),'Color','black','linewidth',2);
+%                 hpcfr1 = plot(fields, Ediff,'Color',[35 107 142]/255,'linewidth',2,'LineStyle','-');
+%                 legend(num2str(temp(iter),'T = %.2f K, A = A_{th}'),num2str(temp(iter),'T = %.2f K, A = A_{th}'))
+%                 
+%                 % Plot the resonant frequency of a bare cavity
+%                 f_cav = 3.54; % Set resonant frequency of the bare cavity
+%                 plot([0 max(fields)],[f_cav f_cav],'-r','LineWidth',1.5);
+%                 
+%                 % Load experimental data of line crossings and superimpose the plot onto the calculated data
+%                 load('f0_BC.mat');
+%                 plot(B(:,1),B(:,2),'ro','MarkerFaceColor','red');
+%                 
+%                 yyaxis(gca,'left');
                 set(gca,'fontsize',15,'Xtick',0:1:max(fields));
-                %             text(8,(j-1)*D+0.02,'0.1');
-                %             set(fig4,'position',[800 100 600 300]);
+                set(gca,'XTickLabelRotation',0)
+%                 xticks(linspace(0.1,max(fields),10))
+%                 text(8,(j-1)*D+0.02,'0.1');
+%                 set(fig4,'position',[800 100 600 300]);
                 xlabel('Field (T)','FontSize',15);
-                ylabel('Energy difference (GHz)','FontSize',15);
+                ylabel('Energy gap (GHz)','FontSize',15);
                 grid off
                 box on;
                 xlim([min(fields) max(fields)]);
                 ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
-                tit4='Difference between energy levels at';
+%                 ylim([1 5]);
+%                 ylim([3.59 3.71]) % adjust y-axis range to fit experimental data
+                tit4='Energy gaps at ';
                 title([tit4 sprintf('T = %.3f K',temp(iter))],'FontSize',15)
                 if Options.savegif == true
                     drawnow
@@ -162,10 +173,9 @@ if Options.savedata == true
     save(filename,'fields','Ediff');
 end
 if Options.savegif == true
-    filepath = 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output\without Hz_I';
     if Options.Elevel == true
         filename = strcat('sim_',num2str(min(temp)*1000,'%u'),'-',num2str(max(temp)*1000,'%u'),'mK_Elevel.gif');
-        fileobj = fullfile(filepath,filename);
+        fileobj = fullfile(Options.location,filename);
         for ii = 1:length(Elevel_frame)
             [img,cmp] = rgb2ind(Elevel_frame{ii},256);
             if ii == 1
@@ -177,7 +187,7 @@ if Options.savegif == true
     end
     if Options.Ediff == true
         filename = strcat('sim_',num2str(min(temp)*1000,'%u'),'-',num2str(max(temp)*1000,'%u'),'mK_Ediff.gif');
-        fileobj = fullfile(filepath,filename);
+        fileobj = fullfile(Options.location,filename);
         for ii = 1:length(Ediff_frame)
             [img,cmp] = rgb2ind(Ediff_frame{ii},256);
             if ii == 1

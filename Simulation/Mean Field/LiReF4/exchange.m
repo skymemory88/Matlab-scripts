@@ -1,4 +1,4 @@
-function [d]=exchange(q,Jex,a,n)
+function [d]=exchange(q,Jex,a,nn)
 
 % This function performs a brute force summation of
 % the q-dependent exchange coupling fo a non-Bravais lattice.
@@ -14,9 +14,9 @@ function [d]=exchange(q,Jex,a,n)
 % between different ions in the unit cell.
 switch nargin
     case 3    
-        N=1;
+        N = 1;
     case 4
-        N = n;
+        N = nn;
     otherwise
         error('Incorrect number of input argument for exchange()!')
 end
@@ -65,53 +65,39 @@ vol=sum(a(1,:).*cross(a(2,:),a(3,:)));
 b=[2*pi*cross(a(2,:),a(3,:))/vol
    2*pi*cross(a(3,:),a(1,:))/vol
    2*pi*cross(a(1,:),a(2,:))/vol];
-% Convert q from Miller indicies to reciprocal aangstroms
+% Convert q from Miller indicies to reciprocal angstroms
 q=q*b;
-% Length of q
-qq=sqrt(sum(q.*q));
+% % Length of q
+% qq=sqrt(sum(q.*q));
 
-% Kronecker delta in x,y,and z
-delta=[1 0 0;0 1 0;0 0 1];
+% % Kronecker delta in x,y,and z
+% delta=[1 0 0;0 1 0;0 0 1]; % replaced by built-in eq(m,n) function, -Yikai 2021.03.08
 
-hkl=zeros((2*N+1)^3,3);
-%hkl=[];
-n=1;
-for h=-N:N
-  for k=-N:N
-    for l=-N:N
-%      hkl=[hkl;h k l];
-       hkl(n,:)=[h k l];
-       n=n+1;
-     end
-  end
-end
-
+[x,y,z]=meshgrid(-N:N,-N:N,-N:N);
+hkl=[x(:) y(:) z(:)];
 
 d=zeros(3,3,size(tau,1),size(tau,1));
 for nt=1:size(tau,1)
-for mt=1:nt
-  r=hkl*a;
-  r(:,1)=r(:,1)-tau(nt,1)+tau(mt,1);
-  r(:,2)=r(:,2)-tau(nt,2)+tau(mt,2);
-  r(:,3)=r(:,3)-tau(nt,3)+tau(mt,3);
-  rr=sum(r.^2,2);
-  r(find(rr<0.01),:)=[];
-  rr(find(rr<0.01))=[];  
-  r(find(rr>(N*5.175)^2),:)=[];%%%%%% clear Spins outside of the sphere
-  rr(find(rr>(N*5.175)^2))=[]; %%%%%%
-  exp_qr=exp(-1i*q*r');
-  for n=1:3
-  for m=1:3
-    d(n,m,nt,mt)=exp_qr*(rr<14)*Jex*delta(n,m);%exchange
-  end
-  end
-  %  d(:,:,nt,mt)=d(:,:,nt,mt)+(4*pi/3)*0.01389*eye(3)/4; %Lorentz
-  d(:,:,mt,nt)=conj(d(:,:,nt,mt));
+    for mt=1:nt
+        r=hkl*a;
+        r(:,1)=r(:,1)-tau(nt,1)+tau(mt,1);
+        r(:,2)=r(:,2)-tau(nt,2)+tau(mt,2);
+        r(:,3)=r(:,3)-tau(nt,3)+tau(mt,3);
+        rr=sum(r.^2,2);
+        r(rr > (N*5.175)^2 | rr<0.01,:)=[]; % Remove points outside of relevant range and singularities
+        rr(rr > (N*5.175)^2 | rr<0.01)=[];
+        exp_qr=exp(-1i*q*r');
+        for n=1:3
+            for m=1:3
+                d(n,m,nt,mt)=exp_qr*(rr<(N*10.75)^2)*Jex*eq(n,m); % exchange interaction
+%                 d(n,m,nt,mt)=exp_qr*(rr<14)*Jex*eq(n,m); % original code, unsure of the rr<14
+            end
+        end
+        %  d(:,:,nt,mt)=d(:,:,nt,mt)+(4*pi/3)*0.01389*eye(3)/4; %Lorentz
+        d(:,:,mt,nt)=conj(d(:,:,nt,mt));
+    end
 end
-end
-
 % Sometimes the coupling is given in units of the unit cell volume:
 %d=d*vol;
-
 
 return

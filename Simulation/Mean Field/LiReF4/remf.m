@@ -1,4 +1,4 @@
-function [ion,evolution,E,V,h_mf1]=remf(ion,h,t,withdemagn,alpha)
+function [ion,evolution,E,V,h_mf1] = remf(ion,hvec,t,withdemagn,alpha)
 global strategies;
 
 for i=1:size(ion.name,1)
@@ -17,39 +17,35 @@ end
 persistent dipole;
 global rundipole
 
-dip_range = 80; %The range over which the dipolar interaction is included
-nn = 3; % Number of magnetic ions in one unit cell
+dip_range = 100; %The range over which the dipolar interaction is included
+nn = 1; % range of exchange interaction in unit of unit cell dimension
 if(isempty(dipole))
-    dipole=dipole_direct([0 0 0],dip_range,ion.a{k});
+    dipole=dipole_direct([0 0 0],dip_range,ion.abc{k});
     for i=1:size(ion.name,1)
         ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:))};
-        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.a{k},nn)};
+        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.abc{k},nn)};
     end
 end
-
 if rundipole == true
-    dipole=dipole_direct([0 0 0],dip_range,ion.a{k});
+    dipole=dipole_direct([0 0 0],dip_range,ion.abc{k});
     for i=1:size(ion.name,1)
         ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:))};
-        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.a{k},nn)};
+        ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.abc{k},nn)};
     end
-    
     rundipole = false;
 end
 
-hvec=h;
 momente_mean=0;
 ion.mom_hyp=ion.mom;
+% alt = [1  1  1
+%       -1  1  1
+%       -1 -1  1
+%        1 -1  1]; % Matrix for alternating summation over unit cell
 
-%%
 for i=1:size(ion.name,1)
 %     ion.mom_hyp(:,:,i)=ion.mom(:,:,i); %we will apply the virtual crystal approximation for the isotops
     momente_mean=momente_mean+ion.prop(i)*ion.mom(:,:,i);
 end
-
-%Lorenzterm = N/V * mu_0/4pi * (mu_b)^2 * 4pi/3
-Lorenz=3.124032/1000; %Ho
-% Lorenz=3.15452/1000; %Er
 
 %gLande
 for i=1:size(ion.name,1)
@@ -64,30 +60,31 @@ demagn(1,1,:,:)=demagn_t(1,1);
 demagn(2,2,:,:)=demagn_t(2,2);
 demagn(3,3,:,:)=demagn_t(3,3);
 
-%0.05368=mu_0*mu_B^2/4pi ([meV*Ang^-3], dipole_direct gives [Ang^3])
-%0.000745836 = N/V * mu_0/4pi * (mu_b)^2
+muB = 9.274e-24; % [J/T]
+mu0 = 4e-7*pi; % [H/m]
+J2meV = 6.24151e+21; % Convert Joule to meV
+Vc = sum(ion.abc{k}(1,:).*cross(ion.abc{k}(2,:),ion.abc{k}(3,:)))*10^-30; % Volume of unit cell [A^-3]
+dmag_fac = 4/Vc * mu0/4/pi * muB^2 * J2meV; % demag_fac = N/V * mu_0/4pi * (mu_b)^2
+Lorenz = dmag_fac * 4*pi/3; % Lorenz_term = N/V * mu_0/4pi * (mu_b)^2 * 4pi/3
+% Lorenz = 3.124032/1000; % Original code (Ho)
+% Lorenz = 3.15452/1000; % Original code (Er)
+gfac = mu0*muB^2/4/pi*J2meV*10^30; % [meV*Ang^-3] (dipole_direct gives [Ang^3])
 
 ion.d=zeros([3,3,4,4,size(ion.name,1)]);
 ion.d_ex=zeros([3,3,4,4,size(ion.name,1)]);
 for i=1:size(ion.name,1)
-    ion.d(:,:,:,:,i)=ion.gLande(i)*(0.05368*dipole+eins*Lorenz/4-withdemagn*0.000745836*pi*demagn);
+    ion.d(:,:,:,:,i)=ion.gLande(i)*(gfac*dipole+eins*Lorenz/4-withdemagn*dmag_fac*pi*demagn);
     ion.d_ex(:,:,:,:,i)=ion.exch{:,:,i};
     evolution.(ion.name{i})(1,:,:)=ion.mom(:,:,i);
     evolution.(ion.name_hyp{i})(1,:,:)=ion.mom_hyp(:,:,i);
 end
-alt=[1  1  1
-    -1  1  1
-    -1 -1  1
-     1 -1  1];
 
 % set convergence criteria. Convergence is accepted when either:
 % (Difference < ConvMin) or (Difference < ConvMax and Niter>NiterMin) or (Niter>NiterMax)
-% This ensures very good convergence when no problem, and decent
-% convergence when difficult.
 ConvMax=1e-6;
 ConvMin=1e-7;
-NiterMin=10000;
-NiterMax=10000;
+NiterMin= 10000;
+NiterMax=20000;
 
 ion.mom_old=zeros([4,3,size(ion.name,1)]);
 ion.mom_old_hyp=zeros([4,3,size(ion.name,1)]);
@@ -98,8 +95,8 @@ for iterations=1:NiterMax
         ion.mom_old_hyp(:,:,i)=ion.mom_hyp(:,:,i);
     end
     momente_old=momente_mean;
-    %  E=zeros(1,length(energies(1,:)));
-    energies = zeros(4, H_dims); % dims = (2*I+1) x (2*J+1)
+%     E=zeros(1,length(energies(1,:)));
+    energies = zeros(4, H_dims); % H_dims = (2*I+1) x (2*J+1)
 %     energies = zeros(4,2); % truncate the energy levels to Ising basis
     for ionn=1:4 % each Ho3+ ion in the unit cell
         %calculate meanfield
@@ -130,17 +127,17 @@ for iterations=1:NiterMax
         for i=1:size(ion.name,1)
             if ion.prop(i)>0 % if the ion exists
                 if ion.hyp(i) % if hyperfine interaction is included
-                 [jx,jy,jz,energies(ionn,:),v]=MF_moments_hyper(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i},ion.A(i),ion.I(i));
-                 ion.mom_hyp(ionn,:,i)=update_moments([jx,jy,jz],evolution.(ion.name_hyp{i}),ionn,iterations);
+                 [jx,jy,jz,energies(ionn,:),v] = MF_moments_hyper(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i},ion.A(i),ion.I(i));
+                 ion.mom_hyp(ionn,:,i) = update_moments([jx,jy,jz],evolution.(ion.name_hyp{i}),ionn,iterations);
                 else % if there hyperfine interaction is excluded
-                 [jx,jy,jz,energies(ionn,:),v]=MF_moments(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i});
-                 ion.mom(ionn,:,i)=update_moments([jx,jy,jz],evolution.(ion.name{i}),ionn,iterations);
+                 [jx,jy,jz,energies(ionn,:),v] = MF_moments(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i});
+                 ion.mom(ionn,:,i) = update_moments([jx,jy,jz],evolution.(ion.name{i}),ionn,iterations);
                 end
             end
         end
-        %      E(ionn)=mean(energies(ionn,:)); % Why does it take an arithmetic average of all the energy levels? --Yikai (12.02.2020)
+%      E(ionn)=mean(energies(ionn,:)); % Why does it take an arithmetic average of all the energy levels? --Yikai (12.02.2020)
         
-        if strategies.symmetry % HMR: equivalency by symmetry) --Yikai (10.02.2020)
+        if strategies.symmetry % HMR: equivalency by symmetry --Yikai (10.02.2020)
             energies = repmat(energies(1,:),4,1);
             ion.mom_hyp = repmat(ion.mom_hyp(1,:,:),4,1,1);
             ion.mom = repmat(ion.mom(1,:,:),4,1,1);
@@ -155,7 +152,6 @@ for iterations=1:NiterMax
         evolution.(ion.name_hyp{i})(size(evolution.(ion.name_hyp{i}),1)+1,:,:)=ion.mom_hyp(:,:,i);
     end
 
-
     % Iterate untill convergence criterion reached
     % Added energy convergence check --Yikai (2020-05-07)
     JDiff = sum(sum(abs(momente_old-momente_mean)));
@@ -164,47 +160,45 @@ for iterations=1:NiterMax
         E=energies(1,:);
         V = v;
         h_mf1 = h_mf;
-        disp(num2str([t,h,iterations,mean(momente_mean)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <J>=(%3.3f,%3.3f,%3.3f)'))
-        %disp(num2str([t,h,iterations,h_mf(2,:)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <(-1)^(i+j)J>=(%3.3f,%3.3f,%3.3f)'))
+        disp(num2str([t,hvec,iterations,mean(momente_mean)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <J>=(%3.3f,%3.3f,%3.3f)'))
+        %disp(num2str([t,hvec,iterations,h_mf(2,:)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <(-1)^(i+j)J>=(%3.3f,%3.3f,%3.3f)'))
         evolution.iterations=iterations;
         return
     end
 end
-
 energies = squeeze(energies);
 E=energies(1,:);
 V = v;
 h_mf1 = h_mf;
-disp(num2str([t,h,iterations,mean(momente_mean)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <J>=(%3.3f,%3.3f,%3.3f)'))
+disp(num2str([t,hvec,iterations,mean(momente_mean)],'Temperature: %3.3f, Field: (%3.3f,%3.3f,%3.3f), Iterations: %3.3i, <J>=(%3.3f,%3.3f,%3.3f), fail to converge!'))
 evolution.iterations=iterations;
 return
 
 function J=update_moments(Jnew,evolution,ionn,iterations)
 global strategies;
 if strategies.accelerator~=0 && iterations>10 && mod(iterations,strategies.expfit_period)~=0 % use accellerated update to shorten convergence
-    Jold=squeeze(evolution(end-1,ionn,:))';
-    Jnow=squeeze(evolution(end,ionn,:))';
-    dnow=Jnow-Jold;
-    J=Jnew+strategies.accelerator*dnow;
+    Jold = squeeze(evolution(end-1,ionn,:))';
+    Jnow = squeeze(evolution(end,ionn,:))';
+    dnow = Jnow-Jold;
+    J = Jnew+strategies.accelerator*dnow;
 elseif strategies.expfit && mod(iterations,strategies.expfit_period)==0
-    ndif=strategies.expfit_deltaN;
-    J=Jnew;
+    ndif = strategies.expfit_deltaN;
+    J = Jnew;
 %     Jold=squeeze(evolution(end-2*ndif+1-4,ionn,:))'; Why the additional "-4"? --Yikai (12.02.2020)
 %     Jnow=squeeze(evolution(end-1*ndif+1-4,ionn,:))';
 %     Jnew=squeeze(evolution(end-0*ndif+1-4,ionn,:))';
-    Jold=squeeze(evolution(end-2*ndif+1,ionn,:))';
-    Jnow=squeeze(evolution(end-1*ndif+1,ionn,:))';
-    Jnew=squeeze(evolution(end-0*ndif,ionn,:))';
+    Jold = squeeze(evolution(end-2*ndif+1,ionn,:))';
+    Jnow = squeeze(evolution(end-1*ndif+1,ionn,:))';
+    Jnew = squeeze(evolution(end-0*ndif,ionn,:))';
 %    enNr=min(max(0,(Jnew-Jnow)./(Jnow-Jold)),0.998);
 %    if isempty(find(enNr>=1,1))
-    enNr=(Jnew-Jnow)./(Jnow-Jold);
+    enNr = (Jnew-Jnow)./(Jnow-Jold);
     for nxyz=1:3 % for each of the three (dimensions) components of the Js --Yikai (10.02.2020)
        if enNr(nxyz)>0.01 && enNr(nxyz)<0.998
-          feNNr=(Jnew-Jnow)./(enNr-1);
-          J(nxyz)=J(nxyz)-feNNr(nxyz);
+          feNNr = (Jnew-Jnow)./(enNr-1);
+          J(nxyz) = J(nxyz)-feNNr(nxyz);
        end
     end
-
 %    if isempty(find(enNr>=1,1))
 %        feNNr=(Jnew-Jnow)./(enNr-1);
 %        J=Jnow-feNNr;
@@ -217,42 +211,44 @@ end
 return
 
 function [jx,jy,jz,energies,v]=MF_moments(hvec,h_dipol,t,J,gLande,Hcf)
+muB = 9.274e-24; %[J/T]
+J2meV = 6.24151e+21; % Convert Joule to meV
 %Initiate J operators
-Jz=diag(J:-1:-J);
-Jp=diag(sqrt((J-[(J-1):-1:-J]).*(J+1+[(J-1):-1:-J])),1);
-Jm=Jp';
-Jx=(Jp+Jm)/2;
-Jy=(Jp-Jm)/2i;
+Jz = diag(J:-1:-J);
+Jp = diag(sqrt((J-[(J-1):-1:-J]).*(J+1+[(J-1):-1:-J])),1);
+Jm = Jp';
+Jx = (Jp+Jm)/2;
+Jy = (Jp-Jm)/2i;
 
 %Calculate Hamiltonian
-Hzeeman=(-gLande*0.05788)*(hvec(1)*Jx+hvec(2)*Jy+hvec(3)*Jz); %in meV (Yikai)
-Hdipole=h_dipol(1)*Jx+h_dipol(2)*Jy+h_dipol(3)*Jz;
-Ham=Hcf+Hzeeman-Hdipole;
+Hzeeman = (-gLande*muB*J2meV)*(hvec(1)*Jx + hvec(2)*Jy + hvec(3)*Jz); %in meV (Yikai)
+HvM = -(h_dipol(1)*Jx+h_dipol(2)*Jy+h_dipol(3)*Jz);
+Ham = Hcf + Hzeeman + HvM;
 
 %Diagonalize
-[v,e]=eig(Ham); %in meV
-E=e;
-e=real(diag(e));
-e=e-min(e);
-[e,n]=sort(e);
-v=v(:,n);
+[v,e] = eig(Ham); %in meV
+E = e;
+e = real(diag(e));
+e = e-min(e);
+[e,n] = sort(e);
+v = v(:,n);
 % e = e(1:2); % truncate the vasis to form an Ising basis
 % v = v(:,1:2); % truncate the basis to form an Ising basis
 beta = 11.6/t; % [kB*T]^-1 in [meV]
 
 %Calculate Matrixelements and Moments
 if t==0 % At zero temperature, use only lowest eigenvalue.
-    energies=E(1,1);
-    jx=real(v(:,1)'*Jx*v(:,1));
-    jy=real(v(:,1)'*Jy*v(:,1));
-    jz=real(v(:,1)'*Jz*v(:,1));
+    energies = E(1,1);
+    jx = real(v(:,1)'*Jx*v(:,1));
+    jy = real(v(:,1)'*Jy*v(:,1));
+    jz = real(v(:,1)'*Jz*v(:,1));
 else % Boltzman factor (with t in Kelvin)
     % energien korrigieren, damit positiv, sonst NaN Fehler mit exp()
-    e=e-min(e);
-    z=exp(-e*beta)/sum(exp(-e*beta)); % Density matrix element
-    jx=real(diag(v'*Jx*v))'*z;
-    jy=real(diag(v'*Jy*v))'*z;
-    jz=real(diag(v'*Jz*v))'*z;
+    e = e-min(e);
+    z = exp(-e*beta)/sum(exp(-e*beta)); % Density matrix element
+    jx = real(diag(v'*Jx*v))'*z;
+    jy = real(diag(v'*Jy*v))'*z;
+    jz = real(diag(v'*Jz*v))'*z;
 %     energies=sum(E)*z; % This assignment is very puzzling --Yikai
     energies = e;
 end
@@ -261,61 +257,66 @@ return
 
 function [jx,jy,jz,energies,v]=MF_moments_hyper(hvec,h_dipol,t,J,gLande,Hcf,A,I)
 % With hyperfine coupling
+muB = 9.274e-24; %[J/T]
+J2meV = 6.24151e+21; % Convert Joule to meV
 %Initiate J operators
-Jz=diag(J:-1:-J);
-Jzh=kron(Jz,eye(2*I+1));
-Jp=diag(sqrt((J-[(J-1):-1:-J]).*(J+1+[(J-1):-1:-J])),1);
-Jm=Jp';
-Jph=kron(Jp,eye(2*I+1));
-Jmh=kron(Jm,eye(2*I+1));
-Jxh=(Jph+Jmh)/2;
-Jyh=(Jph-Jmh)/2i;
-%tensor product of cristal field to include nuclear moments
-Hcfh=kron(Hcf,eye(2*I+1));
+Jz = diag(J:-1:-J);
+Jzh = kron(Jz,eye(2*I+1));
+Jp = diag(sqrt((J-[(J-1):-1:-J]).*(J+1+[(J-1):-1:-J])),1);
+Jm = Jp';
+Jph = kron(Jp,eye(2*I+1));
+Jmh = kron(Jm,eye(2*I+1));
+Jxh = (Jph+Jmh)/2;
+Jyh = (Jph-Jmh)/2i;
+% Expand the crystal field tensor to include nuclear moments' degrees of freedom
+Hcfh = kron(Hcf,eye(2*I+1));
 %Initiate I operators
-Iz=diag(I:-1:-I);
-Izh=kron(eye(2*J+1),Iz);
-Ip=diag(sqrt((I-[(I-1):-1:-I]).*(I+1+[(I-1):-1:-I])),1);
-Im=Ip';
-Iph=kron(eye(2*J+1),Ip);
-Imh=kron(eye(2*J+1),Im);
-Ixh=(Iph+Imh)/2;
-Iyh=(Iph-Imh)/2i;
-ELEf = gLande*0.05788;     % Lande factor * Bohr magneton (meV T^-1)
-NUCf = 4.173 * 3.15245e-5;   % Nuclear Lande factor, mu/mu_N = 4.173
+Iz = diag(I:-1:-I);
+Izh = kron(eye(2*J+1),Iz);
+Ip = diag(sqrt((I-[(I-1):-1:-I]).*(I+1+[(I-1):-1:-I])),1);
+Im = Ip';
+Iph = kron(eye(2*J+1),Ip);
+Imh = kron(eye(2*J+1),Im);
+Ixh = (Iph+Imh)/2;
+Iyh = (Iph-Imh)/2i;
+
+ELEf = gLande*muB*J2meV;     % Lande factor * Bohr magneton (meV T^-1)
+% NUCf = 4.173 * 3.15245e-5;   % Nuclear Lande factor, mu/mu_N = 4.173
 % NUCf = 1.668 * 3.15245e-5;  % http://easyspin.org/documentation/isotopetable.html
 % NUCf = 4.732 * 3.1519e-5;   % Original values from linear response code
 
 %Calculate Hamiltonian
-Hzeeman = -ELEf*(hvec(1)*Jxh+hvec(2)*Jyh+hvec(3)*Jzh);
-% HzeemanI = -NUCf*(hvec(1)*Ixh+hvec(2)*Iyh+hvec(3)*Izh);
-Ham=Hcfh + Hzeeman - h_dipol(1)*Jxh - h_dipol(2)*Jyh - h_dipol(3)*Jzh + A*(Ixh*Jxh + Iyh*Jyh + Izh*Jzh);
-% Ham=Hcfh + Hzeeman + HzeemanI - h_dipol(1)*Jxh - h_dipol(2)*Jyh - h_dipol(3)*Jzh + A*(Ixh*Jxh + Iyh*Jyh + Izh*Jzh);
-% Ham=Hcfh + Hzeeman - h_dipol(1)*Jxh-h_dipol(2)*Jyh-h_dipol(3)*Jzh + A*(Izh*Jzh);
+Hzeeman = -ELEf*(hvec(1)*Jxh + hvec(2)*Jyh + hvec(3)*Jzh); % Electron Zeeman interaction
+% HzeemanI = -NUCf*(hvec(1)*Ixh + hvec(2)*Iyh + hvec(3)*Izh); % Nuclear Zeeman interaction
+Hyper = A*(Ixh*Jxh + Iyh*Jyh + Izh*Jzh); % hyperfine interaction
+HvM =  - (h_dipol(1)*Jxh + h_dipol(2)*Jyh + h_dipol(3)*Jzh); % virtual mean field
+% Ham = Hcfh + Hzeeman + HzeemanI  + Hyper + HvM;
+Ham = Hcfh + Hzeeman + Hyper + HvM;
+% Ham = Hcfh + Hzeeman + HzeemanI  + Hyper + A*(Izh*Jzh);
 
 %Diagonalize
-[v,e]=eig(Ham);
-e=real(diag(e)); % Take only the real part of the eigen-energy to form a diaganol matrix
-e=e-min(e); % Normalize the energy amplitude to the lowest eigen-energy
-[e,n]=sort(e); % sort the energy from lowest to the highest
-v=v(:,n); % sort the eigen-vectors in its basis accordingly
+[v,e] = eig(Ham);
+e = real(diag(e)); % Take only the real part of the eigen-energy to form a diaganol matrix
+e = e-min(e); % Normalize the energy amplitude to the lowest eigen-energy
+[e,n] = sort(e); % sort the energy from lowest to the highest
+v = v(:,n); % sort the eigen-vectors in its basis accordingly
 beta = 11.6/t; % [kB*T]^-1 in [meV]
 
 %Calculate Matrix elements and Moments
 if t==0 
     energies = e;
     % energies=e(1,1); % At zero temperature, use only lowest eigenvalue.
-    jx=real(v(:,1)'*Jxh*v(:,1));
-    jy=real(v(:,1)'*Jyh*v(:,1));
-    jz=real(v(:,1)'*Jzh*v(:,1));
+    jx = real(v(:,1)'*Jxh*v(:,1));
+    jy = real(v(:,1)'*Jyh*v(:,1));
+    jz = real(v(:,1)'*Jzh*v(:,1));
 else % Boltzman factor (with t in Kelvin)
     % energien korrigieren, damit positiv, sonst NaN Fehler mit exp()
-    z=exp(-e*beta)/sum(exp(-e*beta)); % Partition function
-    jx=real(diag(v'*Jxh*v))'*z; % Calculate the expectation values
-    jy=real(diag(v'*Jyh*v))'*z;
-    jz=real(diag(v'*Jzh*v))'*z;
-%     energies=sum(E)*z; % this is a puzzling assignment (Yikai)
-    energies=e;
+    z = exp(-e*beta)/sum(exp(-e*beta)); % Partition function
+    jx = real(diag(v'*Jxh*v))'*z; % Calculate the expectation values
+    jy = real(diag(v'*Jyh*v))'*z;
+    jz = real(diag(v'*Jzh*v))'*z;
+%     energies = sum(E)*z; % this is a puzzling assignment (Yikai)
+    energies = e;
 end
 
 return
