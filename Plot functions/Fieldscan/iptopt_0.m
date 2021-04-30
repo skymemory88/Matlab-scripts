@@ -14,14 +14,14 @@ function [fitresult, gof] = iptopt_0(x, y, field, B0, spin, P0, low, upr, weight
 %% Fit: 'S11_inptopt_fit'.
 [xData, yData] = prepareCurveData( x, y );
 % Set up fittype and options.
-ft = fittype( @(kpe, kpi, w0, Gc, gma, shift, field, B0, spin, x) (shift + abs(1+kpe./...
-    (1i*(x-w0) - (kpe + kpi) + Gc^2./(1i*(x-(spin*(field-B0)+w0) )-gma)))),...
-    'independent', {'x'}, 'dependent', {'y'}, 'coefficients',{'kpe', 'kpi', 'w0', 'Gc', 'gma', 'shift'}, 'problem', {'field','B0', 'spin'});
+ft = fittype( @(kpe, kpi, w0, Gc, gma, field, B0, spin, x) (abs(1+2*kpe./...
+    (1i*(x-w0) - (kpe + kpi - kpi) + Gc^2./(1i*(x-(spin*(field-B0)+w0) )-gma)))),...
+    'independent', {'x'}, 'dependent', {'y'}, 'coefficients',{'kpe', 'kpi', 'w0', 'Gc', 'gma'}, 'problem', {'field','B0','spin'});
 opts = fitoptions( 'Method', 'NonlinearLeastSquares');
 opts.Display = 'Off';
-opts.StartPoint = [P0(1) P0(2) P0(3) P0(4) P0(5) P0(6)];
-opts.Lower = [low(1) low(2) low(3) low(4) low(5) low(6)];
-opts.Upper = [upr(1) upr(2) upr(3) upr(4) upr(5) upr(6)];
+opts.StartPoint = [P0(1) P0(2) P0(3) P0(4) P0(5)];
+opts.Lower = [low(1) low(2) low(3) low(4) low(5)];
+opts.Upper = [upr(1) upr(2) upr(3) upr(4) upr(5)];
 opts.Weights = weight;
 
 % Fit model to data.
@@ -29,7 +29,7 @@ opts.Weights = weight;
 
 if plt
     % Plot fit with data.
-    figure( 'Name', sprintf('S11_inptopt_fit at B = %.2f T',field) );
+    figure( 'Name', sprintf('S11_inptopt_fit at B = %.3f T',field) );
     h = plot( fitresult, xData, yData );
     legend( h, 'Data', 'S11_fit', 'Location', 'NorthEast', 'Interpreter', 'none' );
     % Label axes
