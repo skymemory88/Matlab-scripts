@@ -30,7 +30,7 @@ fields = {  'Time',...
             'lockin2'
           };
 offset = 0; %compensate is used to make the matrice's dimensions match when not all data are linked properly during the measurement.
-nf = int8(length(fields) - offset);
+nf = int16(length(fields) - offset);
 curdir = cd;
 
 tic
@@ -51,7 +51,7 @@ end
 
 % Check file for frequency scan from ZVL
 if size(mm,2) > nf    %Counting the elements of each line to check ZVL data
-        N = int8(size(mm,2) - nf)/(1+(2*nZVL));
+        N = int16(size(mm,2) - nf - 1)/(1+(2*nZVL));
 %         N = (size(mm,2) - nf)/(2*(1+nZVL));
         out.data.ZVLfreq = mm(:,(nf+1):(nf + N));
         out.data.ZVLreal = mm(:,(nf+N+1):2:(nf + 3*N)); % S11 data

@@ -1,4 +1,4 @@
-function [fitresult, gof] = wk_cpl_fit(H0, f0, hPara, fPara)
+function [fitresult, gof] = wk_cpl_fit(H0, f0, spin, hPara, fPara)
 %CREATEFIT(H0,F0)
 %  Create a fit.
 %
@@ -16,12 +16,12 @@ function [fitresult, gof] = wk_cpl_fit(H0, f0, hPara, fPara)
 [xData, yData] = prepareCurveData( H0, f0 );
 
 % Set up fittype and options.
-ft = fittype( 'wc + g^2*7/2*(x-x0)/((7/2*(x-x0))^2+gamma^2)', 'independent', 'x', 'dependent', 'y' );
+ft = fittype( 'wc - g^2*spin*(x-x0)/((spin*(x-x0))^2+gamma^2)', 'independent', 'x', 'dependent', 'y');
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
-opts.Lower = [-Inf -Inf fPara(2) hPara(2)];
-opts.StartPoint = [0.1 0.5 fPara(1) hPara(1)];
-opts.Upper = [Inf Inf fPara(3) hPara(3)];
+opts.StartPoint = [0.05  1e2  spin  fPara(1)  hPara(1)]; % [wc g spin x0 gamma]
+opts.Lower = [0    0   -Inf  fPara(2)  hPara(2)];
+opts.Upper = [1    1    Inf  fPara(3)  hPara(3)];
 
 % Fit model to data.
 [fitresult, gof] = fit( xData, yData, ft, opts );
