@@ -1,17 +1,20 @@
-% function [temp,intc,Delt,eni,enj,J0i,J0j,Jsj,Jsi] = magn_magn_cpl(tempf,intf)
+% function [temp,intc,Delt,eni,enj,J0i,J0j,Jsj,Jsi] = magn_magn_cpl(tempf,intf,scale)
 % Toy model: Two coupled/uncoupled two-level-system (TLS)/multi-level-system (MLS) from spin-spin interaction
 if ~exist('tempf','var')
     tempf = 0.0;
 end
 if ~exist('intf','var')
-    intf = 0.0;
+    intf = 0.5;
 end
-clearvars -except tempf intf
+if ~exist('scale','var')
+    scale = 2.0;
+end
+clearvars -except tempf intf scale
 Delt = -1; % Ferromagnetic gap
 intc = intf*Delt; % Spin-spin interaction strength
 temp = -tempf*Delt; % Temperature
 beta = 1/temp; % 1/kBT
-Hx = linspace(0,-2*Delt,80);
+Hx = linspace(0,-5*Delt,80);
 
 % J = 8; % Ho
 % J = 1; % Ho
@@ -26,28 +29,29 @@ Jzhi = kron(eye(2*J+1),Jz); % Expand the Hilbert space (TLS-1)
 Jphi = kron(eye(2*J+1),Jp);
 Jmhi = kron(eye(2*J+1),Jm);
 Jxhi = (Jphi+Jmhi)/2;
-% Jyhi = (Jphi-Jmhi)/2i;
+Jyhi = (Jphi-Jmhi)/2i;
 
 Jzhj = kron(Jz,eye(2*J+1)); % Expand the Hilbert space (TLS-2)
 Jphj = kron(Jp,eye(2*J+1));
 Jmhj = kron(Jm,eye(2*J+1));
 Jxhj = (Jphj+Jmhj)/2;
-% Jyhj = (Jphj-Jmhj)/2i;
+Jyhj = (Jphj-Jmhj)/2i;
 
-eni = zeros(length(Jz),length(Hx)); % two-level-system 1
-wavi = zeros(length(Jz),length(Jz),length(Hx));
-J0i = zeros(length(Jz),length(Hx));
-
-enj = zeros(length(Jz),length(Hx)); % two-level-system 2
+% containers for two-level-system 1
+eni = zeros(length(Jz),length(Hx)); % Eigen-energy
+wavi = zeros(length(Jz),length(Jz),length(Hx)); % Eigen-state
+J0i = zeros(length(Jz),length(Hx)); % Spin(z) expectation
+% containers for two-level-system 2
+enj = zeros(length(Jz),length(Hx));
 wavj = zeros(length(Jz),length(Jz),length(Hx));
 J0j = zeros(length(Jz),length(Hx));
-
-ens = zeros(length(Jzhi),length(Hx)); % coupled two-level-systems
+% containers for the coupled two-level-systems
+ens = zeros(length(Jzhi),length(Hx));
 wav = zeros(length(Jzhi),length(Jzhi),length(Hx));
 Jsi = zeros(length(Jzhi),length(Hx));
 Jsj = zeros(length(Jzhj),length(Hx));
 for ii = 1:length(Hx)
-    Ham0i = 2*Delt*Jz + Hx(ii)*Jx;
+    Ham0i = scale*Delt*Jz + Hx(ii)*Jx;
     [v,e] = eig(Ham0i); % Diagonalize the hamiltonian
     e = real(diag(e)); % Take only the real part of the eigen-energy to form a diaganol matrix
     e = e-min(e); % Normalize the energy amplitude to the lowest eigen-energy
@@ -56,19 +60,19 @@ for ii = 1:length(Hx)
     zi = exp(-e*beta)/sum(exp(-e*beta)); % Partition function
     
 
-    Ham0j = Delt/2*Jz + Hx(ii)*Jx;
+    Ham0j = Delt/scale*Jz + Hx(ii)*Jx;
     [v,e] = eig(Ham0j); % Diagonalize the hamiltonian
     e = real(diag(e)); % Take only the real part of the eigen-energy to form a diaganol matrix
     e = e-min(e); % Normalize the energy amplitude to the lowest eigen-energy
     [enj(:,ii),n] = sort(e); % sort the energy from lowest to the highest
-    v = v(:,n); % sort the eigen-vectors in its basis accordingly
-    wavj(:,:,ii) = v;
+    wavj(:,:,ii) = v(:,n); % sort the eigen-vectors in its basis accordingly
     zj = exp(-e*beta)/sum(exp(-e*beta)); % Partition function
     
     
-    Hami = 2*Delt*Jzhi + Hx(ii)*Jxhi;
-    Hamj = Delt/2*Jzhj + Hx(ii)*Jxhj;
-    Hint = intc*Jzhi*Jzhj;
+    Hami = scale*Delt*Jzhi + Hx(ii)*Jxhi;
+    Hamj = Delt/scale*Jzhj + Hx(ii)*Jxhj;
+    Hint = intc*Jzhi*Jzhj; % Ising interaction
+%     Hint = intc*(Jxhi*Jxhj+Jyhi*Jyhj+Jzhi*Jzhj); % Heisenberg interaction
     Ham = Hami + Hamj + Hint;
     [v,e] = eig(Ham); % Diagonalize the hamiltonian
     e = real(diag(e)); % Take only the real part of the eigen-energy to form a diaganol matrix
@@ -107,4 +111,4 @@ plot(Hx,Jsj(2,:),'--k')
 legend('sys1','sys2','s-s cpl','s-s cpl')
 xlabel('Magnetic field')
 ylabel('<Jz>')
-clearvars tempf intf
+clearvars tempf intf scale
