@@ -8,8 +8,8 @@ format long;
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions\');
 addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik\'));
 location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
-             'SC239\2021.06.22'];
-loadname = '2021_06_0037';
+             'SC239\2021.06.24'];
+loadname = '2021_06_0040';
 LoadObj = fullfile(location,[loadname, '.dat']);
 SaveObj = fullfile(location,[loadname, '_interp', '.mat']);
 Options.analysis = 2; % Analysis options
@@ -309,11 +309,11 @@ HH = HH(:);
 HH = HH(rows);
 S11 = S11(rows);
 
-freq_l = 3.463; % set frequency range, l: lower limit, h: higher limit
+freq_l = min(freq); % set frequency range, l: lower limit, h: higher limit
 freq_h = max(freq);
 field_l = min(H);  % set field range, l: lower limit, h: lower limit
 field_h = max(H);
-field_cut = field_l + 2; % Field window for cavity parameter fit
+field_cut = field_l + 2.5; % Field window for cavity parameter fit
 
 %Plot the temperature vs magnetic field to check the temperature variation
 figure
@@ -496,9 +496,9 @@ spin = fitP.spin;
 wc = fitP.wc;
 % wc = 3.645;
 gc = fitP.g;
-Brf = fitP.x0; % Level crossing location from perturbative fitting
+% Brf = fitP.x0; % Level crossing location from perturbative fitting
 % Brf = H0(Hpos); % Level crossing location from minimum search
-% Brf = 3.465;
+Brf = 3.41;
 
 % Resonant frequency trace with fitting parameters
 figure
@@ -517,14 +517,14 @@ title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K
 legend(sprintf('gc = %.3f GHz',fitP.g/2));
 axis([field_l field_h freq_l freq_h]);
 
-% Plot frequency scan at line crossing
-figure
-% plot(freq(1:20:end,Hpos),mag(1:20:end,Hpos),'.');
-plot(freq(:,Hpos),(mag(:,Hpos)./bgd0),'.');
-xlabel('Frequency (GHz)');
-ylabel('S11');
-legend(sprintf('Frequency cut at %.2f T',H0(Hpos)));
-title('Frequency scan at line crossing');
+% % Plot frequency scan at line crossing
+% figure
+% % plot(freq(1:20:end,Hpos),mag(1:20:end,Hpos),'.');
+% plot(freq(:,Hpos),(mag(:,Hpos)./bgd0),'.');
+% xlabel('Frequency (GHz)');
+% ylabel('S11');
+% legend(sprintf('Frequency cut at %.2f T',H0(Hpos)));
+% title('Frequency scan at line crossing');
 clearvars B Delt hPara fPara wp wm fitPara H_res f_res
 
 % Remove duplicate points
@@ -595,7 +595,7 @@ Hx = xq(1,:);
 FWHM = interp1(H0,FWHM0,Hx,'pchip','extrap'); % Using spline interpolation to smooth the FWHM
 omg = spin.*(Hx-Brf) + wc; % linearized dispersion relation
             
-ff0 = double.empty(length(Hx),0); 
+ff0 = double.empty(length(Hx),2,0); 
 Qf = double.empty(length(Hx),0);
 gamma = double.empty(length(Hx),0);
 Gc = double.empty(length(Hx),0);
@@ -607,111 +607,97 @@ for jj = 1:length(Hx)
         weight(ii,jj,1) = abs(1./zq(ii,jj)); % Weight function option 1
     end
 end
-
 % weight = 1./gradientweight(zq); % Weight function option 2
 
-switch Options.fitfunc % Pick fitting function from either (1) custom function of (2) spec1d
-    case 1 %Option 1: Custom function by Input-output formalism
-    %% Step 1: Fit the data for the first time to extract "kpe" and "w0" far from the level crossing
-        Hc0 = find(Hx >= field_l, 1,'first');
-        Hc1 = find(Hx <= field_cut, 1, 'last');
-        kpe = double.empty(length(Hx),0);
-        kpi = double.empty(length(Hx),0);
-        parfor ii = Hc0:Hc1
-            if mod(ii,20) == 0
-                worker = getCurrentTask();
-                fprintf('First fit, current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
-            end
-%         for ii = Hc0:Hc1 % for debugging
-            plt = false;
-%             % Selectively plot the fit for visual inspection
-%             figWin = [1:round((Hc1-Hc0)/10):Hc1]; % The iteration window over which shows fitting graph
-%             if ismember(ii,figWin) % Not useable in parallel mode (parfor)
-%                 plt = true;
-%             end
-
-            param = [FWHM(ii)  FWHM(ii)  omg(ii)  0 gc/1000  wc]; % starting value for param = {'kpe', 'kpi', 'omega', 'Gc', 'gma', 'w0'}
-            bound_l = [ 0    0   omg(ii)  0   gc/1000  freq_l]; % lower bound of fitting parameters
-            bound_h = [inf  inf  omg(ii)  1   gc/1000  freq_h]; % upper bound of fitting parameters
-            fit = iptopt(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h,weight(:,ii),plt);
-            
-            param = coeffvalues(fit);
-            kpe(ii) = param(1);
-            kpi(ii) = param(2);
-            Gc(ii) = param(4);
-            ff0(ii) = param(6);
-        end
-    %% Step 2: fit the data for the second time with fixed "kpe" and "w0"
-        kpe0 = mean(kpe);
-        kpi0 = mean(kpi); % keep constant kpe/kpi ratio
-        wc = mean(ff0(1:Hc1));
-        Hc2 = find(Hx >= field_cut, 1,'first');
-        Hc3 = find(Hx <= field_h, 1, 'last');
-%         parfor ii = Hc2:Hc3
-%             if mod(ii,20) == 0
-%                 worker = getCurrentTask();
-%                 fprintf('Second fit, current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
-%             end  
-        for ii = Hc2:Hc3
-            % Selectively plot the fit for visual inspection
-            plt = false;
-            figWin = Hpos-8:2:Hpos+18; % The iteration window over which shows fitting graph
-            if ismember(ii,figWin) % Not useable in parallel mode (parfor)
-                plt = true;
-            end
-          % Set up boundaries for the fitting parameters
-            param  =  [kpe0  kpi0  omg(ii)   gc   gc/1000   wc]; % starting value for param = {'kpe', 'kpi', 'omega', 'Gc', 'gma', 'w0'}
-            bound_l = [ 0    kpi0   -inf     0    0    wc-0.1]; % lower bound of fitting parameters
-            bound_h = [inf   kpi0    inf    inf   1    wc+0.1]; % upper bound of fitting parameters
-            fit = iptopt(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h,weight(:,ii),plt);
-         
-            param = coeffvalues(fit);
-            kpe(ii) = param(1);
-            kpi(ii) = param(2);
-            ff0(ii) = yq(fit(yq(:,ii)) == min(fit(yq(:,ii))));  % Find the resonant frequency by minimum search
-            Qf(ii) = ff0(ii)/(param(1)+param(2));
-            Gc(ii) = param(4);
-            gamma(ii) = param(5);
-        end
-        analysis.kpe = kpe;
-        analysis.kpi = kpi;
-        analysis.w0 = ff0;
-        analysis.Gc = Gc;
-        analysis.gamma = gamma;
-        
-        figure
-        plot(Hx(Hc0:Hc3),kpe(Hc0:Hc3),'-');
-        ylabel('K_e (GHz)');
-        hold on
-        yyaxis right
-        plot(Hx(Hc0:Hc3),kpi(Hc0:Hc3),'-');
-        xlabel('Field (T)');
-        ylabel('K_i (GHz)');
-        title('Dissipation rates');
-        legend('External dissipation rate','Internal dissipation rate')
-                
-        figure
-        plot(Hx(Hc0:Hc3),kpi(Hc0:Hc3)./kpe(Hc0:Hc3),'-');
-        ylabel('K_i/K_e');
-        xlabel('Field (T)');
-        title('Ratio of Dissipation rates');       
-    case 2 %Option 2: use spec1d package to fit the data using Lorentzian form.
-        parfor ii = 1:length(Hx)
-            s = spec1d(yq(:,ii), -zq(:,ii), max(-zq(:,ii)))*0.001; % create spec1d object
-            %starting point for the (Lorentzian) fitting parameters
-            p = [0.1 ff0(ii) FWHM(ii) min(zq(:,ii))]; % (p1: scaling factor ,p2: resonant frequency; p3: FWHM; p4:noise floor(?) )
-            fix = [0 0 0 0]; % Denoting if the fitting parameters are fixed
-            [~, fbck] = fits(s, 'lorz', p, fix);
-%             [~, fbck] = fits(s, 'lorz');
-            ff0(ii) = fbck.pvals(2); % Retrieve the resonant frequency from fitted data
-            Qf(ii) = abs(fbck.pvals(2)/fbck.pvals(3)/2); %Calculate the quality factor
-%             chi(ii) = 1/Qf(ii);
-            if mod(ii,20) == 0
-                worker = getCurrentTask();
-                fprintf('Current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
-            end
-        end
+%% Step 1: Fit the data for the first time to extract "kpe" and "w0" far from the level crossing
+Hc0 = find(Hx >= field_l, 1,'first');
+Hc1 = find(Hx <= field_cut, 1, 'last');
+kpe = double.empty(length(Hx),0);
+kpi = double.empty(length(Hx),0);
+parfor ii = Hc0:Hc1
+    if mod(ii,20) == 0
+        worker = getCurrentTask();
+        fprintf('First fit, current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
+    end
+% for ii = Hc0:Hc1 % for debugging
+%     % Selectively plot the fit for visual inspection
+%     figWin = [1:round((Hc1-Hc0)/10):Hc1]; % The iteration window over which shows fitting graph
+%     if ismember(ii,figWin) % Not useable in parallel mode (parfor)
+%         plt = true;
+%     end
+    plt = false;
+    % starting value for param = {'kpe', 'kpi', 'omega', 'Gc', 'gma', 'w0', 'attn'}
+    param = [FWHM(ii)  FWHM(ii)  omg(ii)  gc  gc/1000  wc 1/mean(zq(:,ii))];
+    bound_l = [0   0  omg(ii)  0   gc/1000  freq_l  0.95]; % lower bound of fitting parameters
+    bound_h = [1   1  omg(ii)  1   gc/1000  freq_h  1.05]; % upper bound of fitting parameters
+    fit = iptopt(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h,weight(:,ii),plt);
+    
+    param = coeffvalues(fit);
+    kpe(ii) = param(1);
+    kpi(ii) = param(2);
+    Gc(ii) = param(4);
+    ff0(ii,:,1) = param(6);
 end
+%% Step 2: fit the data for the second time with fixed "kpe" and "w0"
+kpe0 = mean(kpe);
+kpi0 = mean(kpi); % keep constant kpe/kpi ratio
+wc = mean(ff0(1:Hc1,1));
+Hc2 = find(Hx >= field_cut, 1,'first');
+Hc3 = find(Hx <= field_h, 1, 'last');
+% parfor ii = Hc2:Hc3
+%     if mod(ii,20) == 0
+%         worker = getCurrentTask();
+%         fprintf('Second fit, current magnetic field: %1$3.2f. on core %2$u.\n', Hx(ii), worker.ID);
+%     end
+for ii = Hc2:Hc3
+    % Selectively plot the fit for visual inspection
+    plt = false;
+    figWin = Hpos-8:2:Hpos+18; % The iteration window over which shows fitting graph
+    if ismember(ii,figWin) % Not useable in parallel mode (parfor)
+        plt = true;
+    end
+    % starting value for param = {'kpe', 'kpi', 'omega', 'Gc', 'gma', 'w0', 'attn'}
+    param  =  [kpe0  kpi0  omg(ii)   gc   gc/1000   wc  1/mean(zq(:,ii))];
+    bound_l = [ 0    kpi0     0      0    0    wc-0.1   0.95]; % lower bound of fitting parameters
+    bound_h = [inf   kpi0    inf     1    1    wc+0.1   1.05]; % upper bound of fitting parameters
+    fit = iptopt(yq(:,ii),zq(:,ii),Hx(ii),param,bound_l,bound_h,weight(:,ii),plt);
+    
+    param = coeffvalues(fit);
+    kpe(ii) = param(1);
+    kpi(ii) = param(2);
+    Gc(ii) = param(4);
+    gamma(ii) = param(5);
+    
+    [~,idx] = findpeaks(-fit(yq(:,ii)));
+    if isempty(idx)
+        ff0(ii,:) = yq(fit(yq(:,ii)) == min(fit(yq(:,ii))));  % Find the resonant frequency by minimum search
+    else
+        ff0(ii,:) = yq(idx,ii);  % Find the resonant frequency by minimum search
+    end
+    Qf(ii) = mean(ff0(ii,:)./(param(1)+param(2))); % Calculate quality factor
+end
+analysis.kpe = kpe;
+analysis.kpi = kpi;
+analysis.w0 = ff0;
+analysis.Gc = Gc;
+analysis.gamma = gamma;
+
+figure
+plot(Hx(Hc0:Hc3),kpe(Hc0:Hc3),'-');
+ylabel('K_e (GHz)');
+hold on
+yyaxis right
+plot(Hx(Hc0:Hc3),kpi(Hc0:Hc3),'-');
+xlabel('Field (T)');
+ylabel('K_i (GHz)');
+title('Dissipation rates');
+legend('External dissipation rate','Internal dissipation rate')
+
+figure
+plot(Hx(Hc0:Hc3),medfilt1(kpi(Hc0:Hc3)./kpe(Hc0:Hc3),Options.order),'-');
+ylabel('K_i/K_e');
+xlabel('Field (T)');
+title('Ratio of Dissipation rates');
 
 % Plot the resonant frequency from Lorentzian fit versus DC magnetic field
 figure
