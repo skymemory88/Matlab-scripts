@@ -33,10 +33,10 @@ switch Options.analysis
         [fields,freq,S11,analysis] = option2(LoadObj, Options);
     case 3
         % Off-resonance measurement processing
-        [fields,freq,S11,analysis] = option4(LoadObj, Options);
+        [fields,freq,S11,analysis] = option3(LoadObj, Options);
     case 4
         % Temperature scan
-        [fields,freq,S11,analysis] = option5(LoadObj, Options);
+        [fields,freq,S11,analysis] = option4(LoadObj, Options);
 end
 clearvars -except fields freq S11 analysis Options SaveObj
 
@@ -107,7 +107,6 @@ HH_temp = HH_temp(HH_temp>=field_l & HH_temp<=field_h);
 S11_temp = S11_temp(freq_temp>=freq_l & freq_temp<=freq_h);
 freq_temp = freq_temp(freq_temp>=freq_l & freq_temp<=freq_h);
 HH_temp = HH_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-mag_temp = abs(S11_temp);
 
 % reasign actual lower and upper limits of the frequency and field
 freq_l = min(freq_temp);
@@ -120,6 +119,7 @@ dif = diff(freq); % frequency increments
 resets = find(dif <= 1*(freq_l-freq_h)); % Find the termination point of a complete scans (5% tolerance)
 nop = round(mean(diff(resets))); % Set the number of points per frequency scan
 
+mag_temp = abs(S11_temp);
 mag = reshape(mag_temp,nop,[]);
 freq = reshape(freq_temp,nop,[]);
 HH = reshape(HH_temp,nop,[]);
@@ -358,10 +358,10 @@ dif = diff(freq_temp); % frequency increments
 resets = find( dif <= (freq_l-freq_h) ); % Find the termination point of a complete scans
 nop = round(mean(diff(resets))); % Set the number of points per frequency scan
 
-freq = reshape(freq_temp,nop,[]);
-HH = reshape(HH_temp,nop,[]);
 mag_temp = abs(S11_temp);
 mag = reshape(mag_temp,nop,[]);
+freq = reshape(freq_temp,nop,[]);
+HH = reshape(HH_temp,nop,[]);
 %% Temperary code for Keysight PNA-x N5242B
 % S11_temp = S11;
 % dB_temp = mag2db(abs(S11_temp));
@@ -821,9 +821,9 @@ HH = HH(rows);
 S11 = S11(rows);
 
 freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
-% freq_h = max(freq);
-field_l = min(H);  % set field range, l: lower limit
-field_h = max(H);  % set field range, h: lower limit
+freq_h = max(freq);
+field_l = min(H);  % set field range, l: lower limit, h: lower limit
+field_h = max(H); 
 % Interpolate the data on a 2D grid for the colormap
 
 %Plot the temperature vs magnetic field to check the temperature variation
@@ -836,14 +836,21 @@ ylabel('Temperature')
 title('Magnetic field vs Temperature')
 %% Code For R&S ZVL-6
 % Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
-% step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
-trunc1 = find(freq==freq_l,1,'first'); 
-trunc2 = find(freq==freq_l,1,'last')-1; 
-trunc3 = find(HH>=field_l,1,'first'); % Truncate the data according to the set field range
-trunc4 = find(HH<=field_h,1,'last'); 
-S11_temp = S11(max(trunc1,trunc3):min(trunc2,trunc4));
-freq_temp = freq(max(trunc1,trunc3):min(trunc2,trunc4));
-HH_temp = HH(max(trunc1,trunc3):min(trunc2,trunc4));
+trunc1 = find(freq == min(freq),1,'first'); 
+trunc2 = find(freq == min(freq),1,'last')-1; 
+freq_temp = freq(trunc1:trunc2);
+HH_temp = HH(trunc1:trunc2);
+S11_temp = S11(trunc1:trunc2);
+
+% Truncate according to the upper and lower field limit
+S11_temp = S11_temp(HH_temp>=field_l & HH_temp<=field_h);
+freq_temp = freq_temp(HH_temp>=field_l & HH_temp<=field_h);
+HH_temp = HH_temp(HH_temp>=field_l & HH_temp<=field_h);
+
+% Truncate according to the upper and lower frequency limit
+S11_temp = S11_temp(freq_temp>=freq_l & freq_temp<=freq_h);
+freq_temp = freq_temp(freq_temp>=freq_l & freq_temp<=freq_h);
+HH_temp = HH_temp(freq_temp>=freq_l & freq_temp<=freq_h);
 
 freq_l = min(freq_temp); %set frequency range, l: lower limit, h: higher limit
 freq_h = max(freq_temp);
