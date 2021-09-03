@@ -4,8 +4,8 @@ function EngyLevels
 clearvars
 % temp =  [1.774 1.776 1.778 1.780 1.781 1.782 1.783 1.784 1.785 1.787];
 temp = 0.15;
-theta = [0.0]; % Angle (in degrees) between magnetic field and c-axis in a-c plane
-phi = [0]; % Angle (in degrees) in a-b plane
+theta = [0.02]; % Angle (in degrees) between magnetic field and c-axis in a-c plane
+phi = [33]; % Angle (in degrees) in a-b plane
 N_level = 7; % Number of transition levels to plot
 
 Options.ion = 'Ho'; % support 'Er' and 'Ho'
@@ -27,6 +27,7 @@ color = ["black","red","blue","magenta","green","yellow","cyan"];
 lg = strings(1,numel(theta),numel(phi)); % Create an empty array for legends
 figs_E = gobjects(N_level+1,numel(theta),numel(phi));
 figs_dE = gobjects(N_level,numel(theta),numel(phi));
+figs_dE2 = gobjects(N_level-1,numel(theta),numel(phi));
 if Options.savegif == true
     im_t = numel(temp)*numel(theta)*numel(phi);
     im_idx = 1;
@@ -55,6 +56,7 @@ for iter = 1:numel(temp)
             E(:,:)=squeeze(eee)*E2f;
             %E(:,:) = eee(:,1,:)*E2F;
             Ediff = double.empty(0,size(E,1));
+            Ediff2 = double.empty(0,size(E,1));
             %% Deviation of the energy from the mean value
             %             aver = double.empty(size(E,1),0);
             %             E8=E(:,1:8);
@@ -99,16 +101,26 @@ for iter = 1:numel(temp)
             end
             %% Energy difference bewteen neighbour levels
             if Options.Ediff == true
-                for i=1:N_level
-                    Ediff(i,:) = E(:,i+1)-E(:,i);
+                for i=1:N_level-1 % Up until the second from top level
+                    Ediff(i,:) = E(:,i+1)-E(:,i); % Transition between the nearest neighbouring levels
+                    Ediff2(i,:) = E(:,i+2)-E(:,i); % Transition between the next nearest neighbouring levels
                 end
+                Ediff(N_level,:) = E(:,N_level+1)-E(:,N_level); % Transition between the top two levels
+                
 %               % Plot the lowest energy difference between the 8 levels
                 % frequency = { '1.682 GHz', '3.436 GHz', '3.924 GHz', '4.449 GHz', '5.604 GHz' } ;
 %                 figure;
-%                 figs_dE(:, iter2, iter3) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
-                figs_dE(:, iter2, iter3) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle', marker(1), 'Color','r','LineWidth',1.5);
-%                 figs_dE(:, iter2, iter3) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle', marker(1),'LineWidth',1.5);
                 hold on
+                figs_dE(1, iter2, iter3) = plot(fields, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
+                figs_dE2(1, iter2, iter3) = plot(fields, Ediff2(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
+                if N_level > 1
+                    figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
+%                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color','b','LineWidth',1.5);
+%                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1),'LineWidth',1.5);
+                end
+                if N_level > 2
+                    figs_dE2(2:end, iter2, iter3) = plot(fields, Ediff2(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
+                end
 %                 hpcfr1 = plot(fields, Ediff,'Color','blue','linewidth',2);
 %                 hpcfr1 = plot(fields, Ediff(2:end,:),'Color','black','linewidth',2);
 %                 hpcfr1 = plot(fields, Ediff,'Color',[35 107 142]/255,'linewidth',2,'LineStyle','-');

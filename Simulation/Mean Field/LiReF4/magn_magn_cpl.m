@@ -4,17 +4,17 @@ if ~exist('tempf','var')
     tempf = 0.0;
 end
 if ~exist('intf','var')
-    intf = 0.5;
+    intf = 10;
 end
 if ~exist('scale','var')
-    scale = 2.0;
+    scale = 2;
 end
 clearvars -except tempf intf scale
 Delt = -1; % Ferromagnetic gap
-intc = intf*Delt; % Spin-spin interaction strength
-temp = -tempf*Delt; % Temperature
+intc = -intf*abs(Delt); % Spin-spin interaction strength
+temp = tempf*abs(Delt); % Temperature
 beta = 1/temp; % 1/kBT
-Hx = linspace(0,-5*Delt,80);
+Hx = linspace(0,5*abs(Delt),80);
 
 % J = 8; % Ho
 % J = 1; % Ho
@@ -51,7 +51,7 @@ wav = zeros(length(Jzhi),length(Jzhi),length(Hx));
 Jsi = zeros(length(Jzhi),length(Hx));
 Jsj = zeros(length(Jzhj),length(Hx));
 for ii = 1:length(Hx)
-    Ham0i = scale*Delt*Jz + Hx(ii)*Jx;
+    Ham0i = Delt*scale*Jz + Hx(ii)*Jx;
     [v,e] = eig(Ham0i); % Diagonalize the hamiltonian
     e = real(diag(e)); % Take only the real part of the eigen-energy to form a diaganol matrix
     e = e-min(e); % Normalize the energy amplitude to the lowest eigen-energy
@@ -69,7 +69,7 @@ for ii = 1:length(Hx)
     zj = exp(-e*beta)/sum(exp(-e*beta)); % Partition function
     
     
-    Hami = scale*Delt*Jzhi + Hx(ii)*Jxhi;
+    Hami = Delt*scale*Jzhi + Hx(ii)*Jxhi;
     Hamj = Delt/scale*Jzhj + Hx(ii)*Jxhj;
     Hint = intc*Jzhi*Jzhj; % Ising interaction
 %     Hint = intc*(Jxhi*Jxhj+Jyhi*Jyhj+Jzhi*Jzhj); % Heisenberg interaction
@@ -96,7 +96,7 @@ end
 figure
 plot(Hx,eni(2:end,:),'o')
 hold on
-plot(Hx,enj(2:end,:),'o')
+plot(Hx,enj(2:end,:),'s')
 plot(Hx,ens(2:4,:),'--k')
 legend('sys1','sys2','s-s cpl')
 xlabel('Magnetic field')
@@ -105,7 +105,7 @@ ylabel('Energy')
 figure
 plot(Hx,J0i(2,:),'-o')
 hold on
-plot(Hx,J0j(2,:),'-o')
+plot(Hx,J0j(2,:),'-s')
 plot(Hx,Jsi(2,:),'--k')
 plot(Hx,Jsj(2,:),'--k')
 legend('sys1','sys2','s-s cpl','s-s cpl')

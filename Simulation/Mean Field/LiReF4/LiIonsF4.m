@@ -1,14 +1,11 @@
-function [ion,history,E,V]=LiIonsF4(ion,temp,field,phi,theta,demagn,alpha)
+function [ion,history,E,V] = LiIonsF4(ion,temp,field,phi,theta,demagn,alpha)
 %Compute the magnetization and the alternated magnetization for a range
 %of temperatures and fields. (1-x) is the dilution. temp and h are the 
 %temperature and field arrays. xHypIso is the proportion of nuclear moments
 %isotops for Er. alpha is, in the case the sample is an ellipsiod (a,c,c),
 %the ratio a/c (for demagnetization tensor).
 
-global strategies;
-global rundipole;
-global Options;
-
+global strategies rundipole Options;
 t=tic;
     
 % Matrix used to calculate order parameters from (alternating) moments
@@ -34,7 +31,15 @@ ion.altJs=zeros([4,3,length(temp),size(field,2),size(ion.name,1)]);
 ion.altJs_hyp=zeros([4,3,length(temp),size(field,2),size(ion.name,1)]);
 
 history=cell([length(temp),size(field,2)]);
- 
+
+idx = find(ion.prop);
+if ion.hyp(idx) > 0
+    H_dims = (2*ion.I(idx)+1)*(2*ion.J(idx)+1); % Claculate the dimension of the Hilbert space
+elseif ion.hyp(idx) == 0
+    H_dims = 2*ion.J(idx)+1; % Claculate the dimension of the Hilbert space
+end
+E = zeros(size(field,2),length(temp),H_dims);
+V = zeros(size(field,2),length(temp),H_dims,H_dims);
 for j = 1:length(temp)
     % Reinitiate the angular moments at each temperature step (2020.01.02)
     if size(field,2) > 1
@@ -93,10 +98,11 @@ for j = 1:length(temp)
     ttt = temp(j);
     fff = field;
 % Save the data split by temperatures when they are multi-dimensional, otherwise save the data outside this function
-    if size(field,2) >1 && length(temp) >1
-        eee = sqeeze(E);
-        vvv = squeeze(V);
-        tit=strcat('Hscan_Li',[ion.name(ion.prop~=0)], sprintf('F4_%1$3.3fK_%2$.1fDeg_%3$.1fDeg.mat', temp(j), theta*180/pi, phi*180/pi));
+    if length(temp) >1 && size(field,2) >1 
+        eee = squeeze(E(:,j,:));
+        vvv = squeeze(V(:,j,:,:));
+        tit=strcat('Hscan_Li',[ion.name(ion.prop~=0)], sprintf('F4_%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',...
+                temp, theta*180/pi, phi*180/pi,ion.hyp(n)));
         save(fullfile(Options.filepath,char(tit)),'ttt','fff','eee','vvv','ion','-v7.3')
     end
 end
