@@ -1,110 +1,141 @@
-function  MF_RPA_Yikai(Temperatures,phi,gama,mode,saveopt)
+function  MF_RPA_Yikai(mion,Temperatures,theta,phi,gama,hyp,mode)
 % Current version assumes complete symmetrical equivalence among the four spin moments per unit cell
+% mion: Magnetic ion type: 'Er', 'Ho'
 % Temperatures (can be an array).
+% theta: misalignment angle from c-axis
 % phi: inplane angle in ab-plane between the magnetic field and a/b-axis [degree]
 % gama: linewidth of hyperfine levels [meV].
+% hyp: Hyperfine isotope proportion
 % scanMode: 'field': Magnetic Field scan. 'qvec': wavevector scan with RPA
-% saveopt: true or false to save the susceptibility data
 
 Options.RPA = true; % Apply random phase approximation (RPA) correction
 Options.plotting = false; % Decide whether or not to plot the data at the end
-Options.meV = false; % Energy unit choice (meV or GHz)
-Options.saving = saveopt; % Options to save the susceptibility tensors
+Options.meV = false; % Energy unit choice: meV or GHz (default)
+Options.saving = true; % Options to save the susceptibility tensors
 Options.scanMode = mode; % 1. Field plot with RPA. 2. wavevector plot with RPA
-clearvars -except Temperatures theta phi gama Options;
+clearvars -except Temperatures theta phi gama Options mion freq_total hyp
 
 % Declare physical constants as global for consistency
 hbar = 1.055E-34; % Reduced Planck constant [J.s]
-global gLande_Ho ELEf NUCf dip_range ex_range muB J2meV mu0 f2E
-muB = 9.274e-24; %[J/T]
-mu0 = 4e-7*pi; % [H/m]
+muN = 3.15245e-5; % Nuclear magneton [meV/T]
+global gLande ELEf NUCf dip_range ex_range muB J2meV mu0 f2E ionJ ionI lattice
+switch mion  % Set Lande factor
+    case 'Ho'
+        gN = 1.192; % gN = mu/mu_N/<I> = 4.173/(7/2)
+%         gN = 1.668; % http://easyspin.org/documentation/isotopetable.html
+        gLande = 1.25;
+        ionJ = 8; % Ho
+        ionI = 3.5; % Ho
+        lattice = [5.175 0 0;
+                   0 5.175 0;
+                   0 0 10.75]; % Lattice constant for LiHoF4
+        freq_total = linspace(0,5,201);
+    case 'Er' % Er-167 
+        gN = -0.1611; % http://easyspin.org/documentation/isotopetable.html
+        gLande = 1.20;
+        ionJ = 15/2; % Er
+        ionI = 3; % Er
+        lattice = [5.162 0 0;
+                   0 5.162 0;
+                   0 0 10.70]; % Lattice constant for LiErF4
+       freq_total = linspace(15,45,400);
+end
 J2meV = 6.24151e+21; % Joule to meV
 f2E = hbar*2*pi*10^9*J2meV;% GHz to meV
+muB = 9.274e-24; %[J/T]
+mu0 = 4e-7*pi; % [H/m]
 dip_range = 100; % dipole summation range (number of unit cell)
 ex_range = 1; % Exchange interaction range (number of unit cell)
-gLande_Ho = 1.25;
-ELEf = gLande_Ho*muB*J2meV;     % Lande factor * Bohr magneton (meV T^-1)
-NUCf = 4.173 * 3.15245e-5;   % Nuclear Lande factor, mu/mu_N = 4.173
-% NUCf = 4.732 * 3.1519e-5;   % Original values from linear response code
-% NUCf = 1.668 * 3.15245e-5;  % http://easyspin.org/documentation/isotopetable.html
-theta = 0; % angle between the external field and c-axis.
+ELEf = gLande*muB*J2meV;     % Lande factor * Bohr magneton (meV/T)
+NUCf = gN * muN;
 
-% freq_total = (0:0.5:160);
-freq_total = (0:0.025:7);
 for ii = 1:length(Temperatures)
-    location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
+    location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
+                'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
 %     location = '/Volumes/GoogleDrive/My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I';
-    filename = strcat('Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg', Temperatures(ii), theta, phi),'.mat');
+    filename = strcat(['Hscan_Li',mion,'F4_'], sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f', Temperatures(ii), theta, phi, hyp),'.mat');
     file = fullfile(location,filename);
     load(file,'-mat','eee','fff','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
     fields = vecnorm(fff,2,1);
+%     ttt = 0; % To account for only the lowest eigen-state contributiont
 %     fields = fields(fields <= 5); % Truncate the field range
     fprintf('Calculating for T = %.3f K.\n', Temperatures(ii));
-    %         [fields, freq_total, rechi, imchi] = linear_response(eee,fff,ttt,vvv);
     if Options.RPA == true
-        switch Options.scanMode %1. Field plot with RPA. 2. wavevector plot with RPA
-            case 'field'
-                qz = 0.0;
+        ipt = false;
+        cntr = 0;
+        while ~ipt
+            switch Options.scanMode % 1. Field plot with RPA. 2. wavevector plot with RPA
+                case 'field'
+                    qz = 0.0;
 %                 qz = 7.305; % Wavelength = 0.1369 m, frequency = 2.19 GHz
 %                 qz = 12.175; % Wavelength = 0.0821 m, frequency = 3.65 GHz
 %                 qx = [0.01 0.1 0.3 0.6 1]';
-                qy = zeros(size(qz,1),1);
-                qx = zeros(size(qz,1),1);
-                qvec = [qx qy qz];
-                eigenW = vvv;
-                eigenE = eee;
-            case 'qvec'
-%                 qz = (6.9:0.0025:7.5)';
-                qz = (0:0.0001:0.05)';
-                qx = zeros(size(qz,1),1);
-                qy = zeros(size(qz,1),1);
-                qvec = [qx qy qz];
-%                 B0 = 4.25; % critical field at 300 mK
-                B0 = 5.25;
-                bidx = int16.empty(0,length(B0));
-                for jj = 1:length(B0)
-                    [~,bidx(jj)] = min(abs(vecnorm(fields,1,1)-B0(jj)));
-                end
-                fields = fff(:,bidx);
-                eigenW = vvv(bidx,:,:);
-                eigenE = eee(bidx,:);
-            otherwise
-                disp('Unknown Scan Mode!')
-                return
+                    qy = zeros(size(qz,1),1);
+                    qx = zeros(size(qz,1),1);
+                    qvec = [qx qy qz];
+                    eigenW = vvv;
+                    eigenE = eee;
+                    ipt = true;
+                case 'qvec'
+                    %                 qz = (6.9:0.0025:7.5)';
+                    qz = (0:0.0001:0.05)';
+                    qx = zeros(size(qz,1),1);
+                    qy = zeros(size(qz,1),1);
+                    qvec = [qx qy qz];
+                    %                 B0 = 4.25; % critical field at 300 mK
+                    B0 = 5.25;
+                    bidx = int16.empty(0,length(B0));
+                    for jj = 1:length(B0)
+                        [~,bidx(jj)] = min(abs(vecnorm(fields,1,1)-B0(jj)));
+                    end
+                    fields = fff(:,bidx);
+                    eigenW = vvv(bidx,:,:);
+                    eigenE = eee(bidx,:);
+                    ipt = true;
+                otherwise
+                    prompt = sprintf('Unknown Scan Mode! Please select a mode between field and qvec.\n');
+                    answer = input(prompt,'s');
+                    Options.scanMode = lower(answer);
+                    cntr = cntr + 1; % input request counter
+                    if cntr >= 3
+                        return % terminate the program after three failed requests
+                    end
+            end
         end
         [fields, freq_total, chi0, ~] = linear_response(eigenE,fields,freq_total,ttt,eigenW,gama);
-        [fields, freq_total, chiq.J] = RPA(qvec, fields, freq_total, ion, chi0.J); % Electronic susceptibilities
+        [fields, freq_total, chiq.ionJ ] = RPA(qvec, fields, freq_total, ion, chi0.ionJ); % Electronic susceptibilities
         [fields, freq_total, chiq.IJ] = RPA(qvec, fields, freq_total, ion, chi0.IJ); % cross term
-        [fields, freq_total, chiq.I] = RPA(qvec, fields, freq_total, ion, chi0.I); % Nuclear susceptibilities
+        [fields, freq_total, chiq.ionI ] = RPA(qvec, fields, freq_total, ion, chi0.ionI); % Nuclear susceptibilities
 
-        chiq = ELEf^2*chiq.J + 2*ELEf*NUCf*chiq.IJ + NUCf^2*chiq.I; % Full electronuclear susceptibility expansion
-%         chiq = ELEf^2*chiq.J + 2*ELEf*NUCf*chiq.IJ; % Electron susceptibility + the cross term
-%         chiq = ELEf^2*chiq.J + NUCf^2*chiq.I; % Electron susceptibility + nuclear susceptibilities
-%         chiq = ELEf^2*chiq.J; % Electron susceptibility only
-%         chiq = NUCf^2*chiq.I; % Nuclear susceptibility only
+        chiq = ELEf^2*chiq.ionJ + 2*ELEf*NUCf*chiq.IJ + NUCf^2*chiq.ionI; % Full electronuclear susceptibility expansion
+%         chiq = ELEf^2*chiq.ionJ + 2*ELEf*NUCf*chiq.IJ; % Electron susceptibility + the cross term
+%         chiq = ELEf^2*chiq.ionJ + NUCf^2*chiq.ionI; % Electron susceptibility + nuclear susceptibilities
+%         chiq = ELEf^2*chiq.ionJ; % Electron susceptibility only
+%         chiq = NUCf^2*chiq.ionI; % Nuclear susceptibility only
     else
         eigenE = eee;
         eigenW = vvv;
         [fields, freq_total, chi0, ~] = linear_response(eigenE,fields,freq_total,ttt,eigenW,gama);
     end
-    chi0 = ELEf^2*chi0.J + 2*ELEf*NUCf*chi0.IJ + NUCf^2*chi0.I; % Full electronuclear susceptibility expansion
-%     chi0 = ELEf^2*chi0.J + 2*ELEf*NUCf*chi0.IJ; % Electron susceptibility + the cross term
-%     chi0 = ELEf^2*chi0.J + NUCf^2*chi0.I; % Electron susceptibility + nuclear susceptibilities
-%     chi0 = ELEf^2*chi0.J; % Electron susceptibility only
-%     chi0 = NUCf^2*chi0.I; % Nuclear susceptibility only
-    
-    if Options.saving == true % Save the susceptibilities
-        file_name1 = strcat('LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg_%4$.2e.mat', ttt, theta, phi,gama));
-        savefile1 = fullfile(location,file_name1);
-        if Options.RPA == true
-            file_name2 = strcat('RPA_LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$.1fDeg_%3$.1fDeg_%4$.2e.mat', ttt, theta, phi,gama));
-            savefile2 = fullfile(location,file_name2);
-            save_file(fields,freq_total,chi0,gama,savefile1); % Save the data without RPA corrections
-            save_file(fields,freq_total,chiq,gama,savefile2); % save the data with RPA corrections
-        else
-            save_file(fields,freq_total,chi0,gama,savefile1); % Save the data without RPA corrections
-        end
+    chi0 = ELEf^2*chi0.ionJ + 2*ELEf*NUCf*chi0.IJ + NUCf^2*chi0.ionI; % Full electronuclear susceptibility expansion
+%     chi0 = ELEf^2*chi0.ionJ + 2*ELEf*NUCf*chi0.IJ; % Electron susceptibility + the cross term
+%     chi0 = ELEf^2*chi0.ionJ + NUCf^2*chi0.ionI; % Electron susceptibility + nuclear susceptibilities
+%     chi0 = ELEf^2*chi0.ionJ; % Electron susceptibility only
+%     chi0 = NUCf^2*chi0.ionI; % Nuclear susceptibility only
+if Options.saving == true % Save the susceptibilities
+    file_name1 = strcat('Li',mion,'F4_x1z_x2z_',sprintf('%1$3.3fK_%2$.2fDeg_%3$.1fDeg_%4$.2e.mat', ttt, theta, phi,gama));
+    savefile1 = fullfile(location,file_name1);
+    save_file(fields,freq_total,chi0,gama,savefile1,'z','-v7.3'); % Save the data w/o RPA corrections
+    %         save_file(fields,freq_total,chi0,gama,savefile1,'x','-append'); % Save the data w/o RPA corrections
+    %         save_file(fields,freq_total,chi0,gama,savefile1,'y','-append'); % Save the data w/o RPA corrections
+    if Options.RPA == true
+        file_name2 = strcat('RPA_Li',mion,'F4_x1z_x2z_',sprintf('%1$3.3fK_%2$.2fDeg_%3$.1fDeg_%4$.2e.mat', ttt, theta, phi,gama));
+        savefile2 = fullfile(location,file_name2);
+        save_file(fields,freq_total,chiq,gama,savefile2,'z','-v7.3'); % save the data w. RPA corrections
+        %             save_file(fields,freq_total,chiq,gama,savefile2,'x','-append'); % save the data w. RPA corrections
+        %             save_file(fields,freq_total,chiq,gama,savefile2,'y','-append'); % save the data w. RPA corrections
     end
+end
     
     if Options.plotting == true % Plot the susceptibilities
         switch Options.scanMode
@@ -121,6 +152,7 @@ for ii = 1:length(Temperatures)
                 figs(fields,freq_total,chiq,gama,qvec,Options,Temperatures(ii),"\chi_{RPA}");
         end
     end
+    clearvars chi0 chi_p chiq
 end
 end
 
@@ -214,21 +246,43 @@ switch Options.scanMode
 end
 end
 
-function save_file(fields,freq_total,chi,gama,savefile)
+function save_file(fields,freq_total,chi,gama,savefile,dirc,opt)
 % save(strcat('LiHoF4_x1y_x2y_',sprintf('%1$3.3fK_%2$uDeg', ttt, theta),'fields','freq_total','chi','gama'));
 if size(chi,5) == 1
-    x1z = squeeze(real(chi(3,3,:,:)));
-    x2z = squeeze(imag(chi(3,3,:,:)));
-    save(savefile,'fields','freq_total','x1z','x2z','gama','-v7.3');
+    switch dirc
+        case 'x'
+            x1x = squeeze(real(chi(1,1,:,:)));
+            x2x = squeeze(imag(chi(1,1,:,:)));
+            save(savefile,'fields','freq_total','x1x','x2x','gama', opt);
+        case 'y'
+            x1y = squeeze(real(chi(2,2,:,:)));
+            x2y = squeeze(imag(chi(2,2,:,:)));
+            save(savefile,'fields','freq_total','x1y','x2y','gama', opt);
+        case 'z'
+            x1z = squeeze(real(chi(3,3,:,:)));
+            x2z = squeeze(imag(chi(3,3,:,:)));
+            save(savefile,'fields','freq_total','x1z','x2z','gama', opt);
+    end
 else
-    x1z = squeeze(real(chi(3,3,:,:,:)));
-    x2z = squeeze(imag(chi(3,3,:,:,:)));
-    save(savefile,'fields','freq_total','x1z','x2z','gama','-v7.3');
+    switch dirc
+        case 'x'
+            x1x = squeeze(real(chi(3,3,:,:,:)));
+            x2x = squeeze(imag(chi(3,3,:,:,:)));
+            save(savefile,'fields','freq_total','x1x','x2x','gama', opt);
+        case 'y'
+            x1y = squeeze(real(chi(2,2,:,:,:)));
+            x2y = squeeze(imag(chi(2,2,:,:,:)));
+            save(savefile,'fields','freq_total','x1y','x2y','gama', opt);
+        case 'z'
+            x1z = squeeze(real(chi(3,3,:,:,:)));
+            x2z = squeeze(imag(chi(3,3,:,:,:)));
+            save(savefile,'fields','freq_total','x1z','x2z','gama', opt);
+    end
 end
 end
 
 function [fields, freq_total, chi0, JIz_exp] = linear_response(eigenE,fields,freq_total,temperature,eigenW,gama)
-global ELEf NUCf f2E
+global ELEf NUCf f2E ionJ ionI
 % Declare susceptibility tensor
 chi0r_J = zeros(3,3,length(freq_total(1,:)),size(fields,2));
 chi0i_J = zeros(3,3,length(freq_total(1,:)),size(fields,2));
@@ -237,25 +291,23 @@ chi0i_I = zeros(3,3,length(freq_total(1,:)),size(fields,2));
 chi0r_IJ = zeros(3,3,length(freq_total(1,:)),size(fields,2));
 chi0i_IJ = zeros(3,3,length(freq_total(1,:)),size(fields,2));
 
-%Initiate J operators
-J = 8; % Ho
-I = 3.5; % Ho
-Jz=diag(J:-1:-J); % Jz = -J, -J+1,...,J-1,J
-JhT.z=kron(Jz,eye(2*I+1)); % Expand Jz space to include nuclear degree of freedom
-Jp=diag(sqrt((J-((J-1):-1:-J) ).*(J+1+( (J-1):-1:-J) )),1); % electronic spin ladder operator
+%Initiate ionJ operators
+Jz=diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
+JhT.z=kron(Jz,eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
+Jp=diag(sqrt((ionJ-((ionJ-1):-1:-ionJ) ).*(ionJ+1+( (ionJ-1):-1:-ionJ) )),1); % electronic spin ladder operator
 Jm=Jp'; % electronic spin ladder operator
-Jph=kron(Jp,eye(2*I+1)); % Expand to match the dimension of Hilbert space
-Jmh=kron(Jm,eye(2*I+1));
+Jph=kron(Jp,eye(2*ionI+1)); % Expand to match the dimension of Hilbert space
+Jmh=kron(Jm,eye(2*ionI+1));
 JhT.x=(Jph+Jmh)/2;
 JhT.y=(Jph-Jmh)/2i;
 
 %Initiate I operators
-Iz=diag(I:-1:-I); %Iz = -I, -I+1,...,I-1,I
-IhT.z=kron(eye(2*J+1),Iz); % Expand Hilbert space
-Ip=diag(sqrt((I-((I-1):-1:-I)).*(I+1+((I-1):-1:-I))),1); % Nuclear spin ladder operator
+Iz=diag(ionI:-1:-ionI); %Iz = -I, -I+1,...,I-1,I
+IhT.z=kron(eye(2*ionJ+1),Iz); % Expand Hilbert space
+Ip=diag(sqrt((ionI-((ionI-1):-1:-ionI)).*(ionI+1+((ionI-1):-1:-ionI))),1); % Nuclear spin ladder operator
 Im=Ip'; % Nuclear spin ladder operator
-Iph=kron(eye(2*J+1),Ip); % Expand to match the dimension of Hilbert space
-Imh=kron(eye(2*J+1),Im);
+Iph=kron(eye(2*ionJ+1),Ip); % Expand to match the dimension of Hilbert space
+Imh=kron(eye(2*ionJ+1),Im);
 IhT.x=(Iph+Imh)/2;
 IhT.y=(Iph-Imh)/2i;
         
@@ -286,6 +338,11 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
             beta = 11.6/temperature; %[meV^-1]
             zn = sum(exp(-beta*en));
             Z = exp(-beta*en)/zn;
+%             Z = exp(-beta*en);
+%             for nn = 1:8 % Skew the population of the lowest 8 states
+%                Z(nn) = Z(nn) - (9-nn)/2e2 + nn/2e2;
+%             end
+%             Z = Z/sum(Z);
             [n,np] = meshgrid(Z,Z);
             NN = n-np;
         else
@@ -308,8 +365,8 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
     end
 end
 
-chi0.J = (chi0r_J + 1i*chi0i_J); % Electronic susceptibilities
-chi0.I = (chi0r_I + 1i*chi0i_I); % Nuclear susceptibilities
+chi0.ionJ = (chi0r_J + 1i*chi0i_J); % Electronic susceptibilities
+chi0.ionI = (chi0r_I + 1i*chi0i_I); % Nuclear susceptibilities
 chi0.IJ = (chi0r_IJ + 1i*chi0i_IJ); % Electronuclear Cross term
 end
 
@@ -395,18 +452,15 @@ end
 
 function [fields, freq_total, chiq] = RPA(qvec, fields, freq_total, ion, chi0)
 
-global muB mu0 J2meV gLande_Ho dip_range ex_range
+global muB mu0 J2meV gLande dip_range ex_range lattice
 N = 4; % Number of magnetic atoms in unit cell
-a = [5.175 0 0;
-     0 5.175 0;
-     0 0 10.75]; % Lattice constant for LiHoF4
 gfac = (muB)^2*(mu0/4/pi)*J2meV*10^30;
 
 chiq = zeros(3,3,length(freq_total(1,:)),size(fields,2),size(qvec,1));
 D = zeros(3,3,N,N,size(qvec,1));
 for jj=1:size(qvec,1)
-    D(:,:,:,:,jj) = gLande_Ho^2*(gfac*dipole_direct(qvec(jj,:),dip_range,a))...
-        + exchange(qvec(jj,:),ion.ex(2),a,ex_range);
+    D(:,:,:,:,jj) = gLande^2*(gfac*dipole_direct(qvec(jj,:),dip_range,lattice))...
+        + exchange(qvec(jj,:),ion.ex(2),lattice,ex_range);
 end
 
 deno = zeros(3,3,size(freq_total,1),size(fields,2)); % RPA correction factor (denominator)
