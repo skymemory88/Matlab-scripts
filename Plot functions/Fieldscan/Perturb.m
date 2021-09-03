@@ -2,7 +2,7 @@ function Perturb
 % close all
 hold on
 clearvars
-temp = 0.150;
+temp = 0.130;
 kB = 1/11.6; %Boltzmann constant [meV/K]
 beta = 1/(temp*kB);
 
@@ -19,6 +19,7 @@ g = 0.001; % Coupling strength measured against the ground state energy
 
 % color = ["black","red","blue","magenta","green","yellow","cyan"];
 theta = 0; % Angle (in degrees) in the transverse field plane
+phi = 0;
 % marker = [":","-.","--","-"];
 % lg = strings(1,2); % Create an empty array for legends
 % figs = gobjects(7,numel(temp));
@@ -26,9 +27,9 @@ theta = 0; % Angle (in degrees) in the transverse field plane
 for iter = 1:numel(temp)
     for iter2 = 1:numel(theta)
 %         cd('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\External source\Mean Field --Peter & Ivan\output\A=1.0_angles_Yikai');
-        addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4\output'));
+        addpath(genpath('G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations results\Matlab\Susceptibilities\without Hz_I'));
 %         cd('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Simulation/External source/Mean Field --Peter & Ivan/output/A=1.0_angles_Peter')
-        lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$uDeg',temp(iter),theta),'.mat'];
+        lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.2fDeg_%3$.1fDeg',temp(iter),theta,phi),'.mat'];
         
         load(lname,'-mat','eee','fff');
         fields = vecnorm(fff);
@@ -56,9 +57,9 @@ for iter = 1:numel(temp)
         end
         %% Energy difference bewteen neighbour levels
         if Options.Ediff == true
-%             for ii=1:7 % To use all 7 transition lines
+
             bzF = double.empty(size(Ediff,1),size(fields,2),0);
-            for ii = 1:5
+            for ii=1:7 % To use all 7 transition lines
                 Ediff(ii,:,1)=E(:,ii+1)-E(:,ii);
                 bzF(ii,:,1) = exp(-Ediff(ii,:)*beta); % Boltzmann factor for each transition line
             end

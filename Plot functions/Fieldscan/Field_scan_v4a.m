@@ -13,10 +13,10 @@ function Field_scan_v4a
     Options.mksz = 3;
     Options.fitfunc = 1; % Pick fitting function from either (1) custom function of (2) spec1d
     
-    loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.11.25';
+    loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC107 (4x5x2mm)\19.05.2019';
 %     loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC199/2020.11.05';
     %The first line is for windows, the second line is for mac OS
-    loadname = '2020_11_0031.dat';
+    loadname = '2019_05_0026.dat';
     opt = 2;% Analysis options
     nZVL = 1; % Number of dataset from ZVL
     fileobj = fullfile(loadpath,loadname);
@@ -215,11 +215,11 @@ S11_temp = S11(max(trunc1,trunc3):min(trunc2,trunc4));
 freq_temp = freq(max(trunc1,trunc3):min(trunc2,trunc4));
 HH_temp = HH(max(trunc1,trunc3):min(trunc2,trunc4));
 
-% % Step 2: remove duplicates (Not for data since 2019)
-% dupl = find(diff(freq_temp) == 0.0);
-% freq_temp(dupl+1)=[];
-% S11_temp(dupl+1)=[];
-% HH_temp(dupl+1)=[];
+% Step 2: remove duplicates (Not for data since 2019)
+dupl = find(diff(freq_temp) == 0.0);
+freq_temp(dupl+1)=[];
+S11_temp(dupl+1)=[];
+HH_temp(dupl+1)=[];
 
 dif = diff(freq); % frequency increments
 resets = find(dif<=0.9*(freq_l-freq_h)); % Find the termination point of a complete scans (10% error)
