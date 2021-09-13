@@ -1,6 +1,6 @@
 function [fitresult, gof] = wk_kap_fit(H0, f0, init, bdl, bdh, plt)
 %CREATEFIT(H0,F0)
-%  Create a fit.
+%  Weak coupling fit of dissipations rate
 %
 %  Data for 'wk_kap_fit' fit:
 %      X Input : H0
