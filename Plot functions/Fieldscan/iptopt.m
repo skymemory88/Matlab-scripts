@@ -2,7 +2,8 @@ function [fitresult, gof] = iptopt(x, y, field, P0, low, upr, weight, plt)
 %CREATEFIT(omega,S11)
 %  S11 input-output fit:
 %      X Input : frequency
-%      P0: Initial guesses for fitting parameters (Ke,Ki,omega,Gc,gamma,wc)
+%      alpha : coefficient of linearized w0(B)
+%      P0: Initial guesses for fitting parameters (Ke,Ki,w0,Gc,gamma)
 %      Y Output: |S11|
 %      Plt (true of false): Plot the fit along with data
 %  Output:
@@ -14,7 +15,7 @@ function [fitresult, gof] = iptopt(x, y, field, P0, low, upr, weight, plt)
 [xData, yData] = prepareCurveData( x, y );
 % Set up fittype and options.
 ft = fittype( @(kpe, kpi, omega, Gc, gma, wc, attn, x) (abs(1+2*kpe./...
-    (1i*(x-wc) - (kpe + kpi) + Gc^2./(1i*(x-omega)-gma))).*attn),...
+    (1i*(x-wc) - (kpe + kpi) + Gc^2./(1i*(x-omega )-gma))).*attn),...
     'independent', {'x'}, 'dependent', {'y'}, 'coefficients',{'kpe', 'kpi', 'omega', 'Gc', 'gma', 'wc','attn'});
 opts = fitoptions( 'Method', 'NonlinearLeastSquares');
 opts.Display = 'Off';

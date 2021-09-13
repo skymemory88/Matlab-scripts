@@ -1,4 +1,4 @@
-function [fitresult, gof] = iptopt1(x, y, field, P0, low, upr, weight, plt)
+function [fitresult, gof] = iptoptx(x, y, field, P0, low, upr, weight, plt)
 %CREATEFIT(omega,S11)
 %  S11 input-output fit:
 %      X Input : frequency
