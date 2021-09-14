@@ -91,108 +91,13 @@ clearvars prompt SaveObj
 function [xq,yq,zq,analysis] = option1(varargin)
 clearvars -except varargin
 
-% % manually set the lower and upper field limit
+[HH,freq,mag,LoadObj,Options,analysis] = load_data(varargin{:});
+Temperature = min(analysis.temp(analysis.HH == min(analysis.HH))); % Measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
+
 % field_l = 1.6;
 % field_h = 5.5;
-
-if nargin > 2
-    fprintf('Data already exist in workspace, skip loading...\n');
-    analysis = varargin{1};
-    HH = varargin{2};
-    freq = varargin{3};
-    mag = abs(varargin{4});
-    LoadObj = varargin{5};
-    Options = varargin{6};
-    [~,analysis.name,~] = fileparts(LoadObj);
-    Options.bgdmode = 0;
-    Temperature = min(analysis.temp(varargin{2}(1,:) == min(varargin{2}(1,:)))); %Extract the measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
-    freq_l = min(freq(:,1));
-    freq_h = max(freq(:,1));
-else
-    LoadObj = varargin{1};
-    Options = varargin{2};
-    out = readdata_v4(LoadObj,Options.nData);
-    freq = out.data.ZVLfreq/1e9;
-    S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
-    H = out.data.DCField1;
-    HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
-    T1 = out.data.Temperature1; % Sample cell temperature
-    [~,analysis.name,~] = fileparts(LoadObj);
-    analysis.power = mean(out.data.Power1);
-%     T2 = out.data.Temperature2; % Mixing chamber temperature
-%     lck1 = out.data.lockin1;
-%     lck2 = out.data.lockin2;
-
-    S11 = S11';
-    S11 = S11(:);
-    freq = freq';
-    freq = freq(:);
-    HH = HH';
-    HH = HH(:); %the third argument is the number of frequency points in each line/segment
-    
-    [rows,~,freq] = find(freq); % Remove nonsensical zeros from the frequency data
-    HH = HH(rows);
-    S11 = S11(rows);
-    %Set data range and parameters
-    freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
-    freq_h = max(freq);
-    
-    %% Code For R&S ZVL/ZNL units
-    % Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
-    % step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
-    trunc1 = find(freq == min(freq),1,'first'); 
-    trunc2 = find(freq == min(freq),1,'last')-1; 
-    freq_temp = freq(trunc1:trunc2);
-    HH_temp = HH(trunc1:trunc2);
-    S11_temp = S11(trunc1:trunc2);
-
-    % Truncate according to the upper and lower frequency limit
-    S11_temp = S11_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-    freq_temp = freq_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-    HH_temp = HH_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-    mag_temp = abs(S11_temp);
-
-    freq_l = min(freq_temp); %set frequency range, l: lower limit, h: higher limit
-    freq_h = max(freq_temp);
-
-    dif = diff(freq_temp); % frequency increments
-    resets = find( dif <= (freq_l-freq_h) ); % Find the termination point of a complete scans
-    nop = round(mean(diff(resets))); % Set the number of points per frequency scan
-    
-    % Rearrange data to ascending field
-    if HH(end) > HH(1)
-        analysis.direction = 'up';
-        mag = reshape(mag_temp,nop,[]);
-        freq = reshape(freq_temp,nop,[]);
-        HH = reshape(HH_temp,nop,[]);
-    else
-        analysis.direction = 'down';
-        mag = flip(reshape(mag_temp,nop,[]),2);
-        freq = flip(reshape(freq_temp,nop,[]),2);
-        HH = flip(reshape(HH_temp,nop,[]),2);
-    end
-    analysis.temp = T1;
-    analysis.HH = H;
-    Temperature = min(analysis.temp(analysis.HH == min(analysis.HH))); % Measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
-%% Temperary code for Keysight PNA-x N5242B
-    % S11_temp = S11;
-    % mag_temp = abs(S11_temp);
-    % freq_temp = freq;
-    % HH_temp = HH;
-    % freq_l = min(freq_temp);
-    % freq_h = max(freq_temp);
-    % field_l = min(HH_temp);
-    % % field_l = 1.6;
-    % field_h = max(HH_temp);
-    % [xq,yq] = meshgrid(linspace(field_l,field_h,1501),linspace(freq_l,freq_h,1201)); %set the X and Y range
-    % 
-    % dif = diff(freq); % frequency increments
-    % resets = find(dif<=0.9*(freq_l-freq_h)); % Find the termination point of a complete scans (10% error)
-    % nop = round(mean(diff(resets))); % Set the number of points per frequency scan
-    % mag = reshape(mag_temp,nop,[]);  %reshape the matrix so that each complete frequency scan occupy one column
-    % freq = reshape(freq,nop,[]);
-    % HH = reshape(HH,nop,[]);
-end
+freq_l = min(freq(:,1));
+freq_h = max(freq(:,1));
 
 if exist('field_l','var') && exist('field_h','var')
     % Truncate the data to field limits
@@ -207,7 +112,7 @@ field_l = min(HH(1,:));  %set field range, l: lower limit, h: higher limit
 field_h = max(HH(1,:));
 [xq,yq] = meshgrid(linspace(field_l,field_h,1501),linspace(freq_l,freq_h,1201)); %set the X and Y range
 %% Background cleanup
-clearvars dif step mag_temp freq_temp HH_temp lidx uidx T1
+clearvars dif step lidx uidx T1 *_temp
 if Options.bgdmode ~= 0
     %Find all the resonant peaks
     f0 = zeros(size(mag,2),1);
@@ -393,88 +298,17 @@ end
 function [xq,yq,zq,analysis] = option2(varargin)
 %Set data range and parameters
 clearvars -except varargin
+[HH,freq,mag,LoadObj,Options,analysis] = load_data(varargin{:});
+Temperature = min(analysis.temp(analysis.HH == min(analysis.HH))); % Measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
 
 % set desirable field range
 field_l = 2.0;
 field_h = 5.0;
 field_cut = field_l + 0.5; % Field window for cavity parameter fit
+freq_l = min(freq(:,1));
+freq_h = max(freq(:,1));
 strnth = 'strong';
 
-if nargin > 2  % use data in the workspace if already exist
-    fprintf('Data already exist in workspace, skip loading...\n');
-    analysis = varargin{1};
-    HH = varargin{2};
-    freq = varargin{3};
-    mag = abs(varargin{4});
-    LoadObj = varargin{5};
-    Options = varargin{6};
-    [~,analysis.name,~] = fileparts(LoadObj);
-    Options.bgdmode = 0;
-    Temperature = min(analysis.temp(varargin{2}(1,:) == min(varargin{2}(1,:)))); %Extract the measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
-    freq_l = min(freq(:,1));
-    freq_h = max(freq(:,1));
-else % extract and process data from raw data file
-    LoadObj = varargin{1};
-    Options = varargin{2};
-    [~,analysis.name,~] = fileparts(LoadObj);
-    out = readdata_v4(LoadObj, Options.nData);
-    freq = out.data.ZVLfreq/1e9;
-    S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
-    H = out.data.DCField1;
-    HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
-    T1 = out.data.Temperature1;
-    % T2 = out.data.Temperature2;
-    
-    S11 = S11';
-    S11 = S11(:);
-    freq = freq';
-    freq = freq(:);
-    HH = HH';
-    HH = HH(:); %the third argument is the number of frequency points in each line/segment
-    
-    [rows,~,freq] = find(freq); % Remove nonsensical zeros from the frequency data
-    HH = HH(rows);
-    S11 = S11(rows);
-    
-    freq_l = min(freq); % set frequency range, l: lower limit, h: higher limit
-    freq_h = max(freq);
-    %% Code For R&S ZVL/ZNL units
-    % Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
-    % step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
-    trunc1 = find(freq == min(freq),1,'first');
-    trunc2 = find(freq == min(freq),1,'last')-1;
-    freq_temp = freq(trunc1:trunc2);
-    HH_temp = HH(trunc1:trunc2);
-    S11_temp = S11(trunc1:trunc2);
-    
-    % Truncate according to the upper and lower frequency limit
-    S11_temp = S11_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-    freq_temp = freq_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-    HH_temp = HH_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-    mag_temp = abs(S11_temp);
-    
-    freq_l = min(freq_temp); %set frequency range, l: lower limit, h: higher limit
-    freq_h = max(freq_temp);
-    dif = diff(freq_temp); % frequency increments
-    resets = find( dif <= (freq_l-freq_h) ); % Find the termination point of a complete scans
-    nop = round(mean(diff(resets))); % Set the number of points per frequency scan
-    
-    % Rearrange data to ascending field
-    if HH(end) > HH(1)
-        analysis.direction = 'up';
-        mag = reshape(mag_temp,nop,[]);
-        freq = reshape(freq_temp,nop,[]);
-        HH = reshape(HH_temp,nop,[]);
-    else
-        analysis.direction = 'down';
-        mag = flip(reshape(mag_temp,nop,[]),2);
-        freq = flip(reshape(freq_temp,nop,[]),2);
-        HH = flip(reshape(HH_temp,nop,[]),2);
-    end
-    analysis.temp = T1;
-    analysis.HH = H;
-    Temperature = min(analysis.temp(analysis.HH == min(analysis.HH))); %Extract the measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
-end
 %Plot the temperature vs magnetic field to check the temperature variation
 figure
 plot(analysis.HH,analysis.temp,'o-')
@@ -1183,100 +1017,36 @@ legend(lg)
 % ylabel('Line cross field (T)')
 end
 % End of option 2
-function [xq,yq,zq,analysis] = option3(LoadObj, Options)
+function [xq,yq,zq,analysis] = option3(varargin)
 %% Set data range and parameters
 clear freq S11 dB N FdB FrS FiS FTT1 FTT2
 
-% extract data from raw data file
-if ~exist('out','var')
-    out = readdata_v4(LoadObj, Options.nData);
+[HH,freq,mag,~,Options,analysis] = load_data(varargin{:});
+Temperature = min(analysis.temp(analysis.HH == min(analysis.HH))); % Measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
+
+% set desirable field range
+% field_l = 2.0;
+% field_h = 5.0;
+freq_l = min(freq(:,1));
+freq_h = max(freq(:,1));
+
+if exist('field_l','var') && exist('field_h','var')
+    % Truncate the data to field limits
+    [~,lidx] = find(HH(1,:) >= field_l,1,'first');
+    [~,uidx] = find(HH(1,:) <= field_h,1,'last');
+    mag = mag(:,lidx:uidx);
+    freq = freq(:,lidx:uidx);
+    HH = HH(:,lidx:uidx);
 end
-
-freq = out.data.ZVLfreq/1e9;
-S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;  
-H = out.data.DCField1;
-T1 = out.data.Temperature1;
-% T2 = out.data.Temperature2;
-
-Temperature = unique(T1(H == min(H))); %Extract the measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
-HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
-
-freq = freq';
-freq = freq(:);
-S11 = S11';
-S11 = S11(:);
-HH = HH';
-HH = HH(:);
-
-[rows,~,freq] = find(freq); % Remove nonsensical zeros from the frequency data
-HH = HH(rows);
-S11 = S11(rows);
-
-freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
-freq_h = max(freq);
-field_l = min(H);  % set field range, l: lower limit, h: lower limit
-field_h = max(H); 
-% Interpolate the data on a 2D grid for the colormap
 
 %Plot the temperature vs magnetic field to check the temperature variation
 figure
-[H,idx,~] = unique(H,'stable');
-T1 = T1(idx);
-plot(H(1:round(length(T1)/100):end),T1(1:round(length(T1)/100):end),'o-')
+plot(analysis.HH,analysis.temp,'o-')
 xlabel('DC Magnetic field')
 ylabel('Temperature')
 title('Magnetic field vs Temperature')
-%% Code For R&S ZVL-6
-% Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
-trunc1 = find(freq == min(freq),1,'first'); 
-trunc2 = find(freq == min(freq),1,'last')-1; 
-freq_temp = freq(trunc1:trunc2);
-HH_temp = HH(trunc1:trunc2);
-S11_temp = S11(trunc1:trunc2);
-
-% Truncate according to the upper and lower field limit
-S11_temp = S11_temp(HH_temp>=field_l & HH_temp<=field_h);
-freq_temp = freq_temp(HH_temp>=field_l & HH_temp<=field_h);
-HH_temp = HH_temp(HH_temp>=field_l & HH_temp<=field_h);
-
-% Truncate according to the upper and lower frequency limit
-S11_temp = S11_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-freq_temp = freq_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-HH_temp = HH_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-
-freq_l = min(freq_temp); %set frequency range, l: lower limit, h: higher limit
-freq_h = max(freq_temp);
-field_l = min(HH_temp);  % set field range, l: lower limit
-field_h = max(HH_temp);  % set field range, h: lower limit
-[xq,yq] = meshgrid(linspace(field_l,field_h,1001),linspace(freq_l,freq_h,1201));
-
-dif = diff(freq); % frequency increments
-resets = find(dif <= (freq_l-freq_h)); % Find the termination point of a complete scans
-nop = round(mean(diff(resets))); % Set the number of points per frequency scan
-
-mag_temp = abs(S11_temp);
-mag = reshape(mag_temp,nop,[]);
-% dB = reshape(mag2db(mag_temp),nop,[]);  
-freq = reshape(freq_temp,nop,[]);
-HH = reshape(HH_temp,nop,[]);
-
-analysis.temp = interp1(H,T1,xq(1,:));
-%% Temperary code for Keysight PNA-x N5242B
-% S11_temp = S11;
-% dB_temp = mag2db(abs(S11_temp));
-% dB_temp = dB_temp - max(dB_temp,[],'all'); % Shift the data to compensate changes in RE(impedence) at low temperatures
-% freq_temp = freq;
-% HH_temp = HH;
-% 
-% dif = diff(freq); % frequency increments
-% resets = find(dif<=0.9*(freq_l-freq_h)); % Find the termination point of a complete scans (10% error)
-% nop = round(mean(diff(resets))); % Set the number of points per frequency scan
-% dB = reshape(mag2db(abs(S11)),nop,[]);  %reshape the matrix so that each complete frequency scan occupy one column
-% dB = dB - max(dB,[],'all'); % Shift the data to compensate changes in RE(impedence) at low temperatures
-% freq = reshape(freq,nop,[]);
-% HH = reshape(HH,nop,[]);
 %% Clean up raw data
-clearvars dif step S11_temp mag_temp freq_temp HH_temp
+clearvars dif step *_temp
 
 if Options.bgdmode == 1% Construct the background noise by stitching together zero-field-scan and anti-crossing
     %Find the line crossing by tracing the resonant peaks
@@ -1687,3 +1457,100 @@ ylabel('Resonant frequency (GHz)');
 title(num2str(Field,'Resonant frequency from minimum search at H = %3.3f T'));
 end
 % End of option 4
+function [HH,freq,mag,LoadObj,Options,analysis] = load_data(varargin)
+clearvars -except varargin
+if nargin > 2
+    fprintf('Data already exist in workspace, skip loading...\n');
+    analysis = varargin{1};
+    HH = varargin{2};
+    freq = varargin{3};
+    mag = abs(varargin{4});
+    LoadObj = varargin{5};
+    Options = varargin{6};
+    [~,analysis.name,~] = fileparts(LoadObj);
+    Options.bgdmode = 0;
+else
+    LoadObj = varargin{1};
+    Options = varargin{2};
+    out = readdata_v4(LoadObj,Options.nData);
+    freq = out.data.ZVLfreq/1e9;
+    S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
+    H = out.data.DCField1;
+    HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
+    T1 = out.data.Temperature1; % Sample cell temperature
+    [~,analysis.name,~] = fileparts(LoadObj);
+    analysis.power = mean(out.data.Power1);
+%     T2 = out.data.Temperature2; % Mixing chamber temperature
+%     lck1 = out.data.lockin1;
+%     lck2 = out.data.lockin2;
+    
+    S11 = S11';
+    S11 = S11(:);
+    freq = freq';
+    freq = freq(:);
+    HH = HH';
+    HH = HH(:); %the third argument is the number of frequency points in each line/segment
+    
+    [rows,~,freq] = find(freq); % Remove nonsensical zeros from the frequency data
+    HH = HH(rows);
+    S11 = S11(rows);
+    %Set data range and parameters
+    freq_l = min(freq); %set frequency range, l: lower limit, h: higher limit
+    freq_h = max(freq);
+    
+    %% Code For R&S ZVL/ZNL units
+    % Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
+    % step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
+    trunc1 = find(freq == min(freq),1,'first');
+    trunc2 = find(freq == min(freq),1,'last')-1;
+    freq_temp = freq(trunc1:trunc2);
+    HH_temp = HH(trunc1:trunc2);
+    S11_temp = S11(trunc1:trunc2);
+    
+    % Truncate according to the upper and lower frequency limit
+    S11_temp = S11_temp(freq_temp>=freq_l & freq_temp<=freq_h);
+    freq_temp = freq_temp(freq_temp>=freq_l & freq_temp<=freq_h);
+    HH_temp = HH_temp(freq_temp>=freq_l & freq_temp<=freq_h);
+    mag_temp = abs(S11_temp);
+    
+    freq_l = min(freq_temp); %set frequency range, l: lower limit, h: higher limit
+    freq_h = max(freq_temp);
+    
+    dif = diff(freq_temp); % frequency increments
+    resets = find( dif <= (freq_l-freq_h) ); % Find the termination point of a complete scans
+    nop = round(mean(diff(resets))); % Set the number of points per frequency scan
+    
+    % Rearrange data to ascending field
+    if HH(end) > HH(1)
+        analysis.direction = 'up';
+        mag = reshape(mag_temp,nop,[]);
+        freq = reshape(freq_temp,nop,[]);
+        HH = reshape(HH_temp,nop,[]);
+    else
+        analysis.direction = 'down';
+        mag = flip(reshape(mag_temp,nop,[]),2);
+        freq = flip(reshape(freq_temp,nop,[]),2);
+        HH = flip(reshape(HH_temp,nop,[]),2);
+    end
+    analysis.temp = T1;
+    analysis.HH = H;
+    %% Temperary code for Keysight PNA-x N5242B
+    % S11_temp = S11;
+    % mag_temp = abs(S11_temp);
+    % freq_temp = freq;
+    % HH_temp = HH;
+    % freq_l = min(freq_temp);
+    % freq_h = max(freq_temp);
+    % field_l = min(HH_temp);
+    % % field_l = 1.6;
+    % field_h = max(HH_temp);
+    % [xq,yq] = meshgrid(linspace(field_l,field_h,1501),linspace(freq_l,freq_h,1201)); %set the X and Y range
+    %
+    % dif = diff(freq); % frequency increments
+    % resets = find(dif<=0.9*(freq_l-freq_h)); % Find the termination point of a complete scans (10% error)
+    % nop = round(mean(diff(resets))); % Set the number of points per frequency scan
+    % mag = reshape(mag_temp,nop,[]);  %reshape the matrix so that each complete frequency scan occupy one column
+    % freq = reshape(freq,nop,[]);
+    % HH = reshape(HH,nop,[]);
+end
+end
