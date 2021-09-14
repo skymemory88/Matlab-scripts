@@ -9,8 +9,8 @@ clearvars -except mfields freq S11 analysis
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions\');
 addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik\'));
 location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
-             'SC200 (1.2x3.0x3.5 mm)\2020.11.27'];
-loadname = '2020_11_0038';
+             'SC127\SC127_1 (2.5 x1 x 0.5 mm, rectangle)\17.08.2019'];
+loadname = '2019_08_0006';
 LoadObj = fullfile(location,[loadname, '.dat']);
 SaveObj = fullfile(location,[loadname, '_interp', '.mat']);
 Options.analysis = 1; % Analysis options
