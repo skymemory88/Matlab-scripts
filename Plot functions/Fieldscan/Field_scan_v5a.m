@@ -1,5 +1,5 @@
 format long;
-clearvars
+clearvars -except mfields freq S11 analysis
 % For macOS
 % addpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions')
 % addpath(genpath('/Volumes/GoogleDrive/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik'));
@@ -21,26 +21,33 @@ Options.save = 'n'; % Option to save the analysis
 Options.lnwd = 1.5; % plot linewidth
 Options.ftsz = 12; % plot font size
 Options.mksz = 3; % plot marker size
-Options.order = 4; % 1D filter order
 Options.bgdmode = 2; % Background normalization (0: no normalization. 1: normalized with stitched background. 2: normalize with loaded file)
-Options.fitfunc = 1; % Fitting function (only for off-resonance data) for (1) custom function of (2) spec1d
 Options.nData = 1; % Number of dataset from VNA
+Options.dType = 'exp'; % Input data type: 1. Experimental ('exp'), 2. Simulated ('sim')
+
+if exist('analysis','var') && exist('freq','var') && exist('S11','var') && exist('mfields','var')
+    fprintf('Data already exist in workspace, skip loading...\n');
+    arguments =  {analysis mfields freq S11 LoadObj Options};
+else
+    arguments = {LoadObj Options};
+end
 
 switch Options.analysis
     case 1
         % Simple color plot of S11 (& S21)
-        [fields,freq,S11,analysis] = option1(LoadObj, Options);
+        [mfields,freq,S11,analysis] = option1(LoadObj, Options);
     case 2
         % On-resonance measurement processing (w/ plots)
-        [fields,freq,S11,analysis] = option2(LoadObj, Options);
+        [mfields,freq,S11,analysis] = option2(arguments{:});
     case 3
         % Off-resonance measurement processing (w/ plots)
-        [fields,freq,S11,analysis] = option3(LoadObj, Options);
+        Options.fitfunc = 1; % Fitting function (only for analysis-3): (1) Input-out or (2) Lorentzian
+        [mfields,freq,S11,analysis] = option3(LoadObj, Options);
     case 4
         % Temperature scan
-        [fields,freq,S11,analysis] = option4(LoadObj, Options);
+        [mfields,freq,S11,analysis] = option4(LoadObj, Options);
 end
-clearvars -except fields freq S11 analysis Options SaveObj
+clearvars -except mfields freq S11 analysis Options SaveObj
 
 if ~isfield(Options,'save')
     prompt = sprintf('Save the analysis?\n');
@@ -57,9 +64,9 @@ switch lower(answer)
             background.d = analysis.bgd0;
             analysis = rmfield(analysis,'bf0');
             analysis = rmfield(analysis,'bgd0');
-            save(SaveObj,'analysis','background','fields','freq','S11','-v7.3')
+            save(SaveObj,'analysis','background','mfields','freq','S11','-v7.3')
         else
-            save(SaveObj,'analysis','fields','freq','S11','-v7.3')
+            save(SaveObj,'analysis','mfields','freq','S11','-v7.3')
         end
         %         if Options.analysis == 4 % Add a point to the phase diagram from off-resonance measurement
         %             fprintf('Updating phase diagram\n')
@@ -346,88 +353,92 @@ ylabel('Temperature')
 title('Magnetic field vs Temperature')
 end
 % End of option 1
-function [xq,yq,zq,analysis] = option2(LoadObj, Options)
+function [xq,yq,zq,analysis] = option2(varargin)
 %Set data range and parameters
-order = Options.order; % set to what order the median filters is applied
-clear freq S11 dB N FdB FrS FiS FTT1 FTT2
+clearvars -except LoadObj Options varargin
 
-% extract data from raw data file
-if ~exist('out','var')
-    out = readdata_v4(LoadObj, Options.nData);
-end
-
-freq = out.data.ZVLfreq/1e9;
-S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;  
-H = out.data.DCField1;
-T1 = out.data.Temperature1;
-% T2 = out.data.Temperature2;
-
-Temperature = min(T1(H == min(H))); %Extract the measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
-analysis.temp = T1;
-HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
-
-freq = freq';
-freq = freq(:);
-S11 = S11';
-S11 = S11(:);
-HH = HH';
-HH = HH(:);
-
-[rows,~,freq] = find(freq); % Remove nonsensical zeros from the frequency data
-HH = HH(rows);
-S11 = S11(rows);
-
-strnth = 'strong';
-freq_l = min(freq); % set frequency range, l: lower limit, h: higher limit
-freq_h = max(freq);
-% field_l = min(H);  % set field range, l: lower limit, h: lower limit
-% field_h = max(H);
+% set desirable field range
 field_l = 2.0;
 field_h = 5.0;
 field_cut = field_l + 0.5; % Field window for cavity parameter fit
+strnth = 'strong';
 
-% Interpolate the data on a 2D grid for the colormap
-[xq,yq] = meshgrid(linspace(field_l,field_h,601),linspace(freq_l,freq_h,2001));
-Hx = xq(1,:);
-
-%Plot the temperature vs magnetic field to check the temperature variation
-figure
-plot(H(1:round(length(T1)/100):end),T1(1:round(length(T1)/100):end),'o-')
-xlabel('DC Magnetic field')
-ylabel('Temperature')
-title('Magnetic field vs Temperature')
-
-%% Code For R&S ZVL/ZNL units
-% Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
-% step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
-trunc1 = find(freq == min(freq),1,'first'); 
-trunc2 = find(freq == min(freq),1,'last')-1; 
-freq_temp = freq(trunc1:trunc2);
-HH_temp = HH(trunc1:trunc2);
-S11_temp = S11(trunc1:trunc2);
-
-% Truncate according to the upper and lower frequency limit
-S11_temp = S11_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-freq_temp = freq_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-HH_temp = HH_temp(freq_temp>=freq_l & freq_temp<=freq_h);
-mag_temp = abs(S11_temp);
-
-freq_l = min(freq_temp); %set frequency range, l: lower limit, h: higher limit
-freq_h = max(freq_temp);
-
-dif = diff(freq_temp); % frequency increments
-resets = find( dif <= (freq_l-freq_h) ); % Find the termination point of a complete scans
-nop = round(mean(diff(resets))); % Set the number of points per frequency scan
-
-% Rearrange data to ascending field
-if H(end) > H(1)
-    mag = reshape(mag_temp,nop,[]);
-    freq = reshape(freq_temp,nop,[]);
-    HH = reshape(HH_temp,nop,[]);
-else
-    mag = flip(reshape(mag_temp,nop,[]),2);
-    freq = flip(reshape(freq_temp,nop,[]),2);
-    HH = flip(reshape(HH_temp,nop,[]),2);
+if nargin > 2  % use data in the workspace if already exist
+    analysis = varargin{1};
+    HH = varargin{2};
+    freq = varargin{3};
+    mag = abs(varargin{4});
+    LoadObj = varargin{5};
+    Options = varargin{6};
+    Temperature = min(analysis.temp(varargin{2}(1,:) == min(varargin{2}(1,:)))); %Extract the measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
+    freq_l = min(freq(:,1));
+    freq_h = max(freq(:,1));
+else % extract and process data from raw data file
+    LoadObj = varargin{1};
+    Options = varargin{2};
+    out = readdata_v4(LoadObj, Options.nData);
+    freq = out.data.ZVLfreq/1e9;
+    S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
+    H = out.data.DCField1;
+    analysis.temp = out.data.Temperature1;
+    % T2 = out.data.Temperature2;
+    Temperature = min(analysis.temp(H == min(H))); %Extract the measurement temperature at the lowest field (to avoid magnetoresistance in the thermometer)
+    
+    HH = repmat(H,1,size(freq,2)); %populate the magnetic field to match the dimension of S11 matrix
+    HH = HH';
+    HH = HH(:);
+    freq = freq';
+    freq = freq(:);
+    S11 = S11';
+    S11 = S11(:);
+    
+    %Plot the temperature vs magnetic field to check the temperature variation
+    figure
+    plot(H(1:round(length(analysis.temp)/100):end),analysis.temp(1:round(length(analysis.temp)/100):end),'o-')
+    xlabel('DC Magnetic field')
+    ylabel('Temperature')
+    title('Magnetic field vs Temperature')
+    
+    [rows,~,freq] = find(freq); % Remove nonsensical zeros from the frequency data
+    HH = HH(rows);
+    S11 = S11(rows);
+    
+    freq_l = min(freq); % set frequency range, l: lower limit, h: higher limit
+    freq_h = max(freq);
+    %% Code For R&S ZVL/ZNL units
+    % Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
+    % step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
+    trunc1 = find(freq == min(freq),1,'first');
+    trunc2 = find(freq == min(freq),1,'last')-1;
+    freq_temp = freq(trunc1:trunc2);
+    HH_temp = HH(trunc1:trunc2);
+    S11_temp = S11(trunc1:trunc2);
+    
+    % Truncate according to the upper and lower frequency limit
+    S11_temp = S11_temp(freq_temp>=freq_l & freq_temp<=freq_h);
+    freq_temp = freq_temp(freq_temp>=freq_l & freq_temp<=freq_h);
+    HH_temp = HH_temp(freq_temp>=freq_l & freq_temp<=freq_h);
+    mag_temp = abs(S11_temp);
+    
+    freq_l = min(freq_temp); %set frequency range, l: lower limit, h: higher limit
+    freq_h = max(freq_temp);
+    dif = diff(freq_temp); % frequency increments
+    resets = find( dif <= (freq_l-freq_h) ); % Find the termination point of a complete scans
+    nop = round(mean(diff(resets))); % Set the number of points per frequency scan
+    
+    % Rearrange data to ascending field
+    if H(end) > H(1)
+        analysis.direction = 'up';
+        mag = reshape(mag_temp,nop,[]);
+        freq = reshape(freq_temp,nop,[]);
+        HH = reshape(HH_temp,nop,[]);
+    else
+        analysis.direction = 'down';
+        mag = flip(reshape(mag_temp,nop,[]),2);
+        freq = flip(reshape(freq_temp,nop,[]),2);
+        HH = flip(reshape(HH_temp,nop,[]),2);
+    end
+    
 end
 
 % Truncate the data to field limits
@@ -437,10 +448,13 @@ end
 mag = mag(:,lidx:uidx);
 freq = freq(:,lidx:uidx);
 HH = HH(:,lidx:uidx);
-
-field_l = min(HH(1,:));  %set field range, l: lower limit, h: higher limit
+% set field range according to actual limits
+field_l = min(HH(1,:));
 field_h = max(HH(1,:));
 
+% Interpolate the data on a 2D grid for the colormap
+[xq,yq] = meshgrid(linspace(field_l,field_h,601),linspace(freq_l,freq_h,2001));
+Hx = xq(1,:);
 %% Temperary code for Keysight PNA-x N5242B
 % S11_temp = S11;
 % dB_temp = mag2db(abs(S11_temp));
@@ -565,7 +579,7 @@ if Options.bgdmode ~= 0
     bgdM = repmat(bgd0,1,size(mag,2));
     mag = mag./bgdM;
 end
-clearvars c idx ia lidx ridx widx ii HM T1 trunc1 trunc2 dupl nop bf0
+clearvars c idx ia lidx ridx widx ii HM trunc1 trunc2 dupl nop bf0
 
 %Find all the resonant peaks
 f0 = zeros(size(mag,2),1);
@@ -1035,7 +1049,7 @@ title('Dissipation rates');
 legend('External dissipation rate','Internal dissipation rate')
 
 figure
-plot(Hx(Hc0:Hc2),medfilt1(kpi(Hc0:Hc2)./kpe(Hc0:Hc2),Options.order),'-');
+plot(Hx(Hc0:Hc2),medfilt1(kpi(Hc0:Hc2)./kpe(Hc0:Hc2)),'-');
 ylabel('K_i/K_e');
 xlabel('Field (T)');
 title('Ratio of Dissipation rates');
@@ -1069,7 +1083,7 @@ axis([field_l field_h freq_l freq_h]);
 % Plot the resonant frequency from minimum search versus DC magnetic field
 % figure
 hold on
-f0 = medfilt1(f0,order); % apply median filter to remove some noise
+f0 = medfilt1(f0); % apply median filter to remove some noise
 % hfig1 = plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',Options.mksz,'MarkerFaceColor','black');
 plot(H0, f0, 'ok', 'MarkerSize', Options.mksz);
 xlabel('Field (T)');
@@ -1079,7 +1093,7 @@ axis([field_l field_h freq_l freq_h]);
 
 % Plot the peak amplitude from minimum search vs. magnetic field
 figure
-mag0 = medfilt1(mag0, order); % apply median filter to remove some noise
+mag0 = medfilt1(mag0); % apply median filter to remove some noise
 plot(xq(1,:), mag2db(mag0), 'o', 'MarkerSize', Options.mksz);
 xlabel('Field(T)');
 ylabel('S11 (dB)');
@@ -1104,10 +1118,10 @@ title(num2str(Temperature,'Quality factor, T= %.2f mK'));
 
 figure
 % plot(Hx,Gc,'-o')
-plot(Hx(Hc1:Hc2),medfilt1(Gc1(Hc1:Hc2),order),'-o')
+plot(Hx(Hc1:Hc2),medfilt1(Gc1(Hc1:Hc2)),'-o')
 hold on
 if exist('omg2','var')
-    plot(Hx(Hc1:Hc2),medfilt1(Gc2(Hc1:Hc2),order),'-o')
+    plot(Hx(Hc1:Hc2),medfilt1(Gc2(Hc1:Hc2)),'-o')
     lg = {'Gc1','Gc2'};
 else
     lg = {'Gc'};
@@ -1118,7 +1132,7 @@ title(num2str(Brfs(1),'Fitting paramters from fitting, B_0 = %.2f'))
 hold on
 yyaxis right
 % plot(Hx,gamma,'-s')
-plot(Hx(Hc1:Hc2), medfilt1(gamma(Hc1:Hc2),order),'-s')
+plot(Hx(Hc1:Hc2), medfilt1(gamma(Hc1:Hc2)),'-s')
 lg{end+1} = '\gamma';
 ylabel('Spin linewidth (GHz)')
 legend(lg)
@@ -1354,7 +1368,7 @@ yq = yq(:,ia);
 zq = zq(:,ia);
 analysis.temp = analysis.temp(ia);
 
-f0 = medfilt1(f0,Options.order); % apply median filter to remove some noise
+f0 = medfilt1(f0); % apply median filter to remove some noise
 f0 = f0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 ff0 = f0(2); % Initial guess of the cavity resonant frequency
 H0 = H0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
@@ -1478,16 +1492,16 @@ legend('Experimental data','|S11| fit');
 figure
 plot(H0,f0,'ok','MarkerSize',Options.mksz);
 hold on
-plot(mean(H0(f0==min(medfilt1(f0,Options.order)))), mean(f0(f0==min(f0))), 'o', 'MarkerFaceColor', 'red','MarkerSize',Options.mksz);
+plot(mean(H0(f0==min(medfilt1(f0)))), mean(f0(f0==min(f0))), 'o', 'MarkerFaceColor', 'red','MarkerSize',Options.mksz);
 xlabel('Field (T)');
 ylabel('Resonant frequency (GHz)');
 title(num2str(Temperature,'Resonant frequency from minimum search at T = %3.3f K'));
 
 figure
-plot(H0,medfilt1(1./Q0,Options.order),'.k');
+plot(H0,medfilt1(1./Q0),'.k');
 hold on
 [~,idx,Qf] = find(Qf);
-plot(xq(1,idx),medfilt1(1./Qf,Options.order),'.r');
+plot(xq(1,idx),medfilt1(1./Qf),'.r');
 xlabel('Field (T)');
 ylabel('1/Q');
 title(num2str(Temperature,'Inverse of Q factor at T = %3.3f K'));
@@ -1495,23 +1509,23 @@ legend('f_0 / FWHM','|S11| fitting');
 
 if Options.fitfunc == 1
     figure
-    plot(H0,medfilt1(xr,Options.order),'-');
+    plot(H0,medfilt1(xr),'-');
     ylabel('Susceptibility');
     xlabel('Field (T)');
     title('Re[\chi]')
     
     figure
-    plot(H0,medfilt1(xi,Options.order),'-');
+    plot(H0,medfilt1(xi),'-');
     ylabel('Susceptibility');
     xlabel('Field (T)');
     title('Im[\chi]')
     
     figure
-    plot(H0,medfilt1(kpe,Options.order),'o');
+    plot(H0,medfilt1(kpe),'o');
     ylabel('K_e (GHz)');
     hold on
     yyaxis right
-    plot(H0,medfilt1(kpi,Options.order),'*');
+    plot(H0,medfilt1(kpi),'*');
     xlabel('Field (T)');
     ylabel('K_i (GHz)');
     title('Dissipation rates');
