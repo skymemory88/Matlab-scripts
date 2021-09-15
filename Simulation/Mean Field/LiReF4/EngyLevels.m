@@ -11,10 +11,10 @@ N_level = 7; % Number of transition levels to plot
 Options.ion = 'Ho'; % support 'Er' and 'Ho'
 Options.hyp = 1.00; % Hyperfine isotope proportion
 Options.RPA = false; % not enabled yet
+Options.Js = false;
 Options.Elevel = false;
 Options.Ediff = true;
 Options.Espan = false;
-Options.Js = false;
 Options.savedata = false;
 Options.savegif = false;
 Options.location =... % Location to load/save files
@@ -103,24 +103,28 @@ for iter = 1:numel(temp)
             if Options.Ediff == true
                 for i=1:N_level-1 % Up until the second from top level
                     Ediff(i,:) = E(:,i+1)-E(:,i); % Transition between the nearest neighbouring levels
-                    Ediff2(i,:) = E(:,i+2)-E(:,i); % Transition between the next nearest neighbouring levels
+%                     Ediff2(i,:) = E(:,i+2)-E(:,i); % Transition between the next nearest neighbouring levels
                 end
                 Ediff(N_level,:) = E(:,N_level+1)-E(:,N_level); % Transition between the top two levels
                 
-%               % Plot the lowest energy difference between the 8 levels
-                % frequency = { '1.682 GHz', '3.436 GHz', '3.924 GHz', '4.449 GHz', '5.604 GHz' } ;
+                % frequency = { '1.682 GHz', '3.436 GHz', '3.924 GHz', '4.449 GHz', '5.604 GHz' }; % frequency reference lines
+
+                % Plot transitions between the nearest levels
 %                 figure;
                 hold on
                 figs_dE(1, iter2, iter3) = plot(fields, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
-                figs_dE2(1, iter2, iter3) = plot(fields, Ediff2(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
                 if N_level > 1
                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
 %                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color','b','LineWidth',1.5);
 %                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1),'LineWidth',1.5);
                 end
-                if N_level > 2
-                    figs_dE2(2:end, iter2, iter3) = plot(fields, Ediff2(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
-                end
+                
+%                 % Plot transitions between the next nearest levels
+%                 figs_dE2(1, iter2, iter3) = plot(fields, Ediff2(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
+%                 if N_level > 2
+%                     figs_dE2(2:end, iter2, iter3) = plot(fields, Ediff2(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
+%                 end
+
 %                 hpcfr1 = plot(fields, Ediff,'Color','blue','linewidth',2);
 %                 hpcfr1 = plot(fields, Ediff(2:end,:),'Color','black','linewidth',2);
 %                 hpcfr1 = plot(fields, Ediff,'Color',[35 107 142]/255,'linewidth',2,'LineStyle','-');

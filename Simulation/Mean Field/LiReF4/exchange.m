@@ -90,7 +90,7 @@ for nt=1:size(tau,1)
         for n=1:3
             for m=1:3
                 d(n,m,nt,mt)=exp_qr*(rr<(N*10.75)^2)*Jex*eq(n,m); % exchange interaction
-%                 d(n,m,nt,mt)=exp_qr*(rr<14)*Jex*eq(n,m); % original code, unsure of the rr<14
+%                 d(n,m,nt,mt)=exp_qr*(rr<14)*Jex*delta(n,m); % original code, unsure of the rr<14
             end
         end
         %  d(:,:,nt,mt)=d(:,:,nt,mt)+(4*pi/3)*0.01389*eye(3)/4; %Lorentz
