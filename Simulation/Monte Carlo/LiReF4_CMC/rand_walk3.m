@@ -78,9 +78,9 @@ for iterations=1:sweeps
     end
             
     % take a measurements of <E>, <E^2>, and form factors after each lattice sweep
-    Egs(p) = (E_0/N);  %Energy per site
-%     Egs(p) = (E_0*L_tot/N_tot);  %Energy per site
-    Egs2(p) = Egs(p)^2; %Energy squared per site
+    Egs(p) = (E_0/N);  % Energy per site
+%     Egs(p) = (E_0*L_tot/N_tot);  % Energy per site
+    Egs2(p) = Egs(p)^2; % Energy squared per site
     acc_rate(p) = accept/N; % Calculate acceptance rate of the metropolis steps between measurements
     accept = 0;
     

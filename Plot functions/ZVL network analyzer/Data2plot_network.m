@@ -1,7 +1,9 @@
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik');
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
 format long g;
-scan = importdata('G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200\2020.08.19\detune_300K_air.dat',',',3);
+location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC239\2021.07.14';
+file = 'detune_300K_air.dat';
+scan = importdata(fullfile(location,file),',',3);
 
 freq11=scan.data(:,1);
 S11=scan.data(:,2);
@@ -41,11 +43,11 @@ Q11 = freq11(Idx11)/bw11; %Calculate the quality factor
 % disp(num2str(Q11_fit,'Calculated quality factor for curve 1 from fitting: %3.2f.'));
 % clear fbck s p zqf mag bw11 Idx11 pk;
 
-freq21=scan.data(:,1);
-S21=scan.data(:,4);
-S21i=scan.data(:,5);
-amp21=sqrt(S21.^2+S21i.^2);
-dB_S21=mag2db(amp21);
+% freq21=scan.data(:,1);
+% S21=scan.data(:,4);
+% S21i=scan.data(:,5);
+% amp21=sqrt(S21.^2+S21i.^2);
+% dB_S21=mag2db(amp21);
 % %psd = db2pow(dB_S21)./freq2;    %Calculate power density spectrum
 % %compl_21 = mag2db(1 - sqrt(S21.^2+S21i.^2));
 % bw21 = [];
@@ -109,12 +111,18 @@ dB_S21=mag2db(amp21);
 % amp3=sqrt(S11_3.^2+S11i_3.^2);
 % dB3=mag2db(amp3);
 
+figure % amplitude plot
 plot(freq11,dB_S11,'-o','Markersize',1.5);
 hold on
 % plot(fdB_S11,'red');
-plot(freq21,dB_S21,'-x','Markersize',1.5);
+% plot(freq21,dB_S21,'-x','Markersize',1.5);
 %plot(freq11,compl_11,'s', 'Markersize', 1.5);
 %plot(freq21,compl_21,'s', 'Markersize', 1.5);
+title('S11 response at 300K');
+xlabel('Frequency (Hz)');ylabel('S11 (dB)');
+
+figure % smithplot
+smithplot(freq11,S11+1i*S11i)
 
 % plot(freq11_2,dB_S11_2,'-+','Markersize',1.5);
 % plot(fdB_S11_2,'red');

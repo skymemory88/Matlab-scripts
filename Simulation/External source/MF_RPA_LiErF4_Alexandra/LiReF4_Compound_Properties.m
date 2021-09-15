@@ -1,0 +1,25 @@
+LiErF4.J = 15/2;
+LiErF4.I = 7/2;
+LiErF4.iso_HF = 0.23;
+LiErF4.gLande = 1.2;
+LiErF4.B=[60.2258   -0.1164   -4.3280   -0.0019   -0.0850   -0.0227]/1000;
+LiErF4.Lorenz=3.15452/1000; %Er
+LiErF4.A = 0.00043412;
+LiErF4.a=[5.162 0 0;0 5.162 0;0 0 10.7];
+LiErF4.tau=[0 0 0;0 1/2 1/4;1/2 1/2 1/2;1/2 0 3/4];
+LiErF4.ex = 0;
+LiErF4.renorm = [1 1 1];
+LiErF4.ishf = 0;
+
+LiHoF4.J = 8;
+LiHoF4.I = 7/2;
+LiHoF4.iso_HF = 1;
+LiHoF4.B=[-60   0.35   3.6   0.0004   0.07   0.006]/1000;
+LiHoF4.gLande = 1.25;
+LiHoF4.Lorenz = 3.124032/1000; %Ho
+LiHoF4.A =0.003361; %Henrik
+LiHoF4.ex = -0.0001; %0.1 microeV from Henrik and Jens PRB;
+LiHoF4.renorm = [1 1 0.785];
+LiHoF4.tau=[0 0 0;0 1/2 1/4;1/2 1/2 1/2;1/2 0 3/4];
+LiHoF4.a = [5.175 0 0; 0 5.175 0; 0 0 10.75];
+LiHoF4.ishf = 1;

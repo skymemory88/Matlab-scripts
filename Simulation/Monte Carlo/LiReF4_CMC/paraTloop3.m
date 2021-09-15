@@ -63,8 +63,11 @@ spmd
         for jj = 1:N_meas
 %             [E_0,~,~,acc_rate(index,:,jj,1),~,lattice,lat_mom,~,temp(ii+(labindex-1)*block),~] = rand_walk(params.meas_intv,params.pt_intv,ion,params,inter,lattice,temp(ii+(labindex-1)*block),E_0,lat_mom,field_change,numWkrs,tempMark(index,:),prob(index,:));
 %             [E_0,Egs(jj,index,1),Egs2(jj,index,1),~,mag,lattice,lat_mom,~,temp(ii+(labindex-1)*block),~] = rand_walk(N_stats,inf,ion,params,inter,lattice,temp(ii+(labindex-1)*block),E_0,lat_mom,field_change,numWkrs,tempMark(index,:),prob(index,:));     
-            [E_0,~,~,acc_rate(:,index,jj,1),~,lattice,lat_mom,tempMark(:,index,1),temperature,p_count] = rand_walk3(params.meas_intv,params.pt_intv,ion,params,inter,lattice,temperature,E_0,lat_mom,field_change,numWkrs,p_count,tempMark(:,index,1),prob(:,index));
-            [E_0,Egs(tempMark(p_count,index,1),index,jj,1),Egs2(tempMark(p_count,index,1),index,jj,1),~,mag,lattice,lat_mom,~,temperature,p_count] = rand_walk3(N_stats,inf,ion,params,inter,lattice,temperature,E_0,lat_mom,field_change,numWkrs,p_count,tempMark(:,index,1),prob(:,index));     
+            [E_0,~,~,acc_rate(:,index,jj,1),~,lattice,lat_mom,tempMark(:,index,1),temperature,p_count] ...
+                = rand_walk3(params.meas_intv,params.pt_intv,ion,params,inter,lattice,temperature,E_0,lat_mom,field_change,numWkrs,p_count,tempMark(:,index,1),prob(:,index));
+            [E_0,Egs(tempMark(p_count,index,1),index,jj,1),Egs2(tempMark(p_count,index,1),index,jj,1),~,mag,lattice,lat_mom,~,temperature,p_count]...
+                = rand_walk3(N_stats,inf,ion,params,inter,lattice,temperature,E_0,lat_mom,field_change,numWkrs,p_count,tempMark(:,index,1),prob(:,index));     
+            
             altx_temp(index,tempMark(p_count,index,1),:,jj) = sum(params.C(1:4,1).*permute(mag(1,1:4,:),[2 3 1])); % alternating magnetizations in x
             alty_temp(index,tempMark(p_count,index,1),:,jj) = sum(params.C(1:4,2).*permute(mag(2,1:4,:),[2 3 1])); % alternating magnetizations in y
         end
