@@ -1,0 +1,49 @@
+**/*.mat
+
+**/*.ini
+
+**/*.asv
+
+**/*.fig
+
+**/*.png
+
+**/*.txt
+
+**/*.dat
+
+**/*.jpg
+
+**/*.gif
+
+**/*.vscode
+
+SpinW
+
+Plot functions/Fieldscan/Field_scan.m
+
+Plot functions/Fieldscan/Field_scan_v2.m
+
+Plot functions/Phase diagram/functions/
+
+Plot functions/spec1d--Henrik/
+
+Plot functions/mumax plotter/
+
+.vscode/
+
+Plot functions/Calibration/
+
+Simulation/External source/Dipolar Energies --Conradin/
+
+Simulation/External source/MF-RPA for LiErF4 and LiHoF4/
+
+Simulation/External source/Mean Field --Henrik/
+
+Simulation/External source/Mean Field --Peter/
+
+Simulation/External source/Monte Carlo/CMC-Ursula/
+
+Simulation/External source/Monte Carlo/LiReF4 CMC code/
+
+Simulation/External source/Monte Carlo/VMC-Elahi/
