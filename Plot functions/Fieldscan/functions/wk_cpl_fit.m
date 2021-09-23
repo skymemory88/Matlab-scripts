@@ -25,7 +25,7 @@ opts.Upper = [bdh(1)  bdh(2)  bdh(3)  bdh(4)  bdh(5)];
 opts.Weights = weight;
 
 % Fit model to data.
-[fitresult, gof] = fit( xData, yData, ft, opts );
+[fitresult, gof] = fit( xData, yData, ft, opts);
 
 % Plot fit with data
 if plt
