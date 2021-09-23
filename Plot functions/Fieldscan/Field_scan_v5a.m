@@ -11,7 +11,7 @@ addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functi
 % Process options:
 Options.analysis = 2; % Analysis options (1.simple plot, 2.on-resonance fit, 3.off-resonance fit, 4.temp scan)
 Options.plot = false; % Plot option in analysis part (Option 3)
-% Options.save = 'n'; % Option to save the analysis
+Options.save = 'n'; % Option to save the analysis
 Options.dType = 'exp'; % Input data type: 1. Experimental ('exp'), 2. Simulated ('sim')
 Options.lnwd = 1.5; % plot linewidth
 Options.ftsz = 12; % plot font size
@@ -27,7 +27,7 @@ if strcmp(Options.dType, 'exp')
         'SC239\2021.07.02'];
     % location = ['/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/',...
         % 'Data/Experiment/LiHoF4/SC200/2021.04.12'];
-    loadname = '2021_07_0001';
+    loadname = '2021_07_0002';
     LoadObj = fullfile(location,[loadname,'.dat']);
     SaveObj = fullfile(location,[loadname,'_interp', '.mat']);
 elseif strcmp(Options.dType, 'sim')
@@ -326,13 +326,13 @@ clearvars -except varargin
 Temperature = analysis.temp;
 
 % set desirable field range
-field_l = 11;
-field_h = 17;
-field_cut = field_l + 0.2; % Field window for cavity parameter fit
+field_l = 0;
+field_h = 5;
+field_cut = field_l + 0.5; % Field window for cavity parameter fit
 freq_l = min(freq(:,1));
 freq_h = max(freq(:,1));
 strnth = 'strong'; % 'strong' or 'weak'
-sgn = +1; % sign of the slope of the dispersion relations
+sgn = -1; % sign of the gradiant of the dispersion relations
 
 %Plot the temperature vs magnetic field to check the temperature variation
 if isfield(analysis,'Ts') && isfield(analysis,'Hs')
@@ -397,10 +397,10 @@ for ii = 1:size(mag,2) %Searching column minima (fixed field)
     mag0(ii) = mag(idx,ii);
 end 
 [~,cidx] = min(mag(:,bidx)); % find the resonant peak to be replaced
-% [~,Hpx] = max(mag0); % Method 1. scan of max reflection
+[~,Hpx] = max(mag0); % Method 1. scan of max reflection
 % [~,Hpx] = max(medfilt1(mag(cidx,:))); % Method 2. scan of max reflection at f0 (frequency)
 % [~,Hpx] = max(medfilt1(abs(f0-f0(bidx)))); % Method 3. scan with the resonant peak deviates from f0 the furtherest
-[~,Hpx] = min(abs(H0-14.2)); % Method 4. Manually set the patch slice of the frequency scan
+% [~,Hpx] = min(abs(H0-14)); % Method 4. Manually set the patch slice of the frequency scan
 
 while true
     if Options.bgdmode == 1
@@ -483,72 +483,44 @@ clearvars c idx ia lidx ridx widx ii HM trunc1 trunc2 dupl nop bf0
 
 %Find all the resonant peaks
 f0 = zeros(size(mag,2),2);
-FWHM0 = zeros(size(mag,2),1);
+mag0 = zeros(size(mag,2),2);
+FWHM0 = zeros(size(mag,2),2);
+Q0 = zeros(size(mag,2),2);
 %find the indices to the minima (resonant frequency) of each complete frequency scan until the end of the data
 for ii = 1:size(mag,2) %Searching column minima (fixed field)
-    [~,idx] = min( medfilt1(mag(:,ii)) );
-%     [f0(ii,:),idx] = findpeaks(-medfilt1(mag(:,ii)));
-    if(length(idx)>1)
-        fprintf(num2str(H0(ii),'multiple minima found at H = %.3f'))
-        idx = idx(1);
-    end
-    f0(ii) = freq(idx,ii);
-    H0(ii) = HH(idx,ii); 
-    mag0(ii) = mag(idx,ii);
-%     HM = abs( max(mag(:,ii))-min(mag(:,ii)) )*0.7 + min(mag(:,ii)); % 70% of the height
-    HM = ( max(mag(:,ii)) + min(mag(:,ii)) )/2; % Half max point
-    left = mag(1:idx,ii);
-    right = mag(idx:end,ii);
-    [lidx,~] = find(left >= HM, 1, 'last');
-    [ridx,~] = find(right >= HM, 1, 'first');
-    if lidx == idx+ridx-1
-        FWHM0(ii) = Inf;
-    elseif isempty(lidx) || isempty(ridx)
-        FWHM0(ii) = Inf;
-    else
-        FWHM0(ii) = freq(idx+ridx-1,ii)-freq(lidx,ii);
+    [~,idx] = findpeaks(-medfilt1(mag(:,ii)),'MinPeakProminence',0.05,'MinPeakDistance',100);
+    if isempty(idx); [~,idx] = min(mag(:,ii));end
+    H0(ii) = HH(idx(1),ii);
+    for jj = 1:length(idx)
+        f0(ii,jj) = freq(idx(jj),ii);
+        mag0(ii,jj) = mag(idx(jj),ii);
+        HM = ( max(mag(:,ii)) + mag0(ii,jj) )/2; % Half max point
+%         HM = abs( max(mag(:,ii))-min(mag(:,ii)) )*0.7 + min(mag(:,ii)); % 70% of the height
+        left = mag(1:idx(jj),ii);
+        right = mag(idx(jj):end,ii);
+        [lidx,~] = find(left >= HM, 1, 'last');
+        [ridx,~] = find(right >= HM, 1, 'first');
+        if lidx == idx(jj)+ridx-1
+            FWHM0(ii,jj) = Inf;
+        elseif isempty(lidx) || isempty(ridx)
+            FWHM0(ii,jj) = Inf;
+        else
+            FWHM0(ii,jj) = freq(idx(jj)+ridx-1,ii)-freq(lidx,ii);
+        end
+        Q0(ii,jj) = f0(ii,jj)/FWHM0(ii,jj);
     end
 end
-Q0 = f0./FWHM0;
-Q0(isinf(Q0)) = NaN; % Cut out inf from the array
-[Q0,c] = rmmissing(Q0); % Cut out NaN from the array
-H0 = H0(~c); % Remove corresponding elements in H0 array as well
-f0 = f0(~c);
-mag0 = mag0(~c);
-FWHM0 = FWHM0(~c);
-
-% For noisy data, we need to remove duplicates of minima
-[H0,ia,~] = unique(H0,'stable');
-f0 = f0(ia);
-Q0 = Q0(ia);
-mag0 = mag0(ia);
-FWHM0 = FWHM0(ia);
-
-% Discard nonsensical datapoints
-f0 = f0(f0 >= freq_l & f0 <= freq_h);
-H0 = H0(f0 >= freq_l & f0 <= freq_h);
-Q0 = Q0(f0 >= freq_l & f0 <= freq_h);
-mag0 = mag0(f0 >= freq_l & f0 <= freq_h);
-FWHM0 = FWHM0(f0 >= freq_l & f0 <= freq_h); 
-
 % Reduce data noise
-H0 = H0(Q0 >=0); 
-Q0 = Q0(Q0 >=0);
 f0 = medfilt1(f0);
 Q0 = medfilt1(Q0);
 
 % Remove outlier data
-[f0,rmidx] = rmoutliers(f0,'mean');
+[f0,rmidx] = rmoutliers(f0,'mean',1);
+wc = f0(1,1);
 Q0 = Q0(~rmidx);
 H0 = H0(~rmidx);
 mag0 = mag0(~rmidx);
 FWHM0 = FWHM0(~rmidx);
-
-% Plot Resonant frequency trace with fitting parameters
-Tplot = figure;
-plot(H0,f0,'ok','MarkerSize',Options.mksz);
-% plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',Options.mksz);
-hold on
 
 trigger = 0;
 slope = 0.1;
@@ -557,15 +529,15 @@ while true
         case 'weak'
             % Fit the field dependent resonant frequency data with weak coupling function
 %             [~,idx] = max(f0);
-            [~,idx] = findpeaks(f0);
-            [pfit,~,mu] = polyfit(H0(1:idx(1)),f0(1:idx(1)),1);
+            [~,idx] = findpeaks(f0(:,1));
+            [pfit,~,mu] = polyfit(H0(1:idx(1)),f0(1:idx(1),1),1);
             detrend = polyval(pfit,H0,[],mu);
-            init = [1e-2  1e-2   sgn*slope   f0(1)  H0(Hpx)]; % [g  gamma slope wc x0]
+            init = [1e-2  1e-2   sgn*slope   wc  H0(Hpx)]; % [g  gamma slope wc x0]
             bound_l = [0   0  -Inf   freq_l  field_l];
             bound_h = [1   1   Inf   freq_h  field_h];
-            wt = abs(f0-f0(1))/max(abs(f0-f0(1)));
+            wt = abs(f0(:,1)-f0(1,1))/max(abs(f0(:,1)-f0(1,1)));
 %             wt = ones(size(f0));
-            [fitP,~] = wk_cpl_fit(H0,f0-detrend+pfit(2),init,bound_l,bound_h,wt,true);
+            [fitP,~] = wk_cpl_fit(H0,f0(:,1)-detrend+pfit(2),init,bound_l,bound_h,wt,true);
 %             [fitP,~] = wk_cpl_fit(H0,f0,init,bound_l,bound_h,wt,true);
             slopes = fitP.slope;
             gma0 = fitP.gamma;
@@ -577,9 +549,10 @@ while true
             analysis.Ffit = fitP;
             fprintf('Weak coupling fit complete\n')
             
-            figure(Tplot)
+            Tplot = figure;
+            plot(H0,f0(:,1),'ok','MarkerSize',Options.mksz);
+            hold on
             plot(H0,fitP(H0) + detrend);
-%             plot(H0,fitP(H0));
             lgd = {'Exp. data','Theo. data'};
             xlabel('Field (T)');
             ylabel('Resonant frequency (GHz)');
@@ -587,50 +560,82 @@ while true
             axis([field_l field_h freq_l freq_h]);
             break
         case 'strong'
-            if ~sign(sgn)
-                [~, lidx] = min(f0);
-                [~, uidx] = max(f0(lidx:end));
-            else
-                [~, lidx] = max(f0);
-                [~, uidx] = min(f0(lidx:end));
+            % split the resonant frequencies into upper and lower branches
+            if any(f0(:,2)) % search if there is any overlapping region in avoide crossing pattern
+                [bkr1,~] = find(medfilt1(f0(:,2)) ~= 0,1,'first');
+                [bkr2,~] = find(medfilt1(f0(:,2)) ~= 0,1,'last');
+                if sgn > 0 % for dispersion with positive slope
+                    upB = cat(1,f0(1:bkr1-1,1),f0(bkr1:bkr2,2)); % upper branch
+                    upH = H0(1:bkr2);
+                    loB = f0(bkr1:end,1); % lower branch
+                    loH = H0(bkr1:end);
+                    Hx1 = linspace(min(upH),max(upH),501); % for trace extrapolation
+                    Hx2 = linspace(min(loH),max(loH),length(Hx1));
+                else % for dispersion with negative slope
+                    upB = cat(1,f0(bkr1:bkr2,2),f0(bkr2+1:end,1)); % upper branch
+                    upH = H0(bkr1:end);
+                    loB = f0(1:bkr2,1); % lower branch
+                    loH = H0(1:bkr2);
+                    Hx1 = linspace(min(loH),max(loH),501); % for trace extrapolation
+                    Hx2 = linspace(min(upH),max(upH),length(Hx1));
+                end
+            else % if no overlap found
+                if sgn > 0 % for dispersion with positive slope
+                    [~, lidx] = max(f0(:,1));
+                    [~, ridx] = min(f0(lidx:end),1);
+                    upB = f0(1:lidx,1);
+                    upH = H0(1:lidx);
+                    loB = f0(lidx+ridx-1:end,1);
+                    loH = H0(lidx+ridx-1:end);
+                else
+                    [~, lidx] = min(f0(:,1));
+                    [~, ridx] = max(f0(lidx:end,1));
+                    loB = f0(1:lidx,1);
+                    loH = H0(1:lidx);
+                    upB = f0(lidx+ridx-1:end,1);
+                    upH = H0(lidx+ridx-1:end);
+                end
+                Hx1 = linspace(field_l,H0(lidx+ridx-1),501);
+                Hx2 = linspace(H0(lidx),field_h,length(Hx1));
             end
-            wt = ones(size(f0));
+            % Plot Resonant frequency trace with fitting parameters
+            Tplot = figure;
+            plot(upH,upB,'ok',loH,loB,'ok','MarkerSize',Options.mksz);
+            % plot(H0(1:round(length(H0)/200):end),f0(1:round(length(f0)/200):end),'ok','MarkerSize',Options.mksz);
+            hold on
 %% single dispersion split fit-----------------------            
-            init = [0.05   sgn*slope   f0(1)  H0(Hpx)]; % [g slope wc x0]
+            init = [0.05   sgn*slope   wc  H0(Hpx)]; % [g slope wc x0]
             bound_l = [ 0   -Inf   freq_l   field_l];
             bound_h = [Inf   Inf   freq_h   field_h];
-            [lofit,~] = str_cpl_fit(H0(1:lidx),f0(1:lidx),sgn,init,bound_l,bound_h,wt(1:lidx),false);
+            wt = ones(size(loB));
+            [lofit,~] = str_cpl_fit(loH,loB,sgn,init,bound_l,bound_h,wt,false);
 
             init = [lofit.g   lofit.slope   lofit.wc  lofit.x0]; % [g slope wc x0]
             bound_l = [ 0   -Inf   freq_l   field_l];
             bound_h = [Inf   Inf   freq_h   field_h];
-            [upfit,~] = str_cpl_fit(H0(lidx+uidx-1:end),f0(lidx+uidx-1:end),-sgn,init,bound_l,bound_h,wt(lidx+uidx-1:end),false);
-
-%             wc = 3.642;
+            wt = ones(size(upB));
+            [upfit,~] = str_cpl_fit(upH,upB,-sgn,init,bound_l,bound_h,wt,false); 
             wc = mean([lofit.wc upfit.wc]);
             Brfs = mean([lofit.x0 upfit.x0]);
             slopes = mean([lofit.slope upfit.slope]);
-            Hx1 = linspace(field_l,H0(lidx+uidx-1),501);
-            Hx2 = linspace(H0(lidx),field_h,length(Hx1));
-            lofit_ex = interp1(H0(1:lidx),lofit(H0(1:lidx)),Hx1,'spline','extrap');
-            upfit_ex = interp1(H0(lidx+uidx-1:end),upfit(H0(lidx+uidx-1:end)),Hx2,'spline','extrap');
-            analysis.lofit = lofit_ex;
-            analysis.upfit = upfit_ex;
 %% single dispersion optimization fit-----------------------------------
 %             fitting parameter = ['wc', 'slope', 'x0', 'g']
             init = [wc   slopes   Brfs  0.05];
             bound_l = [freq_l   -Inf   field_l   0];
             bound_h = [freq_h    Inf   field_h   1];
-            if ~sign(sgn)
-                l_branch = @(param, x) (param(1) + param(2)*(x-param(3))./2 - sqrt((param(2)*(x-param(3))).^2 + 4*param(4)^2)./2);
-                u_branch = @(param, x) (param(1) + param(2)*(x-param(3))./2 + sqrt((param(2)*(x-param(3))).^2 + 4*param(4)^2)./2);
+            if sgn > 0
+                brch1 = interp1(upH,upfit(upH),Hx1,'spline','extrap');
+                brch2 = interp1(loH,lofit(loH),Hx2,'spline','extrap');
+                front = @(param, x) (param(1) + param(2)*(x-param(3))./2 + sqrt((param(2)*(x-param(3))).^2 + 4*param(4)^2)./2);
+                back = @(param, x) (param(1) + param(2)*(x-param(3))./2 - sqrt((param(2)*(x-param(3))).^2 + 4*param(4)^2)./2);
             else
-                l_branch = @(param, x) (param(1) + param(2)*(x-param(3))./2 + sqrt((param(2)*(x-param(3))).^2 + 4*param(4)^2)./2);
-                u_branch = @(param, x) (param(1) + param(2)*(x-param(3))./2 - sqrt((param(2)*(x-param(3))).^2 + 4*param(4)^2)./2);
+                brch1 = interp1(loH,lofit(loH),Hx1,'spline','extrap');
+                brch2 = interp1(upH,upfit(upH),Hx2,'spline','extrap');
+                front = @(param, x) (param(1) + param(2)*(x-param(3))./2 - sqrt((param(2)*(x-param(3))).^2 + 4*param(4)^2)./2);
+                back = @(param, x) (param(1) + param(2)*(x-param(3))./2 + sqrt((param(2)*(x-param(3))).^2 + 4*param(4)^2)./2);
             end
-            branches = @(param, x) [l_branch(param, x(:,1)), u_branch(param, x(:,2))];
-
-            fitP = lsqcurvefit(branches, init, [Hx1', Hx2'], [lofit_ex', upfit_ex'], bound_l, bound_h); % fit extrapolated data
+            branches = @(param, x) [front(param, x(:,1)), back(param, x(:,2))];
+            fitP = lsqcurvefit(branches, init, [Hx1', Hx2'], [brch1', brch2'], bound_l, bound_h); % fit extrapolated data
 %             fitP = lsqcurvefit(branches, init, [H0(lidx-300:lidx), H0(lidx+uidx-1:end)],...
 %                 [f0(lidx-300:lidx), f0(lidx+uidx-1:end)], bound_l, bound_h); % fit the original data
             
@@ -639,6 +644,9 @@ while true
             Brfs = fitP(3);
             gcs = fitP(4);
             omg1 = slopes.*(Hx-Brfs) + wc;
+            
+            analysis.wfit1 = brch1;
+            analysis.wfit2 = brch2;
 %% double dispersion split fit--------------------------------------
 %             init = [0.05   0.01   -slope  -slope   mean(f0)  H0(Hpos)  H0(Hpos)]; % [g slope wc x0]
 %             bound_l = [0   0   -Inf   -Inf    freq_l   H0(lidx)   H0(lidx)];
@@ -708,11 +716,11 @@ while true
 %             omg2 = pcfit.slope1.*(Hx-pcfit.x1) + pcfit.wc;
 %% -----------------------------------
             figure(Tplot)
-            if exist('lofit_ex','var')
-                lf = plot(Hx1, lofit_ex,'-r');
+            if exist('brch1','var')
+                lf = plot(Hx1, brch1,'-r');
                 set(lf,'LineWidth',Options.lnwd);
-                if exist('upfit_ex','var')
-                    uf = plot(Hx2, upfit_ex,'-r');
+                if exist('brch2','var')
+                    uf = plot(Hx2, brch2,'-r');
                     set(uf,'LineWidth',Options.lnwd);
                 end
             end
@@ -733,8 +741,10 @@ while true
     end
 end
 % Interpolate data along sampling mesh
-FWHM0 = interp1(H0,FWHM0,Hx,'pchip','extrap'); % Using spline interpolation to smooth the FWHM
 mag0 = interp1(H0,mag0,Hx,'pchip','extrap'); % amplitude along resonant frequency trace
+FWHM0 = mean(FWHM0,2);
+FWHM0 = interp1(H0,FWHM0,Hx,'pchip','extrap'); % Using spline interpolation to smooth the FWHM
+Q0 = mean(Q0,2);
 Q0 = interp1(H0,Q0,Hx,'pchip','extrap');
 analysis.mag0 = mag0;
 analysis.FWHM0 = FWHM0;
@@ -751,9 +761,7 @@ bound_h = [1   1   1    Inf   field_h];
 % slopes = Qfit0.slope;
 % gcs = Qfit0.gc;
 % Brfs = Qfit0.x0;
-if ~exist('gma0','var')
-    gma0 = Qfit0.gamma;
-end
+if ~exist('gma0','var'); gma0 = Qfit0.gamma; end
 omg0 = Qfit0.slope.*(Hx-Qfit0.x0) + wc; % linearized dispersion relation
 % omg1 = omg0;
 analysis.Qfit0 = Qfit0;
@@ -942,8 +950,8 @@ for ii = Hc1:Hc2
     else
         % starting value for param = {'kpe', 'kpi', 'omega', 'Gc', 'gma', 'wc', 'attn'}
         param  =  [kpe0   kpi0   omg1(ii)   Gc1(ii-1)   gma0   wc  1/mean(zq(:,ii))];
-        bound_l = [kpe0   kpi0   omg1(ii)-0.1   0     0    wc-0.1   0.8]; % lower bound of fitting parameters
-        bound_h = [kpe0   kpi0   omg1(ii)+0.1   1     1    wc+0.1   1.2]; % upper bound of fitting parameters
+        bound_l = [kpe0   kpi0   omg1(ii)-0.1   0     0    freq_l   0.8]; % lower bound of fitting parameters
+        bound_h = [kpe0   kpi0   omg1(ii)+0.1   1     1    freq_h   1.2]; % upper bound of fitting parameters
         fit = iptopt(yq(:,ii), zq(:,ii), Hx(ii), param, bound_l, bound_h, weight(:,ii), plt);
         Gc1(ii) = fit.Gc;
         omg1(ii) = fit.omega;
