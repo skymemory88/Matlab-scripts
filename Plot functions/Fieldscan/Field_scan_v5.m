@@ -16,7 +16,7 @@ Options.dType = 'exp'; % Input data type: 1. Experimental ('exp'), 2. Simulated 
 Options.lnwd = 1.5; % plot linewidth
 Options.ftsz = 12; % plot font size
 Options.mksz = 2; % plot marker size
-Options.bgdmode = 2; % Background normalization (0: no normalization. 1: Stitched background. 2: Loaded file. 3: S11 fit)
+Options.bgdmode = 1; % Background normalization (0: no normalization. 1: Stitched background. 2: Loaded file. 3: S11 fit)
 Options.nData = 1; % Number of dataset from VNA
 Options.phPlot = false; % Option to plot phase in color plots
 Options.fitfunc = 1; % Fitting function (only for analysis-3): (1) Input-output or (2) Lorentzian
@@ -353,15 +353,15 @@ clearvars -except varargin
 Temperature = analysis.temp;
 
 % set desirable field range
-field_l = 5.2; % manually set the field limit
-field_h = 7.2;
+field_l = 12.6; % manually set the field limit
+field_h = 16.0;
 if field_l >= max(HH(1,:)) || field_h <= min(HH(1,:))
     field_l = min(HH(1,:));
     field_h = max(HH(1,:));
     fprintf('Manual field range out of data range! resort back to default setting.\n')
 end
 
-strnth = 'weak'; % 'strong' or 'weak'
+strnth = 'strong'; % 'strong' or 'weak'
 sgn = +1; % sign of the gradiant of the dispersion relations
 slope = 0.05; % linear spin resonance slope
 aux = false; % auxiliery spin resonance for fitting
@@ -445,6 +445,8 @@ while true
         legend('B = 0',num2str(H0(Hp0),'B = %.2f T'),'Stitched','location','SouthEast')
         fprintf('Checkpoint: press any key to continue, or Ctrl + c to abort.\n')
         pause
+        fig_norm = figure;
+        plot( freq(:,bidx), mag(:,bidx)./bgd0);
         break 
     elseif Options.bgdmode == 2 % load background data from existing file.
         fprintf('Loading background data...\n')
@@ -457,9 +459,9 @@ while true
             analysis.wc0 = temp_load.analysis.wc0;            
             if exist('background','var')
                 bf0 = freq(:,bidx); 
-                bgd0 = interp1(background.f, background.d, bf0);                        
+                bgd0 = interp1(background.f, background.d, bf0);  
                 fig_norm = figure;
-                plot( freq(:,HH(1,:)==min(HH(1,:)) ), mag(:,HH(1,:)==min(HH(1,:)))./bgd0 );
+                plot( freq(:,bidx), mag(:,bidx)./bgd0);
                 break
             else
                 fprintf('Background data not found! Reverting to extraction from data.\n')
@@ -525,11 +527,11 @@ param  =  [1e-3   1e-3   freq_h    0   1e-3   f0(bidx)  1/mean(mag(:,bidx))];
 bound_l = [ 0      0     freq_h    0   1e-3    freq_l   0.5]; % lower bound of fitting parameters
 bound_h = [Inf    Inf    freq_h    0   1e-3    freq_h   1.5]; % upper bound of fitting parameters
 fit = iptopt(freq(:,bidx), mag(:,bidx), H0(bidx), param, bound_l, bound_h, 1./mag(:,bidx), false);
-% bgd0 = mag(:,bidx)./fit(freq(:,bidx))*fit.attn;
-bgd0 = medfilt1(mag(:,bidx)./fit(freq(:,bidx)))*fit.attn;
+bgd0 = mag(:,bidx)./fit(freq(:,bidx))*fit.attn;
+% bgd0 = medfilt1(mag(:,bidx)./fit(freq(:,bidx)))*fit.attn;
 figure(fig_norm)
 hold on
-plot(freq(:,HH(1,:)==min(HH(1,:)) ),mag(:,HH(1,:)==min(HH(1,:)) )./bgd0);
+plot(freq(:,bidx),mag(:,bidx)./bgd0);
 legend('Normalized with Loaded background','Normalized with fitted background','Location', 'SouthEast');
 prompt = sprintf('Implement additional normalization by fitting? \n');
 add_fit = lower(input(prompt,'s'));
@@ -827,9 +829,9 @@ end
 init = [max(nonzeros(FWHM0))  mean(gcs)  1e-3   mean(slopes)  H0(Hp0)  wc];  % [gamma gc kappa slope x0 wc]
 bound_l = [ 0    0    0   min([0 sgn*Inf])   field_l   wc];
 bound_h = [Inf   1    1   max([0 sgn*Inf])   field_h   wc];
-fpts = min([length(H0(1:Hp0))-1 length(H0(Hp0:end))-1 20]);
-[Qfit0, ~] = Qf_fit(H0(Hp0-fpts:Hp0+fpts), Q0(Hp0-fpts:Hp0+fpts), init, bound_l, bound_h, false);
-% [Qfit0, ~] = Qf_fit(H0, Q0, init, bound_l, bound_h, false);
+% fpts = min([length(H0(1:Hp0))-1 length(H0(Hp0:end))-1 20]);
+% [Qfit0, ~] = Qf_fit(H0(Hp0-fpts:Hp0+fpts), Q0(Hp0-fpts:Hp0+fpts), init, bound_l, bound_h, false);
+[Qfit0, ~] = Qf_fit(H0, Q0(:,1), init, bound_l, bound_h, false);
 analysis.Qfit0 = Qfit0;
 
 if ~exist('gma0','var'); gma0 = Qfit0.gamma; end
