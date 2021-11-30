@@ -1,10 +1,15 @@
-function save_fit(mfields,freq,S11,analysis,H1,H2)
-savename = sprintf('S11_LiHoF4_%1$.3fK_%2$.1f-%3$.1fT_analysis.mat',analysis.temp,analysis.field_l,analysis.field_h);
+function save_fit(mfields,freq,S11,analysis,H1,H2,dType)
+
 [~,id1] = min(abs(mfields(1,:) - H1));
 [~,id2] = min(abs(mfields(1,:) - H2));
-location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\',...
-    'Matlab\Susceptibilities\S11 parameters'];
-savefile = fullfile(location,savename);
+switch dType
+    case 'exp'
+        savename = sprintf('%1$s_%2$.3fK_%3$.2f-%4$.2fT.mat',analysis.name, analysis.temp,analysis.field_l,analysis.field_h);
+    case 'sim'
+        savename = sprintf('S11_LiHoF4_%1$.3fK_%2$.1f-%3$.1fT_analysis.mat',analysis.temp,analysis.field_l,analysis.field_h);
+end
+
+savefile = fullfile(analysis.location,savename);
 
 attn = analysis.attn(id1:id2);
 temp = analysis.temp;
