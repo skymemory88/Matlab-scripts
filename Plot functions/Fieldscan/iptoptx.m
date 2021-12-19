@@ -1,4 +1,4 @@
-function [fitresult, gof] = iptoptx(x, y, field, P0, low, upr, weight, plt)
+function [fitresult, gof] = iptoptx(x, y, field, filFctr, P0, low, upr, weight, plt)
 %CREATEFIT(omega,S11)
 %  S11 input-output fit:
 %      X Input : frequency
@@ -12,11 +12,24 @@ function [fitresult, gof] = iptoptx(x, y, field, P0, low, upr, weight, plt)
 %
 %  See also FIT, CFIT, SFIT.
 %% Fit: 'S11_inptopt_fit'.
+mu0 = 4*pi*10^-7; % Vacuum permeability ([H/m])
+hbar = 1.055E-34; % Reduced Planck constant [J.s]
+meV2J = 1.602217e-22; % [J/meV]
+rho = 4e30/(5.17*5.17*10.75); % Holmium (magnetic moment) number density [m^-3]
+f2E = hbar*2*pi*10^9/meV2J; % [meV/GHz]
+g = sqrt(mu0*10^9*2*pi*rho*filFctr/hbar/2); % susceptibility prefactor [T.(J.s)^-1]
+g = g * meV2J * f2E * 10^-9;
+
 [xData, yData] = prepareCurveData( x, y );
 % Set up fittype and options.
-ft = fittype( @(kpe, kpi, xr, xi, w0, x) (abs(1+2*kpe./...
-    (1i*(x-w0) - (kpe + kpi) + 1i*(xr + 1i*xi)))),...
-    'independent', {'x'}, 'dependent', {'y'}, 'coefficients',{'kpe', 'kpi', 'xr', 'xi', 'w0'});
+% ft = fittype( @(kpe, kpi, xr, xi, w0, x) (abs(1+2*kpe./...
+%     (1i*(x-wc) - (kpe + kpi) + 1i*g^2*wc*(xr + 1i*xi)))),...
+%     'independent', {'x'}, 'dependent', {'y'}, 'coefficients',{'kpe', 'kpi', 'xr', 'xi', 'wc'});
+
+ft = fittype( @(kpe, kpi, xr, xi, wc, x) (abs(1+2*kpe./...
+    (1i*(x-wc) - (kpe + kpi) + 1i*g^2*wc*(xr + 1i*xi)))),...
+    'independent', {'x'}, 'dependent', {'y'}, 'coefficients',{'kpe', 'kpi', 'xr', 'xi', 'wc'});
+
 opts = fitoptions( 'Method', 'NonlinearLeastSquares');
 opts.Display = 'Off';
 opts.StartPoint = [P0(1) P0(2) P0(3) P0(4) P0(5)];
