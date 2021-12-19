@@ -21,8 +21,8 @@ Options.filFctr = 0.0127*2.1; % Filling factor (SC239, SC200, SC251)
 % Determin file location base on data type
 if strcmp(Options.dType, 'exp')
     location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
-        'SC251 (2.49 x 0.92 x 3.45 mm)\Lev (1x4.5x3 mm)\2021.12.18'];
-    loadname = '2021_12_0057';
+        'SC251 (2.49 x 0.92 x 3.45 mm)\Lev (1x4.5x3 mm)\2021.12.19'];
+    loadname = '2021_12_0061';
 %     location = ['G:\My Drive\File sharing\PhD program\Research projects\Collaborations\JianRui Soh\Data\2021.12.05'];
 %     loadname = '2021_12_0018';
     LoadObj = fullfile(location,[loadname,'.dat']);
@@ -66,7 +66,7 @@ switch Options.analysis
         [temps,freq,S11,analysis] = option4(LoadObj, Options);
 end
 analysis.location = location;
-clearvars -except mfields freq S11 analysis Options SaveObj
+clearvars -except temps mfields freq S11 analysis Options SaveObj
 
 if ~isfield(Options,'save')
     prompt = sprintf('Save the analysis?\n');
@@ -82,9 +82,9 @@ switch lower(answer)
             background.d = analysis.bgd0;
             analysis = rmfield(analysis,'bf0');
             analysis = rmfield(analysis,'bgd0');
-            save(SaveObj,'analysis','background','mfields','freq','S11','-v7.3')
+            save(SaveObj,'analysis','background','temps','mfields','freq','S11','-v7.3')
         else
-            save(SaveObj,'analysis','mfields','freq','S11','-v7.3')
+            save(SaveObj,'analysis','mfields','temps','freq','S11','-v7.3')
         end
         if Options.analysis == 4 % Add a point to the phase diagram from off-resonance measurement
             fprintf('Updating phase diagram\n')
@@ -206,7 +206,7 @@ while true
         param  =  [1e-3   1e-3   freq_h    0   1e-3   f0(bidx)  1/mean(mag(:,bidx))];
         bound_l = [ 0      0     freq_h    0   1e-3    freq_l   0.1]; % lower bound of fitting parameters
         bound_h = [Inf    Inf    freq_h    0   1e-3    freq_h   2.0]; % upper bound of fitting parameters
-        fit = iptopt(freq(:,bidx), mag(:,bidx), H0(bidx), param, bound_l, bound_h, 1./mag(:,bidx), false);
+        fit = iptopt0(freq(:,bidx), mag(:,bidx), H0(bidx), param, bound_l, bound_h, 1./mag(:,bidx), false);
         bf0 = freq(:,bidx);
         bgd0 = medfilt1(mag(:,bidx)-fit(freq(:,bidx))+1)*fit.attn;
 %         bgd0 = medfilt1(mag(:,bidx)./fit(freq(:,bidx)))*fit.attn;
@@ -243,7 +243,7 @@ if Options.bgdmode ~= 0
     param  =  [1e-3   1e-3   freq_h   0   1e-3   (freq_l+freq_h)/2  1/mean(bgd0)];
     bound_l = [ 0     0    freq_h     0   1e-3    freq_l   0.8]; % lower bound of fitting parameters
     bound_h = [Inf   Inf   freq_h     0   1e-3    freq_h   1.2]; % upper bound of fitting parameters
-    fit = iptopt(freq(:,bidx), mag(:,bidx)./bgd0, H0(bidx), param, bound_l, bound_h, bgd0./mag(:,bidx), false);
+    fit = iptopt0(freq(:,bidx), mag(:,bidx)./bgd0, H0(bidx), param, bound_l, bound_h, bgd0./mag(:,bidx), false);
 %     bgd0 = mag(:,bidx)./fit(freq(:,bidx));  % further normalization through fitting
     mag = mag./bgdM;
     analysis.kpe0 = fit.kpe;
@@ -467,7 +467,7 @@ while true
         param  =  [1e-3   1e-3   freq_h    0   1e-3    freq(fidx,bidx)   mean(mag(:,bidx))];
         bound_l = [ 0      0     freq_h    0   1e-3    freq_l   0.5]; % lower bound of fitting parameters
         bound_h = [Inf    Inf    freq_h    0   1e-3    freq_h   1.5]; % upper bound of fitting parameters
-        fit = iptopt(freq(:,bidx), mag(:,bidx), HH(1,bidx), param, bound_l, bound_h, 1./mag(:,bidx), true);
+        fit = iptopt0(freq(:,bidx), mag(:,bidx), HH(1,bidx), param, bound_l, bound_h, 1./mag(:,bidx), true);
         bf0 = freq(:,bidx);
 %         bgd0 = medfilt1(mag(:,bidx)-fit(freq(:,bidx))+1)*fit.attn;
         bgd0 = medfilt1(mag(:,bidx)./fit(freq(:,bidx)))*fit.attn;
@@ -527,7 +527,7 @@ end
 param  =  [1e-2   1e-2   freq_h    0   1e-3   f0(bidx)  mean(mag(:,bidx))];
 bound_l = [ 0      0     freq_h    0   1e-3    freq_l   0.5]; % lower bound of fitting parameters
 bound_h = [Inf    Inf    freq_h    0   1e-3    freq_h   1.5]; % upper bound of fitting parameters
-fit = iptopt(freq(:,bidx), mag(:,bidx), H0(bidx), param, bound_l, bound_h, 1./mag(:,bidx), false);
+fit = iptopt0(freq(:,bidx), mag(:,bidx), H0(bidx), param, bound_l, bound_h, 1./mag(:,bidx), false);
 bgd0 = mag(:,bidx)./fit(freq(:,bidx))*fit.attn;
 % bgd0 = medfilt1(mag(:,bidx)./fit(freq(:,bidx)))*fit.attn;
 if Options.bgdmode ~= 0
@@ -952,7 +952,7 @@ else
     param = [kpe(Hc0)  kpi(Hc0)  omg1(Hc0)   gcs(1)    gma0     wc     1/mean(mag(:,Hc0))];
     bound_l = [ 0         0      omg1(Hc0)   gcs(1)    gma0   freq_l   0.8]; % lower bound of fitting parameters
     bound_h = [Inf       Inf     omg1(Hc0)   gcs(1)    gma0   freq_h   1.2]; % upper bound of fitting parameters
-    fit = iptopt(freq(:,Hc0), mag(:,Hc0), H0(Hc0), param, bound_l, bound_h, weight(:,Hc0), false);
+    fit = iptopt0(freq(:,Hc0), mag(:,Hc0), H0(Hc0), param, bound_l, bound_h, weight(:,Hc0), false);
 end
 conf_intv = confint(fit,0.95);
 kpe(Hc0,1) = fit.kpe;
@@ -1017,7 +1017,7 @@ for ii = Hc1:length(H0)
         param  =  [kpe0   kpi0   omg1(ii)  gcs(1)   gamma(ii-1)    wc0    attn0];
         bound_l = [kpe0   kpi0    -Inf    0     0    freq_l  0.8]; % lower bound of fitting parameters
         bound_h = [kpe0   kpi0     Inf   Inf   Inf   freq_h  1.2]; % upper bound of fitting parameters
-        fit = iptopt(freq(:,ii), mag(:,ii), H0(ii), param, bound_l, bound_h, weight(:,ii), plt);
+        fit = iptopt0(freq(:,ii), mag(:,ii), H0(ii), param, bound_l, bound_h, weight(:,ii), plt);
         conf_intv = confint(fit,0.95);
         omg1(ii) = fit.omega;
         omg1_ci(ii,:,1) = conf_intv(:,3);
@@ -1588,10 +1588,10 @@ mag0h = min(mag(:,uidx)); % peak depth at the highest field
 [~,hl] = min([mag0l mag0h]); % pick the finner peak as the first part of the background
 if hl == 1
     [~,tidx] = min( TT(1,:) );
-    fprintf('Use low field data for background normalization...\n')
+    if Options.bgdmode ~= 0; fprintf('Low field data for background normalization...\n'); end
 else
     [~,tidx] = max( TT(1,:) );
-    fprintf('Use high field data for background normalization...\n')
+    if Options.bgdmode ~= 0; fprintf('Use high field data for background normalization...\n'); end
 end
 for ii = 1:size(mag,2) %Searching column minima (fixed field)
     [~,idx] = min( mag(:,ii) );
@@ -1667,7 +1667,7 @@ while true
         param  =  [1e-3   1e-3   freq_h    0   1e-3   f0(tidx)  1/mean(mag(:,tidx))];
         bound_l = [ 0      0     freq_h    0   1e-3    freq_l   0.1]; % lower bound of fitting parameters
         bound_h = [Inf    Inf    freq_h    0   1e-3    freq_h   2.0]; % upper bound of fitting parameters
-        fit = iptopt(freq(:,tidx), mag(:,tidx), H0, param, bound_l, bound_h, 1./mag(:,tidx), false);
+        fit = iptopt0(freq(:,tidx), mag(:,tidx), H0, param, bound_l, bound_h, 1./mag(:,tidx), false);
         bf0 = freq(:,tidx);
         bgd0 = medfilt1(mag(:,tidx)-fit(freq(:,tidx))+1)*fit.attn;
 %         bgd0 = medfilt1(mag(:,bidx)./fit(freq(:,bidx)))*fit.attn;
@@ -1703,7 +1703,7 @@ if Options.bgdmode ~= 0
     param  =  [1e-3  1e-3  freq_h    0   1e-3   (freq_l+freq_h)/2  1/mean(bgd0)];
     bound_l = [ 0     0    freq_h    0   1e-3    freq_l   0.8]; % lower bound of fitting parameters
     bound_h = [Inf   Inf   freq_h    0   1e-3    freq_h   1.2]; % upper bound of fitting parameters
-    fit = iptopt(freq(:,tidx), mag(:,tidx)./bgd0, H0, param, bound_l, bound_h, bgd0./mag(:,tidx), false);
+    fit = iptopt0(freq(:,tidx), mag(:,tidx)./bgd0, H0, param, bound_l, bound_h, bgd0./mag(:,tidx), false);
 %     bgd0 = mag(:,bidx)./fit(freq(:,bidx));  % further normalization through fitting
     mag = mag./bgdM;
     analysis.kpe0 = fit.kpe;
@@ -1781,40 +1781,38 @@ end
 switch Options.fitfunc % Pick fitting function from either (1) custom function of (2) spec1d
     case 1 %Option 1: Custom function by Input-output formalism
         % Step 1: Fit the data for the first time to extract "kpe" and "w0" far from the level crossing
-        kpe = double.empty(length(T0),0);
-        kpi = double.empty(length(T0),0);
-        w0 = double.empty(length(T0),0);
+        wr = double.empty(length(T0),0);
         Qf = double.empty(length(T0),0);
-        wc = double.empty(length(T0),0);
+        omg = double.empty(length(T0),0);
         xr = double.empty(length(T0),0);
         xi = double.empty(length(T0),0);
+        Gc = double.empty(length(T0),0);
+        gma = double.empty(length(T0),0);
         fill = Options.filFctr;
         [~,Tc0] = min(T0);
-        f_init = min(f0(Tc0));
-        % starting value for param = {'kpe', 'kpi', 'omega', 'Gc', 'gma', 'wc', 'attn'}
-        param =  [1e-4   1e-4    0     0    f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
-        bound_l = [0      0      0     0    freq_l]; % lower bound of fitting parameters
-        bound_h = [Inf   Inf     0     0    freq_h]; % upper bound of fitting parameters
-        fit0 = iptoptx(freq(:,Tc0),mag(:,Tc0),H0,fill,param,bound_l,bound_h,weight(:,Tc0),false);
-        kpe(Tc0) = fit0.kpe;
-        kpi(Tc0) = fit0.kpi;
-        w0(Tc0) = fit0.wc;
-        f_init = fit0.wc;
-        kpe0 = fit0.kpe;
-        kpi0 = fit0.kpi;
+
+        % Fit using input-output formalism {'kpe', 'kpi', 'omega', 'Gc', 'gma', 'wc', 'attn'}
+        param = [1e-4   1e-4   freq_l     0    1e-4    f0(Tc0)   1/mean(mag(:,Tc0))];
+        bound_l = [ 0    0     freq_l     0    1e-4    freq_l   0.8]; % lower bound of fitting parameters
+        bound_h = [Inf  Inf    freq_l     0    1e-4    freq_h   1.2]; % upper bound of fitting parameters
+        fit0 = iptopt0(freq(:,Tc0), mag(:,Tc0), H0, param, bound_l, bound_h, weight(:,Tc0), false);     
+        coef = [fit0.kpe  fit0.kpi  fit0.wc  H0 fill]; % fixed coefficients for the following |S11| fit
+        analysis.kpe = fit0.kpe;
+        analysis.kpi = fit0.kpi;
+        analysis.wc = fit0.wc;
+        wr(Tc0) = fit0.wc;
         parfor ii = Tc0+1:length(T0)
-%         for ii = 1:length(T0)
+%         for ii = Tc0+1:length(T0)
             plt = false;
-%             figWin = 10:10:100; % The iteration window over which shows fitting graph
+%             figWin = 10:80:length(T0); % The iteration window over which shows fitting graph
 %             if ismember(ii,figWin) % Not useable in parallel mode (parfor)
 %                 plt = true;
 %             end
-            % Fit using input-output formalism
-            param =  [ kpe0  kpi0    2e-4   2e-4   f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
-            bound_l = [kpe0  kpi0     0      0     f_init]; % lower bound of fitting parameters
-            bound_h = [kpe0  kpi0    Inf    Inf    f_init]; % upper bound of fitting parameters
-            fit = iptoptx(freq(:,ii),mag(:,ii),H0,fill,param,bound_l,bound_h,weight(:,ii),plt);
-            
+            % Fit using input-output formalism {'xr_off', 'xi_off', 'omega', 'Gc', 'gma', 'attn'}
+            param  =  [ 0   1e-4   freq_l   1e-3   1e-4   1/mean(mag(:,ii))];
+            bound_l = [ 0     0     -Inf      0      0      0.8]; % lower bound of fitting parameters
+            bound_h = [Inf   Inf     Inf     Inf    Inf     1.2]; % upper bound of fitting parameters
+            fit = iptopt(freq(:,ii), mag(:,ii), coef, param, bound_l, bound_h, weight(:,ii), plt);
             if mod(ii,20) == 0
                 worker = getCurrentTask();
                 fprintf('Fitting, current temperature: %1$3.2f K. Core %2$u.\n', T0(ii), worker.ID);
@@ -1822,19 +1820,21 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
           
             param = coeffvalues(fit);
             [idx,~,~] = find(fit(freq(:,ii)) == min(fit(freq(:,ii)))); % Find the resonant frequency by (unique) minimum search
-            w0(ii) = freq(idx(1)); 
-            kpe(ii) = param(1);
-            kpi(ii) = param(2);
-            xr(ii,1) = param(3);
-            xi(ii,1) = param(4);   
-            wc(ii) = param(5);
-            Qf(ii) = w0(ii)/(param(1)+param(2));
+            wr(ii) = freq(idx(1)); 
+            xr(ii,1) = param(1);
+            xi(ii,1) = param(2);
+            omg(ii) = param(3);   
+            Gc(ii) = param(4);
+            gma(ii) = param(5);
+            Qf(ii) = wr(ii)/(param(1)+param(2));
         end
-        analysis.kpe = kpe;
-        analysis.kpi = kpi;
-        analysis.w0 = w0;
         analysis.xr = xr;
-        analysis.xi = xi;        
+        analysis.xi = xi;  
+        analysis.g = Gc;
+        analysis.gma = gma;
+        analysis.wr = wr;
+        analysis.Qf = Qf;
+        analysis.w0 = omg;
     case 2 %Option 2: use spec1d package to fit the data using Lorentzian form.
         parfor ii = 1:length(T0)
             s = spec1d(freq(:,ii), -mag(:,ii), max(-mag(:,ii)))*0.001; % create spec1d object
@@ -1852,11 +1852,6 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
             end
         end
 end
-analysis.Qf = Qf;
-analysis.wc = wc;
-
-% Plot the interpolated frequency response data in a field scan using color map
-
 % Plot the interpolated frequency response data in a field scan using color map
 figure
 cmap = pcolor(TT,freq,mag2db(mag));
@@ -1869,22 +1864,23 @@ set(gca,'fontsize',Options.ftsz)
 xlabel('Temperature (K)');
 ylabel('Frequency (GHz)');
 xticks(linspace(temp_l,temp_h,6));
-title(num2str(H0,'Resonant frequency from minimum search at H = %3.3f T'));
+title(num2str(H0,'S11 response and resonant frequqncies at H = %3.3f T'));
 legend('Experimental data','Minimum search');
 
 % Plot the interpolated frequency response data in a field scan using color map
 figure
 cmap1 = copyobj(cmap,gca);
 hold on
-plot(T0,w0,'.r','MarkerSize',Options.mksz);
+plot(T0,wr,'.r','MarkerSize',Options.mksz);
 set(cmap1, 'edgeColor','none')
 shading interp;
 colorbar
 set(gca,'fontsize',Options.ftsz)
 xlabel('Temperature (K)');
 ylabel('Frequency (GHz)');
+xlim([temp_l temp_h]);
 xticks(linspace(temp_l,temp_h,6));
-title(num2str(H0,'S11 response at H = %3.3f T'));
+title(num2str(H0,'S11 response and resonant frequencies at H = %3.3f T'));
 legend('Experimental data','|S11| fit');
 
 figure
@@ -1904,14 +1900,14 @@ if Options.fitfunc == 1
 %     plot(H0,medfilt1(xr),'-');
     ylabel('Susceptibility');
     xlabel('Temperature (K)');
-    title('Re[\chi]')
+    title('Re[\chi_{off}]')
     
     figure
     plot(T0,xi,'o');
 %     plot(T0,medfilt1(xi),'-');
     ylabel('Susceptibility');
     xlabel('Temperature (K)');
-    title('Im[\chi]')
+    title('Im[\chi_{off}]')
     
 %     figure
 %     plot(T0,medfilt1(kpe),'o');
@@ -2011,7 +2007,8 @@ else
                     else
                         analysis.direction = 'down';
                     end
-                    [T1,sIdx] = sort(T1(1,:));
+                    [~,sIdx] = sort(T1(1,:));
+                    T1 = T1(:,sIdx);
                     HH = HH(:,sIdx);
                 else
                    if H(10) > H(1)
@@ -2019,8 +2016,9 @@ else
                     else
                        analysis.direction = 'down';
                    end
-                   [HH,sIdx] = sort(HH(1,:));
+                   [~,sIdx] = sort(HH(1,:));
                    T1 = T1(:,sIdx);
+                   HH = HH(:,sIdx);
                 end
                 freq = freq(:,sIdx);
                 mag = mag(:,sIdx);
