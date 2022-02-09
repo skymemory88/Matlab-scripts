@@ -1,4 +1,4 @@
-function sim = S11_simulation(ion,temp,theta,phi,gama,RPA_opt)
+function sim = S11_simulation(mion,temp,theta,phi,gama,RPA_opt)
 %% Strong/weak coupling simulation
 % B = linspace(0,9,100);
 % Br = 3.72;
@@ -38,7 +38,7 @@ function sim = S11_simulation(ion,temp,theta,phi,gama,RPA_opt)
 % xlabel('Frequency (GHz)');
 % ylabel('S11 response');
 %% 2D color plot of S11
-clearvars -except temp theta phi gama RPA_opt dE ion
+clearvars -except temp theta phi gama RPA_opt dE mion
 
 analysis.temp = temp; % Simulation temperature(s)
 mu0 = 4*pi*10^-7; % Vacuum permeability ([H/m])
@@ -47,33 +47,54 @@ meV2J = 1.602217e-22; % [J/meV]
 rho = 4e30/(5.17*5.17*10.75); % Holmium (magnetic moment) number density [m^-3]
 f2E = hbar*2*pi*10^9/meV2J; % [meV/GHz]
 kB = 0.08617; % [meV/K]
-
-location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',ion,...
-            'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
-% location = ['/Volumes/GoogleDrive/My Drive/File sharing\PhD program\Research projects\Li',ion,...
-%             'F4 project\Data\Simulations results\Matlab\Susceptibilities\with Hz_I'];
+% muB = 9.274e-24; %[J/T]
+% gLande_H0 = 1.25; % Ho
+% ELEf = gLande_H0*muB/meV2J; % Lande factor * Bohr magneton (meV/T)
+% muN = 3.15245e-5; % Nuclear magneton [meV/T]
+% gN = 1.192; % gN(Ho) = mu/mu_N/<I> = 4.173/(7/2)
+% NUCf = gN * muN;
 
 Options.simType = 2; % Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation
 Options.Ediff = false; % Plot energy levels on top
     hyp = 1.0; % hyperfine isotope proportionality
 Options.RPA = RPA_opt; % Use RPA susceptibilities
+Options.noise = false; % Add white noises to the backgroud
+    nlevel = 37; % signal-to-noise level (dB)
 Options.x1x2 = false; % Plot the matrix elements of the susceptibilities
-Options.trace = false; % Calculate the trace of resonant frequency along field axis
+Options.trace = true; % Calculate the trace of resonant frequency along field axis
 Options.Q_1 = false; % Calculate 1/Q plot along the field axis
 Options.plot = false; % Option to plot data
-Options.savedata = true; % Save results to a file
+Options.savedata = false; % Save results to a file
 Options.savegif = false; % Save a series of color plots as a gif
     saveloc = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\S11 parameters';
     
+location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
+            'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
+filename = ['Hscan_LiHoF4_',sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',analysis.temp,theta,phi,hyp)];
+MF_file = fullfile(location,filename);
+if Options.RPA ==true
+    filename = strcat('RPA_LiHoF4_chi_',sprintf('%1$3.3fK_%2$.2fDeg_%3$.1fDeg_%4$.2e.mat',analysis.temp,theta,phi,gama));
+else
+    filename = strcat('LiHoF4_chi_',sprintf('%1$3.3fK_%2$.2fDeg_%3$.1fDeg_%4$.2e.mat',analysis.temp,theta,phi,gama));
+end
+chi_file = fullfile(location,filename);
+
 alpha = 0.0; % Phase angle (in radians)
 % alpha = [0 pi/6 pi/4 pi/2 pi/3 pi]; % Phase angle (in radians) between coherent and dissipative couplings (can be an array)
 % alpha = linspace(0,pi,20);
 
+chi_labl = ["\chi_{xx}","\chi_{yy}","\chi_{zz}"]; % label for diagonal elements of susceptibility tensor
+chi_elem = [0 0 0
+            0 0 0
+            0 0 1]; % choose which tensorial element of susceptibility to use
+chi_idx = find(chi_elem); % index of chi element choice.
+
 if Options.RPA == true
 %     scale = 2.1; % MF-RPA scaling factor
-    scale = 1.5; % MF-RPA scaling factor
+    scale = 2.5; % MF-RPA scaling factor
 else
-    scale = 2.3; % MF scaling facto
+%     scale = 2.3; % MF scaling factor
+    scale = 2.8; % MF scaling factor
 end
 % Filling factor:  %SC108: 0.112, SC200: 0.0127
 filFctr = 0.0127*scale; % SC200
@@ -85,42 +106,44 @@ filFctr = 0.0127*scale; % SC200
 % Cavity loss rates
 % kappa_i = 7.69e-4; % SC200: 2020_10_0009.dat
 % kappa_e = 9.34e-4; % SC200: 2020_10_0009.dat
-% kappa_i = 4.99e-4; % SC200: 2020_11_0032.dat
-% kappa_e = 4.85e-4; % SC200: 2020_11_0032.dat
+% kappa_i = 2.64e-4; % SC200: 2020_11_0031.dat
+% kappa_e = 7.02e-4; % SC200: 2020_11_0031.dat
+% kappa_i = 1.07e-4; % SC200: 2020_11_0032.dat
+% kappa_e = 8.16e-4; % SC200: 2020_11_0032.dat
 
 % kappa_i = 5.74e-4; % SC239: 2021_06_0040.dat
 % kappa_e = 3.66e-4; % SC239: 2021_06_0040.dat
-% kappa_i = 5.91e-4; % SC239: 2021_07_0004.dat
-% kappa_e = 4.02e-4; % SC239: 2021_07_0004.dat
+% kappa_i = 3.81e-4; % SC239: 2021_07_0003.dat
+% kappa_e = 5.56e-4; % SC239: 2021_07_0003.dat
 
 % kappa_i = 1.77e-4; % SC127_1
 % kappa_e = 6.92e-4; % SC127_1
-% kappa_i = 3.60e-4; % SC108
-% kappa_e = 6.19e-4; % SC108
-kappa_i = 3.00e-4; % SC107
-kappa_e = 2.00e-4; % SC107
+% kappa_i = 1.15e-4; % SC108
+% kappa_e = 8.18e-4; % SC108
+kappa_i = 2.91e-4;
+kappa_e = 4.02e-4;
 
 % field parameters
 field_l = 0;
-field_h = 17;
-field_pts = 801; % number of points along field axis
-field = linspace(field_l,field_h,field_pts); % sampling points along field axis
+field_h = 6;
+field_pts = 1001; % number of points along field axis
+field = linspace(field_l,field_h,field_pts); % Only applies when calculating from scratch
 
-dE = -0.0;
 % frequency parameters
-% wc = 4.73532; % Fundamental mode of the cavitya
-wc = 3.642+dE;
+dE = -0.0;
+wc = 4.757 +dE; % Fundamental mode of the cavity
+% wc = 3.643+dE;
 % w2 = 4.2; % Second mode of the cavity
 gw0 = sqrt(mu0*wc*10^9*2*pi*rho*filFctr/hbar/2); % susceptibility prefactor [T.(J.s)^-1]
 gw0 = gw0 * meV2J * f2E * 10^-9; % [T]
 % gw0 = filFctr^2*wc^2; % Phys.Rev.Appl. 2, 054002 (2014)
 
-% freq_l = 4.710;
-% freq_h = 4.745;
-freq_l = 3.55+dE;
-freq_h = 3.73+dE;
+freq_l = 4.715;
+freq_h = 4.775;
+% freq_l = wc-0.1;
+% freq_h = wc+0.1;
 freq_pts = 2001; % number of points along frequency axis
-freq = linspace(freq_l,freq_h,freq_pts); % frequency range
+freq = linspace(freq_l,freq_h,freq_pts); % Only applies when calculating from scratch
 
 if Options.savegif == true
 %     im_t = numel(alpha); % a series with varying phase angle
@@ -129,121 +152,162 @@ if Options.savegif == true
     S11_frame = []*im_t;
 end
 
-switch Options.simType
-    case 1 % Option 1: Perturbative treatment of resonant frequency
-        beta = 1/(analysis.temp*kB);
-        g = 0.001; % Coupling strength measured against the ground state energy
-        % g = 0.01*wc;
-        lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$uDeg',analysis.temp,theta),'.mat'];
-        file = fullfile(location,lname);
-        load(file,'-mat','eee','fff');
-        fields = vecnorm(fff);
-        E(:,:)=squeeze(eee)/f2E;
-        %E(:,:) = eee(:,1,:)/f2E;
-        Ediff = double.empty(7,size(E,1),0);
-        bzF = double.empty(size(Ediff,1),size(fields,2),0);
-        for ii = 1:7
-            Ediff(ii,:,1)=E(:,ii+1)-E(:,ii);
-            bzF(ii,:,1) = exp(-Ediff(ii,:)*beta); % Boltzmann factor for each transition line
-        end
-        
-        %Optional: Plot the lowest eight energy levels
-        if Options.Elevel == true
-            color = ["black","red","blue","magenta","green","yellow","cyan"];
-            theta = [0]; % Angle (in degrees) in the transverse field plane
-            marker = [":","-.","--","-"];
-            figure
-            hold on
-            plot(fields,E(:,1:8),'Color',[35 107 142]/255,'linewidth',2);
-            set(gca,'fontsize',15);
-            % text(8,(j-1)*D+0.02,'0.1');
-            %         set(fig1,'position',[100 100 600 300])
-            xlabel('Field (T)','FontSize',15)
-            ylabel('Energy (GHz)','FontSize',15)
-            grid off
-            box on;
-            xlim([0 9]);
-%            ylim([2 5]);
-            tit1='Energy levels';
-            title(tit1,'FontSize',15)
-            legend(num2str(analysis.temp*1000,'T = %u mK,  A = A_{th}'))
-        end
-        
-        % Optional: Energy difference bewteen neighbour levels
-        if Options.Ediff == true
-            figure
-            hold on
-            figs(:, iter2) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle',marker(1), 'Color',color(iter2),'LineWidth',1.5);
-            hold on
-%             lg(iter, iter2) = [num2str(analysis.temp(iter)*1000,"T = %u mK, A = A_{th}"),num2str(theta(iter2),", theta = %u")];
-            set(gca,'fontsize',15,'Xtick',0:1:max(fields));
-            xlabel('Field (T)','FontSize',15);
-            ylabel('Energy difference (GHz)','FontSize',15);
-            grid off
-            box on;
-%            xlim([min(fields) max(fields)]);
-%            ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
-            title('Difference between energy levels','FontSize',15);
-        end
-        % Calculate perturbed discpersion relations
-        
-        w = double.empty(size(Ediff,1)+1,size(field,2),0); % eigen-frequencys
-        % boltFac = double.empty(size(Ediff,1),size(field,2),0); % Boltzmann factor
-        temp_Ediff = double.empty(size(Ediff,1),size(field,2),0);
-        w(1,:,1) = wc;
-        for ii = 2:size(Ediff,1)+1
-            w(ii,:) = interp1(fields,Ediff(ii-1,:),field);
-            temp_Ediff(ii-1,:,1) = interp1(fields,Ediff(ii-1,:),field);
-            %     boltFac(ii-1,:,1) = interp1(fields,bzF(ii-1,:),field);
-        end
-        Ediff = temp_Ediff;
-        clearvars temp_Ediff
-        
-        % Construct interaction Hamiltonian along magnetic field axis
-        ww = double.empty(0,size(Ediff,1)+1,size(field,2));
-        for jj = 1:size(field,2)
-            % off diagonal elements (coupling strength)
-            gs = g./abs(wc-w(2:end,jj));
-            %    gs = g./abs(wc-w(2:end,jj)).*(boltFac(:,jj)/max(boltFac(:,jj)));
-            %    gs = g/abs(wc-w(2,jj))*ones(1,size(Ediff,1));
-            %    gs = g/abs(wc-w(2,jj))*ones(1,size(Ediff,1))*(boltFac(:,jj)/max(boltFac(:,jj)));
+while true
+    switch Options.simType
+        case 1 % Option 1: Perturbative treatment of resonant frequency
+            beta = 1/(analysis.temp*kB);
+            g = 0.001; % Coupling strength measured against the ground state energy
+            % g = 0.01*wc;
+            load(MF_file,'-mat','eee','fff');
+            fields = vecnorm(fff);
+            En(:,:)=squeeze(eee)/f2E;
+            %En(:,:) = eee(:,1,:)/f2E;
+            Ediff = double.empty(7,size(En,1),0);
+            bzF = double.empty(size(Ediff,1),size(fields,2),0);
+            for ii = 1:7
+                Ediff(ii,:,1)=En(:,ii+1)-En(:,ii);
+                bzF(ii,:,1) = exp(-Ediff(ii,:)*beta); % Boltzmann factor for each transition line
+            end
             
-            % check point: use to turn off interactions bewteen cavity and certain spin levels
-            %    gs(1:2) = 0;
-            %    gs(1:end-1) = 0;
+            %Optional: Plot the lowest eight energy levels
+            if Options.Elevel == true
+                color = ["black","red","blue","magenta","green","yellow","cyan"];
+                theta = [0]; % Angle (in degrees) in the transverse field plane
+                marker = [":","-.","--","-"];
+                figure
+                hold on
+                plot(fields,En(:,1:8),'Color',[35 107 142]/255,'linewidth',2);
+                set(gca,'fontsize',15);
+                % text(8,(j-1)*D+0.02,'0.1');
+                %         set(fig1,'position',[100 100 600 300])
+                xlabel('Field (T)','FontSize',15)
+                ylabel('Energy (GHz)','FontSize',15)
+                grid off
+                box on;
+                xlim([0 9]);
+    %            ylim([2 5]);
+                tit1='Energy levels';
+                title(tit1,'FontSize',15)
+                legend(num2str(analysis.temp*1000,'T = %u mK,  A = A_{th}'))
+            end
             
-            Ham = diag(w(:,jj));
-            Ham(1,2:end) = gs;
-            Ham(2:end,1) = gs';
-            ww(1,:,jj) = eig(Ham);
-        end
-        % pick out the frequencies along the field axis that is closes to bare frequency of the cavity
-        wn = abs(squeeze(ww)-wc);
-        wc = ww(wn == min(wn,[],1));
-        clearvars wn ww
-        
-        figure
-        plot(field,wc,'--k','linewidth',1);
-        hold on
-        plot(field,Ediff,'-r');
-        xlim([field_l field_h])
-        ylim([freq_l freq_h])
-        
-        wc = repmat(wc,1,size(freq,2)); % expand the resonant frequency to a matrix for calculations in the next step
-        [field,freq] = meshgrid(field,freq);
-    case 2 % Option 2 Load existing susceptibilities and interpolate
-        if Options.Ediff == true
-            filename = ['Hscan_LiHoF4_',sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',analysis.temp,theta,phi,hyp)];
-            file = fullfile(location,filename);
-            if isfile(file)
-                load(file,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
+            % Optional: Energy difference bewteen neighbour levels
+            if Options.Ediff == true
+                figure
+                hold on
+                figs(:, iter2) = plot(fields, Ediff, 'Marker', 'none', 'LineStyle',marker(1), 'Color',color(iter2),'LineWidth',1.5);
+                hold on
+    %             lg(iter, iter2) = [num2str(analysis.temp(iter)*1000,"T = %u mK, A = A_{th}"),num2str(theta(iter2),", theta = %u")];
+                set(gca,'fontsize',15,'Xtick',0:1:max(fields));
+                xlabel('Field (T)','FontSize',15);
+                ylabel('Energy difference (GHz)','FontSize',15);
+                grid off
+                box on;
+    %            xlim([min(fields) max(fields)]);
+    %            ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
+                title('Difference between energy levels','FontSize',15);
+            end
+            
+            % Calculate perturbed discpersion relations
+            w = double.empty(size(Ediff,1)+1,size(field,2),0); % eigen-frequencys
+            % boltFac = double.empty(size(Ediff,1),size(field,2),0); % Boltzmann factor
+            temp_Ediff = double.empty(size(Ediff,1),size(field,2),0);
+            w(1,:,1) = wc;
+            for ii = 2:size(Ediff,1)+1
+                w(ii,:) = interp1(fields,Ediff(ii-1,:),field);
+                temp_Ediff(ii-1,:,1) = interp1(fields,Ediff(ii-1,:),field);
+%                boltFac(ii-1,:,1) = interp1(fields,bzF(ii-1,:),field);
+            end
+            Ediff = temp_Ediff;
+            clearvars temp_Ediff
+
+            % Construct interaction Hamiltonian along magnetic field axis
+            ww = double.empty(0,size(Ediff,1)+1,size(field,2));
+            for jj = 1:size(field,2)
+                % off diagonal elements (coupling strength)
+                gs = g./abs(wc-w(2:end,jj));
+%                 gs = g./abs(wc-w(2:end,jj)).*(boltFac(:,jj)/max(boltFac(:,jj)));
+%                 gs = g/abs(wc-w(2,jj))*ones(1,size(Ediff,1));
+%                 gs = g/abs(wc-w(2,jj))*ones(1,size(Ediff,1))*(boltFac(:,jj)/max(boltFac(:,jj)));
+
+                % check point: use to turn off interactions bewteen cavity and certain spin levels
+%                 gs(1:2) = 0;
+%                 gs(1:end-1) = 0;
+
+                Ham = diag(w(:,jj));
+                Ham(1,2:end) = gs;
+                Ham(2:end,1) = gs';
+                ww(1,:,jj) = eig(Ham);
+            end
+            % pick out the frequencies along the field axis that is closes to bare frequency of the cavity
+            wn = abs(squeeze(ww)-wc);
+            wc = ww(wn == min(wn,[],1));
+            clearvars wn ww
+
+            figure
+            plot(field,wc,'--k','linewidth',1);
+            hold on
+            plot(field,Ediff,'-r');
+            xlim([field_l field_h])
+            ylim([freq_l freq_h])
+
+            wc = repmat(wc,1,size(freq,2)); % expand the resonant frequency to a matrix for calculations in the next step
+            [field,freq] = meshgrid(field,freq);
+            break;
+        case 2 % Option 2 Load existing susceptibilities and interpolate
+            if isfile(MF_file) && isfile(chi_file)
+                load(MF_file,'-mat','eee'); % loads eigenEnergy
+                load(chi_file,'-mat','fields','freq_total','chi');
+                chi_elem = find(chi_elem);
+                x1 = chi(chi_elem);
+                x2 = chi(chi_elem);
+                
+                [field,freq] = meshgrid(fields(1,:),freq_total);
+                sim.freq = freq;
+                sim.field = field;
+                En = squeeze(eee);
+                %% Calculate excitation spectrum
+                if Options.Ediff == true
+                    Ediff = double.empty(0,size(En,1));
+                    for i=1:7 % upper limit = size(En,2)-1
+                        Ediff(i,:) = (En(:,i+1)-En(:,i))/f2E;
+                    end
+                end
+                clearvars fff vvv eee
+                
+                if Options.x1x2 == true
+                    figure;
+                    hp1 = pcolor(fields(1,:),freq,x1);
+                    set(hp1, 'edgeColor','none')
+%                     caxis([-23 2]);
+                    colorbar
+                    xlabel('Magnetic field (T)')
+                    ylabel('Frequency (GHz)')
+                    if Options.RPA == true
+                        title({'Real part of \chi_{zz} with RPA'})
+                    else
+                        title({'Real part of \chi_{zz}'})
+                    end
+                    
+                    figure
+                    hp2 = pcolor(fields(1,:),freq,(x2));
+                    set(hp2, 'edgeColor','none')
+                    colorbar
+                    xlabel('Magnetic field (T)')
+                    ylabel('Frequency (GHz)')
+                    if Options.RPA == true
+                        title({strcat("Imaginary part of ", chi_labl(chi_idx), " with RPA")})
+                    else
+                        title({strcat("Imaginary part of ", chi_labl(chi_idx))})
+                    end
+                end
+                break;
             else % if file not exist, call calculation function first
-                prompt = sprintf('%s doesn`t exist, run calculation and generate the file?\n',filename);
+                prompt = sprintf('Data file doesn`t exist, run calculation and generate the files?\n');
                 answer = input(prompt,'s');
                 switch lower(answer)
                     case {'y','yes'}
-                        LiReF4_MF_Yikai(analysis.temp,field,theta,phi);
-                        load(file,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
+                        Options.simType = 3;
                     case {'n','no'}
                         return
                     otherwise
@@ -251,110 +315,60 @@ switch Options.simType
                         return
                 end
             end
-            E = squeeze(eee);
-            fields = vecnorm(fff);
+        case 3 % Option 3: Calculate susceptabilities for resonant frequency shift (takes long time)
+            LiReF4_MF_Yikai('Ho',analysis.temp,field,theta,phi);
+            MF_RPA_Yikai('Ho',analysis.temp,freq,theta,phi,gama,1,Options.RPA);
+            switch chi_idx
+                case 1
+                    load(chi_file,'-mat','x1x','x2x');
+                    x1 = x1x';
+                    x2 = x2x';
+                case 2
+                    load(chi_file,'-mat','x1y','x2y');
+                    x1 = x1y';
+                    x2 = x2y';
+                case 3
+                    load(chi_file,'-mat','x1z','x2z');
+                    x1 = x1z';
+                    x2 = x2z';
+            end
+            sim.freq = freq;
+            sim.field = field;
             %% Calculate the expecation value of the spin moment
-            %     V = vvv;
-            %     muB = 9.274e-24/meV2J; % [meV/T]
-            %     muN = 3.15245e-5; % [meV/T]
-            %     gLande_Ho = 1.25;
-            %     ELEf = gLande_Ho * muB; 
-            %     NUCf = 1.668 * muN; % gN = 1.668. https://easyspin.org/documentation/isotopetable.html
-            %     % NUCf = 4.173 * 3.15245e-5;   % Nuclear Lande factor, mu/mu_N = 4.173
-            %     % NUCf = 4.732 * 3.1519e-5;   % Original code
-            %     J=8; % Electronic moment for Ho3+
-            %     I=3.5; % Nuclear moment for Ho3+
-            %     %Initiate J operators
-            %     Jz=diag(J:-1:-J); % Jz = -J, -J+1,...,J-1,J
-            %     Jzh=kron(Jz,eye(2*I+1)); % Expand Jz space to include nuclear degree of freedom
-            % %     Iz=diag(I:-1:-I); %Iz = -I, -I+1,...,I-1,I
-            % %     Izh=kron(eye(2*J+1),Iz); % Expand Hilbert space
-            %     Jz_exp = double.empty(0,length(fields(1,:)));
-            % %     JIz_exp = double.empty(0,length(fields(1,:)));
-            %     for kk = 1:length(fields(1,:)) % calculate susceptibility for all fields
-            %         v = squeeze(squeeze(V(kk,:,:,:))); % Obtain the corresponding eigen vectors
-            %         JzhT = Jzh * ELEf;
-            % %         IzhT = Izh * NUCf;
-            %         tz = v'  * JzhT * v;
-            % %         ttz  = v'  * (JzhT+IzhT) * v;
-            % %         Jz_exp(1,kk) = sqrt(sum(sum((tz) .* (tz.'))));
-            %         Jz_exp(1,kk) = real(sum(diag(tz)));
-            % %         JIz_exp(1,kk) = sqrt(sum(sum((ttz) .* (ttz.'))));
-            % %         JIz_exp(1,kk) = real(sum(diag(ttz)));
-            %     end
-            %     Jz_exp = interp1(fields,Jz_exp,field);
-            % %     JIz_exp = interp1(fields,JIz_exp,field);
-            %% interpolate the dispersion relation along field axis
-            Ediff = double.empty(0,size(E,1));
-            for i=1:7 % upper limit = size(E,2)-1
-                Ediff(i,:) = (E(:,i+1)-E(:,i))/f2E;
-            end
-            temp_Ediff = double.empty(size(Ediff,1),size(field,2),0);
-            for ii = 1:size(Ediff,1)
-                temp_Ediff(ii,:,1) = interp1(fields,Ediff(ii,:),field);
-            end
-            Ediff = temp_Ediff;
-        end
-        clearvars temp_Ediff fff vvv eee
-        
-        % Load the susceptibilities from MF-linear response calculations
-        if Options.RPA ==true
-            filename = strcat('RPA_LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$.2fDeg_%3$.1fDeg_%4$.2e.mat',analysis.temp,theta,phi,gama));
-%            filename = 'chi125mK_17e-5meV.mat';
-        else
-            filename = strcat('LiHoF4_x1z_x2z_',sprintf('%1$3.3fK_%2$.2fDeg_%3$.1fDeg_%4$.2e.mat',analysis.temp,theta,phi,gama));
-        end
-        file = fullfile(location,filename);
-        load(file,'-mat','fields','freq_total','x1z','x2z');
-%         load(file,'-mat','fields','freq_total','x1x','x2x');
-%         load(file,'-mat','fields','freq_total','x1y','x2y');
-        
-        if Options.x1x2 == true
-            figure;
-            hp1 = pcolor(fields(1,:),freq_total,x1z);
-            set(hp1, 'edgeColor','none')
-%            caxis([-23 2]);
-            colorbar
-            xlabel('Magnetic field (T)')
-            ylabel('Frequency (GHz)')
-            if Options.RPA == true
-                title({'Real part of \chi_{zz} with RPA'})
-            else
-                title({'Real part of \chi_{zz}'})
-            end
-            
-            figure
-            hp2 = pcolor(fields(1,:),freq_total,(x2z));
-            set(hp2, 'edgeColor','none')
-            colorbar
-            xlabel('Magnetic field (T)')
-            ylabel('Frequency (GHz)')
-            if Options.RPA == true
-                title({'Imaginary part of \chi_{zz} with RPA'})
-            else
-                title({'Imaginary part of \chi_{zz}'})
-            end
-        end
-        
-        [field,freq] = meshgrid(field,freq);
-        x1 = interp2(fields,freq_total,x1z,field,freq);
-        x2 = interp2(fields,freq_total,x2z,field,freq);
-    case 3 % Option 3: Calculate susceptabilities for resonant frequency shift (takes long time)
-        filename = ['LHF_',num2str(analysis.temp,'%.3f.mat')];
-        file = fullfile(location,filename);
-        load(file,'-mat','eee','vvv','fff'); % loads variables "Energy" and "EigenVector", and "Fields"
-        if ~exist ('x1','var') && ~exist('x2','var')
-            life = 1/0.00005; % define lifetime (meV-1) for hyperfine levels
-            [field, Ediff, x1, x2] = linear_response(eee,fff,ttt,vvv,1/life); % Calculate susceptibilities
-        end
-        x1 = x1';
-        x2 = x2';
-        [field,freq] = meshgrid(field,freq);
-%        wc = wc./(sqrt(1+filFctr.*x1)); % Use only real part of the susceptibility
-%        wc = wc./(sqrt(1+filFctr.*1i*x2)); % Use only imaginary part of the susceptibility
-%        wc = wc./(sqrt(1+filFctr.*(x1+1i*x2)));
+%             load(MF_file,'-mat','eee','vvv','fff','ion'); % loads variables "Energy" and "EigenVector", and "Fields"
+%             V = vvv;
+%             field = vecnorm(fff);
+%             %Initiate J operators
+%             J=8; % Electronic moment for Ho3+
+%             I=3.5; % Nuclear moment for Ho3+
+%             Jz=diag(J:-1:-J); % Jz = -J, -J+1,...,J-1,J
+%             Jzh=kron(Jz,eye(2*I+1)); % Expand Jz space to include nuclear degree of freedom
+%             %     Iz=diag(I:-1:-I); %Iz = -I, -I+1,...,I-1,I
+%             %     Izh=kron(eye(2*J+1),Iz); % Expand Hilbert space
+%             Jz_exp = double.empty(0,length(fields(1,:)));
+%             %     JIz_exp = double.empty(0,length(fields(1,:)));
+%             for kk = 1:length(fields(1,:)) % calculate susceptibility for all fields
+%                 v = squeeze(squeeze(V(kk,:,:,:))); % Obtain the corresponding eigen vectors
+%                 JzhT = Jzh * ELEf;
+%                 %         IzhT = Izh * NUCf;
+%                 tz = v'  * JzhT * v;
+%                 %         ttz  = v'  * (JzhT+IzhT) * v;
+%                 %         Jz_exp(1,kk) = sqrt(sum(sum((tz) .* (tz.'))));
+%                 Jz_exp(1,kk) = real(sum(diag(tz)));
+%                 %         JIz_exp(1,kk) = sqrt(sum(sum((ttz) .* (ttz.'))));
+%                 %         JIz_exp(1,kk) = real(sum(diag(ttz)));
+%             end
+%             Jz_exp = interp1(fields,Jz_exp,field);
+%             % JIz_exp = interp1(fields,JIz_exp,field);
+            break;
+    end
 end
 %% Calculate the spin terms in the denominator without susceptibilities
+%   load(MF_file,'-mat','eee','vvv'); % loads variables "Energy" and "EigenVector", and "Fields"
+%   Ediff = double.empty(0,size(En,1));
+%   for i=1:7 % upper limit = size(En,2)-1
+%      Ediff(i,:) = (En(:,i+1)-En(:,i))/f2E;
+%   end
 %   Gamma = 150*kappa_i; % Coupling strength between the cavity field and the spin system
 %   life = 1/(200*abs(kappa_e)); % define spin level lifetime (meV-1)
 %   % life = 0.0001;
@@ -375,19 +389,22 @@ end
 % S11_2 = 1 + 2*kappa_e./(1i.*(wc-freq) - kappa_i - kappa_e + Gamma.*x2); % Calculate the S11 response using susceptibilites
 %% Simulat S11 using input-output formalism
 for ii = 1:length(alpha) % varying phase angle
-% for ii = 1:length(filFctr) % varying filling factor
-%     chi = filFctr(ii)*(x1+1i*x2); % Coupling strength between the spin system and cavity field
     chi = (x1+1i*x2); % [meV.T^-2]
     S11 = 1 + 2*kappa_e./(1i.*(freq-wc) - (kappa_i + kappa_e) + gw0^2 * 1i*chi * exp(1i*alpha(ii)));
-%     S21_1 = 2*kappa_e./(1i.*(freq-wc) - (kappa_i + kappa_e) + filFctr_1*1i*chi*exp(1i*alpha(ii)));
-%     S21_2 = 2*gamma_e_2./(1i.*(freq-w2) - (gamma_i_2 + gamma_e_2) + 1i*filFctr_2*chi*exp(1i*(alpha(ii))));
+%     S21_1 = kappa_e./(1i.*(freq-wc) - (kappa_i + kappa_e) + filFctr_1*1i*chi*exp(1i*alpha(ii)));
+%     S21_2 = kappa_e_2./(1i.*(freq-w2) - (kappa_i_2 + kappa_e_2) + 1i*filFctr_2*chi*exp(1i*(alpha(ii))));
 %     S21 = abs(S21_1 + S21_2);
+    if Options.noise == true
+        fprintf('Adding white noise (%d dB) to the background.\n',nlevel);
+        S11 = awgn(S11,nlevel,'measured');
+%         S11 = S11 + randn(size(S11))*0.01;
+    end
     sim.S11{ii} = S11;
     if Options.plot == true
         s_para = figure;
         map = pcolor(field,freq,mag2db(abs(S11))); % color plot of the S11 response
 %         map = pcolor(field,freq,mag2db(real(S11))); % color plot of the S11 response        
-        %     map = pcolor(field,freq,mag2db(S21)); % color plot of the S21 response
+%         map = pcolor(field,freq,mag2db(S21)); % color plot of the S21 response
         map.EdgeColor = 'none';
         colorbar
         xlim([field_l field_h])
@@ -445,12 +462,12 @@ for ii = 1:length(alpha) % varying phase angle
             % Calculate quality factor using f0/FWHM
             left = mag(jj,1:idx);
             right = mag(jj,idx:end);
-            [lidx,~] = find(left >= HM, 1, 'last');
+            [chi_idx,~] = find(left >= HM, 1, 'last');
             [ridx,~] = find(right >= HM, 1, 'first');
-            if lidx == idx+ridx-1
+            if chi_idx == idx+ridx-1
                 FWHM(jj) = Inf;
             else
-                FWHM(jj) = freq(idx+ridx-1,1)-freq(lidx,1);
+                FWHM(jj) = freq(idx+ridx-1,1)-freq(chi_idx,1);
             end
         end
         sim.FWHM = FWHM;
@@ -490,14 +507,16 @@ if Options.savegif == true
 end
 
 if Options.savedata == true
-    savename = sprintf('sim_%1$.2fGHz_RPA_S11_%2$.3fK_%3$udeg',wc,temp,phi);
+%     savename = sprintf('sim_%1$.2fGHz_RPA_S11_%2$.3fK_%3$udeg',wc,temp,phi);
+    savename = strcat('S11_LiHoF4_',sprintf('%1$3.3fK_%2$.2fGHz_%3$.2fDeg_%4$.1fDeg_%5$.2e',...
+        analysis.temp,wc,theta,phi,gama));
     
     % save the simulation parameters
-    analysis.wc = wc;
+    analysis.wc0 = wc;
     analysis.alpha = alpha;
-    analysis.kpi = kappa_i;
-    analysis.kpe = kappa_e;
-    analysis.gamma = gama;
+    analysis.kpi0 = kappa_i;
+    analysis.kpe0 = kappa_e;
+    analysis.gamma0 = gama;
     analysis.fil = filFctr;
     analysis.dType = 'sim';
     analysis.RPA = RPA_opt;

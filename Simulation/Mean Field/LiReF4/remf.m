@@ -129,15 +129,18 @@ for iterations=1:NiterMax
         %calculate moments of ions in a meanfield (ie diagonnalize the hamiltonian)
         for i=1:size(ion.name,1)
             if ion.prop(i) > 0 % if the ion exists
-                if ion.hyp(i) > 0 % if there is finite hyperfine interaction
-                 [jx,jy,jz,energies(ionn,:),v] = MF_moments_hyper(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i},ion.A(i),ion.I(i),ion.h4);
-                 ion.mom_hyp(ionn,:,i) = update_moments([jx,jy,jz],evolution.(ion.name_hyp{i}),ionn,iterations);
+                if ion.hyp(i) == 0 % if there is no hyperfine interaction
+                    [jx,jy,jz,energies(ionn,:),v] = MF_moments(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i},ion.h4);
+                    ion.mom(ionn,:,i) = update_moments([jx,jy,jz],evolution.(ion.name{i}),ionn,iterations);
+                else % if there is finite hyperfine interaction
+                    [jx,jy,jz,energies(ionn,:),v] = MF_moments_hyper(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.nLande(i),ion.cf{:,:,i},ion.A(i),ion.I(i),ion.h4);
+                    ion.mom_hyp(ionn,:,i) = update_moments([jx,jy,jz],evolution.(ion.name_hyp{i}),ionn,iterations);
                 end
-                if ion.hyp(i) ~= 1 % if there is partial or no hyperfine interaction
-                 [jx,jy,jz,~,~] = MF_moments(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i},ion.h4);
-%                  [jx,jy,jz,energies(ionn,:),v] = MF_moments(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i},ion.h4);
-                 ion.mom(ionn,:,i) = update_moments([jx,jy,jz],evolution.(ion.name{i}),ionn,iterations);
+                if ion.hyp(i) ~= 1 % if there is only partial hyperfine interaction
+                    [jx,jy,jz,~,~] = MF_moments(hvec,h_mf(i,:),t,ion.J(i),ion.gLande(i),ion.cf{:,:,i},ion.h4);
+                    ion.mom(ionn,:,i) = update_moments([jx,jy,jz],evolution.(ion.name{i}),ionn,iterations);
                 end
+             
             end
         end
 %      E(ionn)=mean(energies(ionn,:)); % Why does it take an arithmetic average of all the energy levels? --Yikai (12.02.2020)
@@ -245,10 +248,10 @@ Ham = Ham + h4*O44*h_dipol(1)^2;
 
 %Diagonalize
 [v,e] = eig(Ham); %in meV
-E = e;
 e = real(diag(e));
-e = e-min(e);
 [e,n] = sort(e);
+energies = e;
+e = e-min(e);
 v = v(:,n);
 % e = e(1:2); % truncate the vasis to form an Ising basis
 % v = v(:,1:2); % truncate the basis to form an Ising basis
@@ -256,28 +259,25 @@ beta = 11.6/t; % [kB*T]^-1 in [meV]
 
 %Calculate Matrixelements and Moments
 if t==0 % At zero temperature, use only lowest eigenvalue.
-    energies = E(1,1);
     jx = real(v(:,1)'*Jx*v(:,1));
     jy = real(v(:,1)'*Jy*v(:,1));
     jz = real(v(:,1)'*Jz*v(:,1));
 else % Boltzman factor (with t in Kelvin)
     % energien korrigieren, damit positiv, sonst NaN Fehler mit exp()
-    e = e-min(e);
     z = exp(-e*beta)/sum(exp(-e*beta)); % Density matrix element
     jx = real(diag(v'*Jx*v))'*z;
     jy = real(diag(v'*Jy*v))'*z;
     jz = real(diag(v'*Jz*v))'*z;
 %     energies=sum(E)*z; % This assignment is very puzzling --Yikai
-    energies = e;
 end
 
 return
 
-function [jx,jy,jz,energies,v] = MF_moments_hyper(hvec,h_dipol,t,J,gLande,Hcf,A,I,h4)
+function [jx,jy,jz,energies,v] = MF_moments_hyper(hvec,h_dipol,t,J,gLande,nLande,Hcf,A,I,h4)
 % With hyperfine coupling
-global muB muN J2meV
+global muB muN J2meV Options
 ELEf = gLande*muB*J2meV;     % Lande factor * Bohr magneton (meV/T)
-NUCf = 1.192 * muN; % gN = mu/mu_N/<I> = 4.173/(7/2)
+NUCf = nLande * muN; % gN = mu/mu_N/<I> = 4.173/(7/2)
 % NUCf = 1.668 * muN;  % http://easyspin.org/documentation/isotopetable.html
 
 %Initiate J operators
@@ -303,12 +303,17 @@ Iyh = (Iph-Imh)/2i;
 
 %Calculate Hamiltonian
 Hzeeman = -ELEf*(hvec(1)*Jxh + hvec(2)*Jyh + hvec(3)*Jzh); % Electron Zeeman interaction
-HzeemanI = -NUCf*(hvec(1)*Ixh + hvec(2)*Iyh + hvec(3)*Izh); % Nuclear Zeeman interaction
 Hyper = A*(Ixh*Jxh + Iyh*Jyh + Izh*Jzh); % hyperfine interaction
 HvM =  -(h_dipol(1)*Jxh + h_dipol(2)*Jyh + h_dipol(3)*Jzh); % virtual mean field
-Ham = Hcfh + Hzeeman + HzeemanI  + Hyper + HvM;
-% Ham = Hcfh + Hzeeman + Hyper + HvM;
-% Ham = Hcfh + Hzeeman + HzeemanI  + Hyper + A*(Izh*Jzh);
+
+if Options.nZee == true 
+    HzeemanI = -NUCf*(hvec(1)*Ixh + hvec(2)*Iyh + hvec(3)*Izh); % Nuclear Zeeman interaction
+    Ham = Hcfh + Hzeeman + HzeemanI  + Hyper + HvM;
+    % Ham = Hcfh + Hzeeman + HzeemanI  + Hyper + A*(Izh*Jzh);
+else
+    Ham = Hcfh + Hzeeman + Hyper + HvM;
+    % Ham = Hcfh + Hzeeman + Hyper + A*(Izh*Jzh);
+end
 
 % introduce order by disorder anisotropy
 O44c = (Jph^4+Jmh^4)/2;
@@ -319,12 +324,12 @@ Ham = Ham + h4*O44c*h_dipol(1)^2;
 e = real(diag(e)); % Take only the real part of the eigen-energy to form a diaganol matrix
 [e,n] = sort(e); % sort the energy from lowest to the highest
 v = v(:,n); % sort the eigen-vectors in its basis accordingly
+energies = e;
 e = e-min(e); % Normalize the energy amplitude to the lowest eigen-energy
 beta = 11.6/t; % [kB*T]^-1 in [meV]
 
 %Calculate Matrix elements and Moments
 if t==0 
-    energies = e;
     % energies=e(1,1); % At zero temperature, use only lowest eigenvalue.
     jx = real(v(:,1)'*Jxh*v(:,1));
     jy = real(v(:,1)'*Jyh*v(:,1));
@@ -336,7 +341,6 @@ else % Boltzman factor (with t in Kelvin)
     jy = real(diag(v'*Jyh*v))'*z;
     jz = real(diag(v'*Jzh*v))'*z;
 %     energies = sum(E)*z; % this is a puzzling assignment (Yikai)
-    energies = e;
 end
 
 return

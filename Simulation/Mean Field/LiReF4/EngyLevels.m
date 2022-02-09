@@ -3,9 +3,9 @@ function EngyLevels
 % hold on
 clearvars
 % temp =  [1.774 1.776 1.778 1.780 1.781 1.782 1.783 1.784 1.785 1.787];
-temp = 0.15;
-theta = [0.02]; % Angle (in degrees) between magnetic field and c-axis in a-c plane
-phi = [33]; % Angle (in degrees) in a-b plane
+temp = 0.13;
+theta = 0.02; % Angle (in degrees) between magnetic field and c-axis in a-c plane
+phi = 17; % Angle (in degrees) in a-b plane
 N_level = 7; % Number of transition levels to plot
 
 Options.ion = 'Ho'; % support 'Er' and 'Ho'
@@ -14,6 +14,7 @@ Options.RPA = false; % not enabled yet
 Options.Js = false;
 Options.Elevel = false;
 Options.Ediff = true;
+    Options.deltaI2 = false; % Transitions between the next nearest neightbouring levels
 Options.Espan = false;
 Options.savedata = false;
 Options.savegif = false;
@@ -27,7 +28,7 @@ color = ["black","red","blue","magenta","green","yellow","cyan"];
 lg = strings(1,numel(theta),numel(phi)); % Create an empty array for legends
 figs_E = gobjects(N_level+1,numel(theta),numel(phi));
 figs_dE = gobjects(N_level,numel(theta),numel(phi));
-figs_dE2 = gobjects(N_level-1,numel(theta),numel(phi));
+if Options.deltaI2; figs_dE2 = gobjects(N_level-1,numel(theta),numel(phi)); end
 if Options.savegif == true
     im_t = numel(temp)*numel(theta)*numel(phi);
     im_idx = 1;
@@ -56,27 +57,27 @@ for iter = 1:numel(temp)
             E(:,:)=squeeze(eee)*E2f;
             %E(:,:) = eee(:,1,:)*E2F;
             Ediff = double.empty(0,size(E,1));
-            Ediff2 = double.empty(0,size(E,1));
-            %% Deviation of the energy from the mean value
-            %             aver = double.empty(size(E,1),0);
-            %             E8=E(:,1:8);
-            %             for j=1:size(E,1)
-            %                 aver(j)=mean(E8(j,:));
-            %             end
-            %             for j=1:8
-            %                 E8(:,j)=E8(:,j)-aver(:);
-            %             end
-            %             clearvars aver
-            %
-            %             figure
-            %             hold on
-            %             plot(fields,E8(:,1:8),'Color',[35 107 142]/255,'linewidth',2);
-            %             xlabel('Field (T)','FontSize',15)
-            %             ylabel('Energy (GHz)','FontSize',15)
-            %             xlim([0 9]);
-            %             tit0='Energy spread from the mean value';
-            %             title(tit0,'FontSize',15)
-            %             legend(num2str(temp(iter)*1000,'T = %u mK,  A = A_{th}'))
+            if Options.deltaI2; Ediff2 = double.empty(0,size(E,1)); end
+%% Deviation of the energy from the mean value
+%             aver = double.empty(size(E,1),0);
+%             E8=E(:,1:8);
+%             for j=1:size(E,1)
+%                 aver(j)=mean(E8(j,:));
+%             end
+%             for j=1:8
+%                 E8(:,j)=E8(:,j)-aver(:);
+%             end
+%             clearvars aver
+%
+%             figure
+%             hold on
+%             plot(fields,E8(:,1:8),'Color',[35 107 142]/255,'linewidth',2);
+%             xlabel('Field (T)','FontSize',15)
+%             ylabel('Energy (GHz)','FontSize',15)
+%             xlim([0 9]);
+%             tit0='Energy spread from the mean value';
+%             title(tit0,'FontSize',15)
+%             legend(num2str(temp(iter)*1000,'T = %u mK,  A = A_{th}'))
             %% Plot the lowest eight energy levels
             if Options.Elevel == true
                 fig_E = figure;
@@ -89,7 +90,6 @@ for iter = 1:numel(temp)
                 ylabel('Energy (GHz)','FontSize',15)
                 grid off
                 box on;
-%                 ylim([0 10]);
                 tit1='Energy levels';
                 title(tit1,'FontSize',15)
                 legend(num2str(temp(iter)*1000,'T = %u mK,  A = A_{th}'))
@@ -103,7 +103,9 @@ for iter = 1:numel(temp)
             if Options.Ediff == true
                 for i=1:N_level-1 % Up until the second from top level
                     Ediff(i,:) = E(:,i+1)-E(:,i); % Transition between the nearest neighbouring levels
-%                     Ediff2(i,:) = E(:,i+2)-E(:,i); % Transition between the next nearest neighbouring levels
+                    if Options.deltaI2
+                        Ediff2(i,:) = E(:,i+2)-E(:,i); % Transition between the next nearest neighbouring levels
+                    end
                 end
                 Ediff(N_level,:) = E(:,N_level+1)-E(:,N_level); % Transition between the top two levels
                 
@@ -112,34 +114,36 @@ for iter = 1:numel(temp)
                 % Plot transitions between the nearest levels
 %                 figure;
                 hold on
-                figs_dE(1, iter2, iter3) = plot(fields, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
+                figs_dE(1, iter2, iter3) = plot(fields, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'b','LineWidth',1.5);
                 if N_level > 1
-                    figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
-%                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color','b','LineWidth',1.5);
+%                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
+                    figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color','w','LineWidth',1.5);
 %                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1),'LineWidth',1.5);
                 end
                 
 %                 % Plot transitions between the next nearest levels
-%                 figs_dE2(1, iter2, iter3) = plot(fields, Ediff2(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
-%                 if N_level > 2
-%                     figs_dE2(2:end, iter2, iter3) = plot(fields, Ediff2(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
-%                 end
+                dif Options.deltaI2
+                    figs_dE2(1, iter2, iter3) = plot(fields, Ediff2(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
+                    if N_level > 2
+                        figs_dE2(2:end, iter2, iter3) = plot(fields, Ediff2(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
+                    end
 
-%                 hpcfr1 = plot(fields, Ediff,'Color','blue','linewidth',2);
-%                 hpcfr1 = plot(fields, Ediff(2:end,:),'Color','black','linewidth',2);
-%                 hpcfr1 = plot(fields, Ediff,'Color',[35 107 142]/255,'linewidth',2,'LineStyle','-');
-%                 legend(num2str(temp(iter),'T = %.2f K, A = A_{th}'),num2str(temp(iter),'T = %.2f K, A = A_{th}'))
-%                 
-%                 % Plot the resonant frequency of a bare cavity
-%                 f_cav = 3.54; % Set resonant frequency of the bare cavity
-%                 plot([0 max(fields)],[f_cav f_cav],'-r','LineWidth',1.5);
-                
-%                 yyaxis(gca,'left');
+                    hpcfr1 = plot(fields, Ediff,'Color','blue','linewidth',2);
+%                     hpcfr1 = plot(fields, Ediff(2:end,:),'Color','black','linewidth',2);
+%                     hpcfr1 = plot(fields, Ediff,'Color',[35 107 142]/255,'linewidth',2,'LineStyle','-');
+                    legend(num2str(temp(iter),'T = %.2f K, A = A_{th}'),num2str(temp(iter),'T = %.2f K, A = A_{th}'))
+
+                    % Plot the resonant frequency of a bare cavity
+                    f_cav = 3.54; % Set resonant frequency of the bare cavity
+                    plot([0 max(fields)],[f_cav f_cav],'-r','LineWidth',1.5);
+
+                    yyaxis(gca,'left');
+                    xticks(linspace(0.1,max(fields),10))
+%                     text(8,(j-1)*D+0.02,'0.1');
+                    set(figs_dE2,'position',[800 100 600 300]);
+                end
                 set(gca,'fontsize',15,'Xtick',0:1:max(fields));
                 set(gca,'XTickLabelRotation',0)
-%                 xticks(linspace(0.1,max(fields),10))
-%                 text(8,(j-1)*D+0.02,'0.1');
-%                 set(fig4,'position',[800 100 600 300]);
                 xlabel('Magnetic Field (T)','FontSize',15);
                 ylabel('Energy gap (GHz)','FontSize',15);
                 grid off

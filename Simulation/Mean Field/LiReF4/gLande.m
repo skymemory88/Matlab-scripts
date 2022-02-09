@@ -1,4 +1,4 @@
-function [gLande]=gLande(L,S)
+function [gLande] = gLande(L,S)
 
 J=L+S;
 
