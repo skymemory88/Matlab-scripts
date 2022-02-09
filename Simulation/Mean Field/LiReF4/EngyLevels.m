@@ -122,7 +122,7 @@ for iter = 1:numel(temp)
                 end
                 
 %                 % Plot transitions between the next nearest levels
-                dif Options.deltaI2
+                if Options.deltaI2
                     figs_dE2(1, iter2, iter3) = plot(fields, Ediff2(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
                     if N_level > 2
                         figs_dE2(2:end, iter2, iter3) = plot(fields, Ediff2(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);

@@ -63,7 +63,7 @@ Options.noise = false; % Add white noises to the backgroud
 Options.x1x2 = false; % Plot the matrix elements of the susceptibilities
 Options.trace = true; % Calculate the trace of resonant frequency along field axis
 Options.Q_1 = false; % Calculate 1/Q plot along the field axis
-Options.plot = false; % Option to plot data
+Options.plot = true; % Option to plot data
 Options.savedata = false; % Save results to a file
 Options.savegif = false; % Save a series of color plots as a gif
     saveloc = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\S11 parameters';
@@ -83,10 +83,12 @@ alpha = 0.0; % Phase angle (in radians)
 % alpha = [0 pi/6 pi/4 pi/2 pi/3 pi]; % Phase angle (in radians) between coherent and dissipative couplings (can be an array)
 % alpha = linspace(0,pi,20);
 
-chi_labl = ["\chi_{xx}","\chi_{yy}","\chi_{zz}"]; % label for diagonal elements of susceptibility tensor
+chi_labl = ["\chi_{xx}","\chi_{xy}","\chi_{xz}"
+            "\chi_{yz}","\chi_{yy}","\chi_{yz}"
+            "\chi_{zx}","\chi_{zy}","\chi_{zz}"]; % element label of susceptibility tensor
 chi_elem = [0 0 0
             0 0 0
-            0 0 1]; % choose which tensorial element of susceptibility to use
+            0 0 1]; % tensorial element of susceptibility to use
 chi_idx = find(chi_elem); % index of chi element choice.
 
 if Options.RPA == true
@@ -258,9 +260,11 @@ while true
             if isfile(MF_file) && isfile(chi_file)
                 load(MF_file,'-mat','eee'); % loads eigenEnergy
                 load(chi_file,'-mat','fields','freq_total','chi');
+                chi = reshape(chi,[],size(chi,3),size(chi,4));
+                
                 chi_elem = find(chi_elem);
-                x1 = chi(chi_elem);
-                x2 = chi(chi_elem);
+                x1 = real(squeeze(chi(chi_elem,:,:)));
+                x2 = imag(squeeze(chi(chi_elem,:,:)));
                 
                 [field,freq] = meshgrid(fields(1,:),freq_total);
                 sim.freq = freq;
