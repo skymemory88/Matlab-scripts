@@ -1,4 +1,4 @@
-function  MF_RPA_Yikai(mion,dscrt_var,freq_total,theta,phi,gama,hyp,RPA_mode)
+function  MF_RPA_Yikai(mion,scanMode,dscrt_var,freq_total,theta,phi,gama,hyp,RPA_mode)
 % Current version assumes complete symmetrical equivalence among the four spin moments per unit cell
 % mion: Magnetic ion type: 'Er', 'Ho'
 % dscrt_var: discrete variable, can be temperature of field.
@@ -12,7 +12,7 @@ function  MF_RPA_Yikai(mion,dscrt_var,freq_total,theta,phi,gama,hyp,RPA_mode)
 Options.plotting = false; % Decide whether or not to plot the data at the end
 Options.meV = false; % Energy unit choice: meV or GHz (default)
 Options.saving = true; % Options to save the susceptibility tensors
-Options.scanMode = 'temp'; % 1. Field plot with RPA; 2. Temp plot with RPA; 2. wavevector plot with RPA
+Options.scanMode = scanMode; % 1. Field plot with RPA; 2. Temp plot with RPA; 2. wavevector plot with RPA
 Options.RPA = RPA_mode; % Apply random phase approximation (RPA) correction
     Qplot = false; % k-dependent plot for RPA susceptibilities
     if Qplot == true
@@ -36,25 +36,7 @@ if Options.RPA == false
 end
 clearvars -except dscrt_var theta phi gama Options mion freq_total hyp qvec contnu_var0 Qplot
 
-global gL ELEf NUCf dip_range ex_range muB J2meV mu0 f2E ionJ ionI lattice
-switch mion  % set magnetic element [Er, Ho, Yb, Tm, Gd, Y]
-    case 'Er'
-        prop(1) = 1; % LiErF4
-    case 'Ho'
-        prop(2) = 1; % LiHoF4
-    case 'Yb'
-        prop(3) = 1; % LiTbF4
-    case 'Tm'
-        prop(4) = 1; % LiTmF4
-    case 'Gd'
-        prop(5) = 1; % LiGdF4
-    case 'Y'
-        prop(6) = 1; % LiYF4
-    case 'dope' % to be written
-        prop(1) = 0.3; % doping percentage [Er, Ho, Yb, Tm, Gd, Y]
-        prop(2) = 1-prop(1);
-end
-elem_idx = find(prop);
+global dip_range ex_range muB J2meV mu0 f2E elem_idx ELEf NUCf
 % Declare physical constants as global for consistency
 hbar = 1.055E-34; % Reduced Planck constant [J.s]
 muN = 3.15245e-5; % Nuclear magneton [meV/T]
@@ -76,12 +58,11 @@ for ii = 1:length(dscrt_var)
                 filename = strcat(['Hscan_Li',mion,'F4_'], sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
                 file = fullfile(location,filename);
                 load(file,'-mat','eee','fff','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
-                save_name1 = strcat('Li',mion,'F4_chi_',sprintf('%1$3.3fK_%2$.2fDeg_%3$.1fDeg_%4$.2e.mat', ttt, theta, phi, gama));
-                save_name2 = strcat('RPA_Li',mion,'F4_chi_',sprintf('%1$3.3fK_%2$.2fDeg_%3$.1fDeg_%4$.2e.mat', ttt, theta, phi,gama));
-                eee = eee - min(eee,[],2); % Normalize the energies against the ground state energy
-%                 ttt = 0; % To account for only the lowest eigen-state contributiont
-%                 fields = fields(fields <= 5); % Truncate the field range
+                file_part = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e.mat', dscrt_var(ii), theta, phi, gama);
                 continu_var = vecnorm(fff,2,1); % choose the continuous variable to be field
+                % ttt = 0; % To account for only the lowest eigen-state contributiont
+                % continu_var = continu_var(continu_var <= 5); % Truncate the field range
+                ttt = repelem(ttt,length(continu_var));
                 ipt = true;
                 fprintf('Calculating for T = %.3f K.\n', dscrt_var(ii));
             case 'temp'
@@ -90,11 +71,7 @@ for ii = 1:length(dscrt_var)
                 filename = strcat(['Tscan_Li',mion,'F4_'], sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
                 file = fullfile(location,filename);
                 load(file,'-mat','eee','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
-                save_name1 = strcat('Li',mion,'F4_chi_',sprintf('%1$3.3fT_%2$.2fDeg_%3$.1fDeg_%4$.2e.mat', dscrt_var(ii), theta, phi, gama));
-                save_name2 = strcat('RPA_Li',mion,'F4_chi_',sprintf('%1$3.3fT_%2$.2fDeg_%3$.1fDeg_%4$.2e.mat', dscrt_var(ii), theta, phi,gama));
-                eee = eee - min(eee,[],2); % Normalize the energies against the ground state energy
-%                 ttt = 0; % To account for only the lowest eigen-state contributiont
-%                 fields = fields(fields <= 5); % Truncate the field range
+                file_part = sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_%4$.2e.mat', dscrt_var(ii), theta, phi, gama);
                 continu_var = ttt; % choose the continuous variable to be temperature
                 ipt = true;
                 fprintf('Calculating for B = %.3f T.\n', dscrt_var(ii));
@@ -108,11 +85,12 @@ for ii = 1:length(dscrt_var)
                 end
         end
     end
-    ionJ = ion.J(elem_idx); % Gd
-    ionI = ion.I(elem_idx); % Gd
-    gL = ion.gLande(elem_idx);
-    lattice = ion.abc{elem_idx};
-    ELEf = gL*muB*J2meV; % Lande factor * Bohr magneton (meV/T)
+    eee = eee - min(eee,[],2); % Normalize the energies against the ground state energy
+    save_name1 = strcat('chi0_Li',mion,'F4_',file_part);
+    save_name2 = strcat('RPA_Li',mion,'F4_',file_part);
+    
+    elem_idx = find(ion.prop);  
+    ELEf = ion.gLande(elem_idx) * muB * J2meV; % Lande factor * Bohr magneton (meV/T)
     NUCf = ion.nLande(elem_idx) * muN;
     eigenE = eee; % load eigenenergy
 %     eigenE(:,9:end) = 0; % truncate the Hilbert space
@@ -128,7 +106,7 @@ for ii = 1:length(dscrt_var)
             eigenE = eee(bidx,:);
             continu_var = continu_var(bidx);
         end
-        [continu_var, freq_total, chi, ~] = linear_response(eigenE,continu_var,freq_total,ttt,eigenW,gama);
+        [continu_var, freq_total, chi, ~] = linear_response(ion,eigenE,continu_var,freq_total,ttt,eigenW,gama);
         [continu_var, freq_total, chiq_J ] = RPA(qvec, continu_var, freq_total, ion, chi.ionJ); % Electronic susceptibilities
         [continu_var, freq_total, chiq_IJ] = RPA(qvec, continu_var, freq_total, ion, chi.IJ); % cross term
         [continu_var, freq_total, chiq_I ] = RPA(qvec, continu_var, freq_total, ion, chi.ionI); % Nuclear susceptibilities
@@ -139,7 +117,7 @@ for ii = 1:length(dscrt_var)
 %         chiq = ELEf^2*chiq.ionJ; % Electron susceptibility only
 %         chiq = NUCf^2*chiq.ionI; % Nuclear susceptibility only
     else
-        [continu_var, freq_total, chi, ~] = linear_response(eigenE,continu_var,freq_total,ttt,eigenW,gama);
+        [continu_var, freq_total, chi, ~] = linear_response(ion,eigenE,continu_var,freq_total,ttt,eigenW,gama);
     end
     chi0 = ELEf^2*chi.ionJ + 2*ELEf*NUCf*chi.IJ + NUCf^2*chi.ionI; % Full electronuclear susceptibility expansion
 %     chi0 = ELEf^2*chi0.ionJ + 2*ELEf*NUCf*chi0.IJ; % Electron susceptibility + the cross term
@@ -199,8 +177,19 @@ indx = [strcat(fig_tit,"^{xx}") strcat(fig_tit,"^{yy}") strcat(fig_tit,"^{zz}")]
 if Qplot == true
     qvec = qvec(:,3); % use qz
     for ii = 1:size(continu_var,2)
+        switch Options.scanMode
+            case 'field'
+                file_part1 = sprintf('T = %.3f K. and ', dscrt_var);
+                file_part2 = sprintf('B = [%1$.2f %2$.2f %3$.2f] T.',continu_var(1,ii),continu_var(2,ii),continu_var(3,ii));
+            case 'temp'
+                file_part1 = sprintf('B = %.3f T. and ', dscrt_var);
+                file_part2 = sprintf('B = [%1$.2f %2$.2f %3$.2f] T.',continu_var(1,ii),continu_var(2,ii),continu_var(3,ii));
+            otherwise
+                disp("Unknow scan mode!")
+                return
+        end
         for jj = 3 % plot only chi_zz component
-            %           for jj = 1:3
+            % for jj = 1:3
             % Color plot the imaginary part of the susceptibilities of z component
             fig(1) = figure;
             set(fig(1),'position',pos0 + (jj-1)*pos_inc);
@@ -210,6 +199,7 @@ if Qplot == true
             caxis([0 100]);
             colorbar
             legend(['\gamma =' num2str(gama,'%.2e meV')]);
+            title(['Re[', char(indx(jj)), '] at ', file_part1, file_part2])
             xlabel(sprintf('Q = [h, 0, 0]'))
             ylabel('Frequency (GHz)')
             if Options.meV == true
@@ -224,30 +214,29 @@ if Qplot == true
             caxis([0 100]);
             colorbar
             legend(['\gamma =' num2str(gama,'%.2e meV')]);
+            title(['Im[', char(indx(jj)), '] at ', file_part1, file_part1])
             xlabel(sprintf('Q = [h, 0, 0]'))
             ylabel('Frequency (GHz)')
             if Options.meV == true
                 ylabel('Energy (meV)')
             end
-            switch Options.scanMode
-                case 'field'
-                    figure(fig(1))
-                    title(['Re[', char(indx(jj)), '] at ',sprintf('T = %.3f K. and ', dscrt_var),sprintf('B = [%1$.2f %2$.2f %3$.2f] T.',continu_var(1,ii),continu_var(2,ii),continu_var(3,ii))])
-                    figure(fig(2))
-                    title(['Im[', char(indx(jj)), '] at ',sprintf('T = %.3f K. and ', dscrt_var),sprintf('B = [%1$.2f %2$.2f %3$.2f] T.',continu_var(1,ii),continu_var(2,ii),continu_var(3,ii))])
-                case 'temp'
-                    figure(fig(1))
-                    title(['Re[', char(indx(jj)), '] at ',sprintf('B = %.3f T. and ', dscrt_var),sprintf('B = [%1$.2f %2$.2f %3$.2f] T.',continu_var(1,ii),continu_var(2,ii),continu_var(3,ii))])
-                    figure(fig(2))
-                    title(['Im[', char(indx(jj)), '] at ',sprintf('B = %.3f T. and ', dscrt_var),sprintf('B = [%1$.2f %2$.2f %3$.2f] T.',continu_var(1,ii),continu_var(2,ii),continu_var(3,ii))])
-                otherwise
-                    disp("Unknow scan mode!")
-                    return
-            end
         end
     end
 else
     for ii = 1:size(qvec,1)
+        switch Options.scanMode
+            case 'field'
+                xlab = 'Magnetic Field (T)';
+                file_part1 = sprintf('T = %.3f K and ', dscrt_var);
+                file_part2 = sprintf('Q = [%1$.2f %2$.2f %3$.2f]',qvec(ii,1),qvec(ii,2),qvec(ii,3));
+            case 'temp'
+                xlab = 'Temperature (K)';
+                file_part1 = sprintf('T = %.3f K and ', dscrt_var);
+                file_part2 = sprintf('Q = [%1$.2f %2$.2f %3$.2f]',qvec(ii,1),qvec(ii,2),qvec(ii,3));
+            otherwise
+                disp("Unknow scan mode!")
+                return
+        end
         % Color plot the imaginary part of the susceptibilities
         for jj = 3 % plot only chi_zz component
 %             for jj = 1:3
@@ -259,11 +248,12 @@ else
             caxis([0 5]);
             colorbar
             legend(['\gamma =' num2str(gama,'%.2e meV')]);
+            title(['Im[', char(indx(jj)), '] at ', file_part1, file_part2])
+            xlabel(xlab)
             ylabel('Frequency (GHz)')
             if Options.meV == true
                 ylabel('Energy (meV)')
-            end
-            
+            end            
             % Plot the real part of the susceptibility of the z component
             fig(2) = figure;
             set(fig(2),'position',pos0 + jj*pos_inc);
@@ -273,29 +263,11 @@ else
             caxis([0 5]);
             colorbar
             legend(['\gamma =' num2str(gama,'%.2e meV')]);
-           
+            title(['Re[', char(indx(jj)), '] at ', file_part1, file_part2])
+            xlabel(xlab)
             ylabel('Frequency (GHz)')
             if Options.meV == true
                 ylabel('Energy (meV)')
-            end
-            switch Options.scanMode
-                case 'field'
-                    figure(fig(1))
-                    xlabel('Magnetic Field (T)')
-                    title(['Re[', char(indx(jj)), '] at ', sprintf('T = %.3f K and ', dscrt_var),sprintf('Q = [%1$.2f %2$.2f %3$.2f]',qvec(ii,1),qvec(ii,2),qvec(ii,3))])
-                    figure(fig(2))
-                    xlabel('Magnetic Field (T)')
-                    title(['Im[', char(indx(jj)), '] at ', sprintf('T = %.3f K and ', dscrt_var),sprintf('Q = [%1$.2f %2$.2f %3$.2f]',qvec(ii,1),qvec(ii,2),qvec(ii,3))])
-                case 'temp'
-                    figure(fig(1))
-                    xlabel('Temperature (K)')
-                    title(['Re[', char(indx(jj)), '] at ', sprintf('T = %.3f K and ', dscrt_var),sprintf('Q = [%1$.2f %2$.2f %3$.2f]',qvec(ii,1),qvec(ii,2),qvec(ii,3))])
-                    figure(fig(2))
-                    xlabel('Temperature (K)')
-                    title(['Im[', char(indx(jj)), '] at ', sprintf('T = %.3f K and ', dscrt_var),sprintf('Q = [%1$.2f %2$.2f %3$.2f]',qvec(ii,1),qvec(ii,2),qvec(ii,3))])
-                otherwise
-                    disp("Unknow scan mode!")
-                    return
             end
         end
     end
@@ -318,13 +290,14 @@ qvec = save_vars{6};
 save(savefile,'temp','fields','freq_total','chi','gama','qvec','-v7.3');
 end
 
-function [fields, freq_total, chi, JIz_exp] = linear_response(eigenE,fields,freq_total,temperature,eigenW,gma)
-global ELEf NUCf f2E ionJ ionI
+function [continu_var, freq_total, chi, JIz_exp] = linear_response(ion,eigenE,continu_var,freq_total,temperature,eigenW,gma)
+global ELEf NUCf f2E elem_idx
 % Declare susceptibility tensor
-chi0_J = zeros(3,3,length(freq_total(1,:)),size(fields,2));
-chi0_I = zeros(3,3,length(freq_total(1,:)),size(fields,2));
-chi0_IJ = zeros(3,3,length(freq_total(1,:)),size(fields,2));
-
+chi0_J = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
+chi0_I = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
+chi0_IJ = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
+ionJ = ion.J(elem_idx);
+ionI = ion.I(elem_idx);
 %Initiate ionJ operators
 Jz=diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
 JhT.z=kron(Jz,eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
@@ -350,8 +323,8 @@ IhT.y=(Iph-Imh)/2i;
 % IJ_hT.z = JhT.z+NUCf/ELEf*IhT.z;
 
 % Single out <Jz+Iz> calculations
-JIz_exp = double.empty(size(fields,2),size(JhT.z,1),0); % Expectation value of J-I pseudo-spin
-for kk = 1:size(fields,2) % calculate susceptibility for all fields
+JIz_exp = double.empty(size(continu_var,2),size(JhT.z,1),0); % Expectation value of J-I pseudo-spin
+for kk = 1:size(continu_var,2) % calculate susceptibility for all fields
     v = squeeze(eigenW(kk,:,:)); % Obtain the corresponding eigen vectors
     JzhT = JhT.z * ELEf;
     IzhT = IhT.z * NUCf;
@@ -364,12 +337,12 @@ end
 for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
     freq = freq_total (m);
     omega = freq*f2E;   % define frequency sweep range (meV)
-%     for k = 1:size(fields,2) % for debugging: calculate susceptibility for all fields
-    parfor k = 1:size(fields,2) % calculate susceptibility for all fields
+%     for k = 1:size(continu_var,2) % for debugging: calculate susceptibility for all fields
+    parfor k = 1:size(continu_var,2) % calculate susceptibility for all fields
         v = squeeze(eigenW(k,:,:)); % Obtain the corresponding eigen vectors
         en = squeeze(eigenE(k,:)); % Obtain the corresponding eigen energies [meV]
-        if temperature ~= 0
-            beta = 11.6/temperature; %[meV^-1]
+        if temperature(k) ~= 0
+            beta = 11.6/temperature(k); %[meV^-1]
             zn = sum(exp(-beta*en));
             Z = exp(-beta*en)/zn;
 %             Z = exp(-beta*en);
@@ -540,21 +513,22 @@ elseif nargin == 5 % Compute the complex matrix element
 end
 end
 
-function [fields, freq_total, chiq] = RPA(qvec, fields, freq_total, ion, chi0)
+function [continu_var, freq_total, chiq] = RPA(qvec, continu_var, freq_total, ion, chi0)
 
-global muB mu0 J2meV gL dip_range ex_range lattice
+global muB mu0 J2meV dip_range ex_range elem_idx
 N = 4; % Number of magnetic atoms in unit cell
+lattice = ion.abc{elem_idx};
 gfac = (muB)^2*(mu0/4/pi)*J2meV*10^30;
 
-chiq = zeros(3,3,length(freq_total(1,:)),size(fields,2),size(qvec,1));
+chiq = zeros(3,3,length(freq_total(1,:)),size(continu_var,2),size(qvec,1));
 D = zeros(3,3,N,N,size(qvec,1));
 for jj=1:size(qvec,1)
-    D(:,:,:,:,jj) = gL^2*(gfac*dipole_direct(qvec(jj,:),dip_range,lattice))...
+    D(:,:,:,:,jj) = ion.gLande(elem_idx)^2*(gfac*dipole_direct(qvec(jj,:),dip_range,lattice))...
         + exchange(qvec(jj,:),ion.ex(2),lattice,ex_range);
 end
 
-deno = zeros(3,3,size(freq_total,1),size(fields,2)); % RPA correction factor (denominator)
-for ii = 1:size(fields,2)
+deno = zeros(3,3,size(freq_total,1),size(continu_var,2)); % RPA correction factor (denominator)
+for ii = 1:size(continu_var,2)
     for nq = 1:size(qvec,1)
         Jq = sum(sum(D(:,:,:,:,nq),4),3)/4; % average over the four sites in the unit cell and avoid double counting
         parfor kk = 1:length(freq_total(1,:))
@@ -568,26 +542,26 @@ end
 % subs = ["xx", "yy", "zz"];
 % for ii = 1:3
 %     figure
-%     hp0 = pcolor(fields,freq_total,squeeze((Mx(ii,ii,:,:))));
+%     hp0 = pcolor(continu_var,freq_total,squeeze((Mx(ii,ii,:,:))));
 %     set(hp0, 'edgeColor','none')
 %     xlabel('Magnetic field (T)')
 %     ylabel('Frequency (GHz)')
 %     
 %     figure
-%     hp0 = pcolor(fields,freq_total,squeeze(abs(deno(ii,ii,:,:))));
+%     hp0 = pcolor(continu_var,freq_total,squeeze(abs(deno(ii,ii,:,:))));
 %     set(hp0, 'edgeColor','none')
 %     xlabel('Magnetic field (T)')
 %     ylabel('Frequency (GHz)')
 %     for nq = 1:size(qvec,1)
 %         figure
-%         hp0 = pcolor(fields,freq_total,real(squeeze(chiq(ii,ii,:,:,nq))));
+%         hp0 = pcolor(continu_var,freq_total,real(squeeze(chiq(ii,ii,:,:,nq))));
 %         set(hp0, 'edgeColor','none');
 %         colorbar
 %         xlabel('Magnetic field (T)')
 %         ylabel('Frequency (GHz)')
 %         title(['Real part of \chi_',char(subs(ii)),'^{RPA}'])
 %         figure
-%         hp0 = pcolor(fields,freq_total,imag(squeeze(chiq(ii,ii,:,:,nq))));
+%         hp0 = pcolor(continu_var,freq_total,imag(squeeze(chiq(ii,ii,:,:,nq))));
 %         set(hp0, 'edgeColor','none');
 %         colorbar
 %         xlabel('Magnetic field (T)')
