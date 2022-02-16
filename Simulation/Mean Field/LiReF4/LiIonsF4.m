@@ -41,7 +41,7 @@ end
 E = zeros(size(field,2),length(temp),H_dims);
 V = zeros(size(field,2),length(temp),H_dims,H_dims);
 
-switch Options.scantype % determine x-variable and data slicing direction
+switch Options.scanMode % determine x-variable and data slicing direction
     case 'field'
         continu_var = vecnorm(field,2);
         discrt_var = temp;
@@ -58,7 +58,7 @@ for j = 1:length(discrt_var)
         rundipole = true;
     end
     for i = 1:length(continu_var)
-        switch Options.scantype % determine x-variable and data slicing direction
+        switch Options.scanMode % determine x-variable and data slicing direction
             case 'field'
                 Bidx = i;
                 Tidx = j;
@@ -108,7 +108,7 @@ for j = 1:length(discrt_var)
     end
 % Save the data split by temperatures when they are multi-dimensional, otherwise save the data outside this function
     if length(discrt_var) >1 && length(continu_var) >1
-        switch Options.scantype
+        switch Options.scanMode
             case 'field'
                 eee = squeeze(E(:,j,:));
                 vvv = squeeze(V(:,j,:,:));

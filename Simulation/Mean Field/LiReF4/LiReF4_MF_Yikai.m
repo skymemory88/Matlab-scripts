@@ -11,7 +11,7 @@ clearvars -except temp Bfield theta phi mion
 global strategies; % global convergence strategies switches
 strategies.powerlaw = false; % Use a starting guess with the assumption the variables follow a power law.
 strategies.accelerator = 0.0; % accelerate. Beware: it often doesn't accelerate actually. Can speed up if the system has to break a symetry
-strategies.damping = 0.1; % damping factor. May reduce exponential fit efficiency
+strategies.damping = 0.2; % damping factor. May reduce exponential fit efficiency
 strategies.expfit = true; % turn on fitting to an exponential.
 strategies.expfit_period = 30; % period between exponential fit.
 strategies.expfit_deltaN = 5; % The exponential fit points distance. Three points used: N, N-deltaN, N-2deltaN.
@@ -38,13 +38,13 @@ else
 end
 
 if length(Bfield) > length(temp)
-    Options.scantype = 'field';
+    Options.scanMode = 'field';
 else
-    Options.scantype = 'temp';
+    Options.scanMode = 'temp';
 end
 
-theta = pi*theta/180; % convert to radian, deviation angle from normal vector
-phi = pi*phi/180; % convert to radian, in-plane angle from a/b axis
+theta = theta*pi/180; % convert to radian, deviation angle from normal vector
+phi = phi*pi/180; % convert to radian, in-plane angle from a/b axis
 
 Hx = Bfield*cos(phi)*cos(theta);
 Hy = Bfield*sin(phi)*cos(theta);
@@ -54,7 +54,8 @@ fields = [Hx;Hy;Hz];
 %Ions' names
 ion.name = [{'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}];
 ion.name_hyp = [{'Er_hyp'};{'Ho_hyp'};{'Yb_hyp'};{'Tm_hyp'};{'Gd_hyp'};{'Y_hyp'}];
-ion.prop = [0;0;0;0;0;0];
+ion.prop = [0;0;0;0;0;0]; % ion proportion
+ion.cfRot = [0;0;0;0;0;0]; % crystal field basis rotation (in degrees)
 ion.h4 = 0;
 demagn = true; % Demagnetization factor included if TRUE
     alpha = 0; % shape in calculating demagnetization factor is a needle (0), sphere (1), disc (inf)
@@ -75,6 +76,7 @@ switch mion
 %         ion.h4 = 5.26e-3; % Order-by-disorder anisotropy, Neda's thesis
     case 'Ho'
         ion.prop(2) = 1; % LiHoF4
+        ion.cfRot(2) = 9; % (in degrees) Phys. Rev. B 75, 054426 (2007)
         strategies.symmetry = true; % override symmetry reflection for Ising magnet
     case 'Yb'
         ion.prop(3) = 1; % LiTbF4
@@ -107,30 +109,29 @@ ion.abc = [{[5.162 0 0; 0 5.162 0; 0 0 10.70]}      %Er
            {[5.132 0 0; 0 5.132 0; 0 0 10.59]}];    %Y
 
 % Ions' cf parameters (ueV)
-ion.B = [[60.2258   -0.1164   -4.3280   -0.0019   -0.0850   -0.0227]   % Er
-         [-57.9   0.309   3.51   0.000540   0.0560   0.0153]          % Ho -- test
-%          [-57.9   0.309   3.51   0.000540   0.0511   0.0140]          % Ho -- SC239 at phi = 13
-%          [-57.9   0.309   3.51   0.000540   0.0560   0.0160]          % Ho -- SC200 at phi = 17
-%          [-61.1   0.309   3.51   0.000680   0.0680   0.0125]          % Ho -- SC239 (0.785*Jz) at phi = 28
-%          [-57.9   0.309   3.51   0.000540   0.0572   0.0134]          % Ho -- SC200 (0.785*Jz) at phi = 18
-%          [-61.1   0.262   3.80   0.000751   0.0505   0.0098]          % Ho -- SC239 (0.785*Jz) at phi = 12
-%          [-57.9   0.309   3.51   0.000540   0.0631   0.0171]          % Ho -- Phys. Rev. B 92, 144422 (2015)
-%          [-60.0   0.350   3.60   0.000400   0.0700   0.0098]          % Ho -- Phys. Rev. B 75, 054426 (2007)
-%          [-56.2   0.325   3.61   0.000181   0.0758   0.0000]          % Ho -- Handbook on the physics and chemistry of the Rare-Earths V.23 (1996)
-%          [-73.6   0.478   4.69   0.000100   0.0861   0.0118]          % Ho -- J. Magn. Magn. Magn. 15, 31 (1980)
-%          [-52.2   0.323   3.59   0.000522   0.0685   0.0000]          % Ho -- Phys. Rev. B 19, 6564 (1979)
-%          [-60.0   0.35    3.60   0.000400   0.0700   0.0060]          % Ho -- original code
-         [646.2016   15.3409  116.4854   -0.0686  -15.1817    0.0000]  % Yb    
-%         [663.0000   12.5000   102.0000   -0.6200   -16.0000   0.0000] % Yb
-         [224.3   -1.85   -11.7   0.002   0.2645   0.1377]             % Tm
-         [0 0 0 0 0 0]                                                 % Gd
-         [0 0 0 0 0 0]];                                               % Y
-     
+ion.B = [[60.2258   -0.1164   -4.3280   0.00   -0.0019   -0.0850   -0.0227]   % Er
+         [-57.9   0.309   3.51   0.00   0.000540   0.0631   0.0171]          % Ho -- test
+%          [-57.9   0.309   3.51   0.00   0.000540   0.0511   0.0140]          % Ho -- SC239 at phi = 13
+%          [-57.9   0.309   3.51   0.00   0.000540   0.0560   0.0160]          % Ho -- SC200 at phi = 17
+%          [-61.1   0.309   3.51   0.00   0.000680   0.0680   0.0125]          % Ho -- SC239 (0.785*Jz) at phi = 28
+%          [-61.1   0.262   3.80   0.00   0.000751   0.0505   0.0098]          % Ho -- SC239 (0.785*Jz) at phi = 12
+%          [-57.9   0.309   3.51   0.00   0.000540   0.0572   0.0134]          % Ho -- SC200/SC239 (0.785*Jz) at phi = 17
+%          [-57.9   0.309   3.51   0.00   0.000540   0.0631   0.0171]          % Ho -- Phys. Rev. B 92, 144422 (2015)
+%          [-60.0   0.350   3.60   0.00   0.000400   0.0700   0.0098]          % Ho -- Phys. Rev. B 75, 054426 (2007)
+%          [-56.2   0.325   3.61   0.00   0.000181   0.0758   0.0000]          % Ho -- Handbook on the physics and chemistry of the Rare-Earths V.23 (1996)
+%          [-73.6   0.478   4.69   0.00   0.000100   0.0861   0.0118]          % Ho -- J. Magn. Magn. Magn. 15, 31 (1980)
+%          [-52.2   0.323   3.59   0.00   0.000522   0.0685   0.0000]          % Ho -- Phys. Rev. B 19, 6564 (1979)
+%          [-60.0   0.35    3.60   0.00   0.000400   0.0700   0.0060]          % Ho -- original code
+         [646.2016   15.3409  116.4854   0.00   -0.0686  -15.1817    0.0000]  % Yb    
+%         [663.0000   12.5000   102.0000   0.00   -0.6200   -16.0000   0.0000] % Yb
+         [224.3   -1.85   -11.7   0.00   0.002   0.2645   0.1377]             % Tm
+         [0 0 0 0 0 0 0]                                                 % Gd
+         [0 0 0 0 0 0 0]];                                               % Y
 ion.B = ion.B/1000.0; % ueV to meV
 
 %Ions' renorm
 ion.renorm=[[1,1,1]         % Er
-%             [1,1,0.785]     % Ho (citation needed)
+%             [1,1,0.785]     % Ho -- Phys. Rev. B 75, 054426 (2007), Phys. Rev. B 49, 11833 (1994)
             [1,1,1]         % Ho
             [1,1,1]         % Yb
             [1,1,1]         % Tm
@@ -173,7 +174,7 @@ ion.mom(:,:,6) = [0 0 0; 0 0 0; 0 0 0; 0 0 0];          % Y
 %% Plot data
 n = ion.prop~=0;
 if Options.plotting == true
-    switch Options.scantype
+    switch Options.scanMode
         case 'field'
             J_H = zeros([3,size(fields,2),size(ion.name,1)]);
             Jnorm_H = zeros([size(fields,2),size(ion.name,1)]);
@@ -195,7 +196,7 @@ if Options.plotting == true
     end
     
     %Plot spin moments
-    switch Options.scantype
+    switch Options.scanMode
         case 'field' % For field scan
             figure
             hold on
@@ -239,7 +240,7 @@ if length(temp) == 1 || size(Bfield,2) == 1 % for single external paramter sweep
     fff = fields;
     ttt = temp;
     vvv = squeeze(V);
-    switch  Options.scantype
+    switch  Options.scanMode
         case 'field'
             elem = [ion.name(n)];
             tit = strcat('Hscan_','Li',elem(1:end),sprintf('F4_%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',...

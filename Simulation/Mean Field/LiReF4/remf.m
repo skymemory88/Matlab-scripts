@@ -20,14 +20,14 @@ nn = 1; % range of exchange interaction in unit of unit cell dimension
 if(isempty(dipole))
     dipole=dipole_direct([0 0 0],dip_range,ion.abc{elem});
     for i=1:size(ion.name,1)
-        ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:))};
+        ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:),ion.cfRot(i))};
         ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.abc{elem},nn)};
     end
 end
 if rundipole == true
     dipole=dipole_direct([0 0 0],dip_range,ion.abc{elem});
     for i=1:size(ion.name,1)
-        ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:))};
+        ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:),ion.cfRot(i))};
         ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.abc{elem},nn)};
     end
     rundipole = false;
@@ -289,9 +289,8 @@ Jph = kron(Jp,eye(2*I+1));
 Jmh = kron(Jm,eye(2*I+1));
 Jxh = (Jph+Jmh)/2;
 Jyh = (Jph-Jmh)/2i;
-% Expand the crystal field tensor to include nuclear moments' degrees of freedom
-Hcfh = kron(Hcf,eye(2*I+1));
-%Initiate I operators
+
+% Initiate I operators
 Iz = diag(I:-1:-I);
 Izh = kron(eye(2*J+1),Iz);
 Ip = diag(sqrt((I-[(I-1):-1:-I]).*(I+1+[(I-1):-1:-I])),1);
@@ -300,6 +299,8 @@ Iph = kron(eye(2*J+1),Ip);
 Imh = kron(eye(2*J+1),Im);
 Ixh = (Iph+Imh)/2;
 Iyh = (Iph-Imh)/2i;
+
+Hcfh = kron(Hcf,eye(2*I+1)); % Expand the crystal field space to include nuclear moments' degrees of freedom
 
 %Calculate Hamiltonian
 Hzeeman = -ELEf*(hvec(1)*Jxh + hvec(2)*Jyh + hvec(3)*Jzh); % Electron Zeeman interaction
@@ -324,7 +325,7 @@ Ham = Ham + h4*O44c*h_dipol(1)^2;
 e = real(diag(e)); % Take only the real part of the eigen-energy to form a diaganol matrix
 [e,n] = sort(e); % sort the energy from lowest to the highest
 v = v(:,n); % sort the eigen-vectors in its basis accordingly
-energies = e;
+energies = e; % save the unnormalized eigenenergies
 e = e-min(e); % Normalize the energy amplitude to the lowest eigen-energy
 beta = 11.6/t; % [kB*T]^-1 in [meV]
 
