@@ -1,4 +1,4 @@
-function [fitresult, gof] = iptopt0(x, y, field, P0, low, upr, weight, plt)
+function [fitresult, gof] = iptopt0(x, y, field, param, weight, plt)
 %CREATEFIT(omega,S11)
 %  S11 input-output fit:
 %      X Input : frequency
@@ -19,6 +19,10 @@ function [fitresult, gof] = iptopt0(x, y, field, P0, low, upr, weight, plt)
 % f2E = hbar*2*pi*10^9/meV2J; % [meV/GHz]
 % g = sqrt(mu0*10^9*2*pi*rho*filFctr/hbar/2); % susceptibility prefactor [T.(J.s)^-1]
 % g = g * meV2J * f2E * 10^-9;
+
+P0 = param(1,:); % starting values of the fitting parameters
+low = param(2,:); % lower limit of the fitting parameters
+upr = param(3,:); % upper limit of the fitting parameters
 
 [xData, yData] = prepareCurveData( x, y );
 % Set up fittype and options.
