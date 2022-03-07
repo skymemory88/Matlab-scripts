@@ -13,6 +13,12 @@ Options.plotting = false; % Decide whether or not to plot the data at the end
 Options.meV = false; % Energy unit choice: meV or GHz (default)
 Options.saving = true; % Options to save the susceptibility tensors
 Options.scanMode = scanMode; % 1. Field plot with RPA; 2. Temp plot with RPA; 2. wavevector plot with RPA
+Options.nZee = false;
+    if Options.nZee == true
+        nZee_path = 'with Hz_I';
+    else
+        nZee_path = 'without Hz_I';
+    end
 Options.RPA = RPA_mode; % Apply random phase approximation (RPA) correction
     Qplot = false; % k-dependent plot for RPA susceptibilities
     if Qplot == true
@@ -34,7 +40,7 @@ Options.RPA = RPA_mode; % Apply random phase approximation (RPA) correction
 if Options.RPA == false
     Qplot = flase;
 end
-clearvars -except dscrt_var theta phi gama Options mion freq_total hyp qvec contnu_var0 Qplot
+clearvars -except dscrt_var theta phi gama Options mion freq_total hyp qvec contnu_var0 Qplot nZee_path
 
 global dip_range ex_range muB J2meV mu0 f2E elem_idx ELEf NUCf
 % Declare physical constants as global for consistency
@@ -54,7 +60,7 @@ for ii = 1:length(dscrt_var)
         switch Options.scanMode % 1. Field plot with RPA. 2. wavevector plot with RPA
             case 'field'
                 location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
-                            'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
+                            'F4 project\Data\Simulations\Matlab\Susceptibilities\', nZee_path];
                 filename = strcat(['Hscan_Li',mion,'F4_'], sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
                 file = fullfile(location,filename);
                 load(file,'-mat','eee','fff','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
@@ -67,7 +73,7 @@ for ii = 1:length(dscrt_var)
                 fprintf('Calculating for T = %.3f K.\n', dscrt_var(ii));
             case 'temp'
                 location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
-                    'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
+                    'F4 project\Data\Simulations\Matlab\Susceptibilities\', nZee_path];
                 filename = strcat(['Tscan_Li',mion,'F4_'], sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
                 file = fullfile(location,filename);
                 load(file,'-mat','eee','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
@@ -372,8 +378,8 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
         EE = eep-ee-omega;
         deno0 = 1 ./ (EE - 1i*gamma);
         chi0_J(:,:,m,k) = chi_Mx(JhT,JhT,v,NN,deno0); % Electornic spin operators
-        chi0_IJ(:,:,m,k) = chi_Mx(JhT,JhT,v,NN,deno0); % Electro-Nuclear cross term
-        chi0_I(:,:,m,k) = chi_Mx(JhT,JhT,v,NN,deno0); % Nuclear spin operators
+        chi0_IJ(:,:,m,k) = chi_Mx(JhT,IhT,v,NN,deno0); % Electro-Nuclear cross term
+        chi0_I(:,:,m,k) = chi_Mx(IhT,IhT,v,NN,deno0); % Nuclear spin operators
 %         chi0_J(:,:,m,k) = chi_Mx(IJ_hT,IJ_hT,v,NN,deno0); % hyperdized electronuclear operator
     end
 end
