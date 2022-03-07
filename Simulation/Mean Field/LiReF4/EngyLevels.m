@@ -1,26 +1,46 @@
 function EngyLevels
-% close all
-% hold on
 clearvars
+
+hbar = 1.055E-34; % Reduced Planck constant [J.s]
+meV2J = 1.602217e-22; % [J/meV]
+f2E = hbar*2*pi*10^9/meV2J; % [meV/GHz]
+
 % temp =  [1.774 1.776 1.778 1.780 1.781 1.782 1.783 1.784 1.785 1.787];
-temp = 0.13;
-theta = 0.02; % Angle (in degrees) between magnetic field and c-axis in a-c plane
-phi = 17; % Angle (in degrees) in a-b plane
+temp = 0.16;
+theta = 0.0; % Angle (in degrees) between magnetic field and c-axis in a-c plane
+phi = 0.0; % Angle (in degrees) in a-b plane
 N_level = 7; % Number of transition levels to plot
 
 Options.ion = 'Ho'; % support 'Er' and 'Ho'
 Options.hyp = 1.00; % Hyperfine isotope proportion
+Options.nZee = false; % nuclear Zeeman interaction
 Options.RPA = false; % not enabled yet
-Options.Js = false;
-Options.Elevel = false;
-Options.Ediff = true;
-    Options.deltaI2 = false; % Transitions between the next nearest neightbouring levels
-Options.Espan = false;
-Options.savedata = false;
-Options.savegif = false;
-Options.location =... % Location to load/save files
-    ['G:\My Drive\File sharing\PhD program\Research projects\Li',Options.ion,...
+Options.Js = false; % spin expectation values
+Options.eUnit = 'GHz';
+    if strcmp(Options.eUnit,'meV')
+        E2f = 1; % use default meV unit
+        ylab = 'Energy (meV)';
+        ylab1 = 'Energy gap (meV)';
+        ylab2 = 'Freqeuency range (meV)';
+    elseif strcmp(Options.eUnit,'GHz')
+        E2f = 1/f2E; % meV to GHz conversion
+        ylab = 'Energy (GHz)';
+        ylab1 = 'Energy gap (GHz)';
+        ylab2 = 'Freqeuency range (GHz)';
+    end
+Options.Elevel = false; % eigen-energies
+Options.Ediff = true; % excitation spectrum
+    Options.deltaI2 = 0; % Transitions between the next nearest neightbouring levels
+Options.Espan = 0;
+Options.savedata = 0;
+Options.savegif = 0;
+if Options.nZee == true
+    Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',Options.ion,...
         'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
+else
+    Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',Options.ion,...
+        'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I'];
+end
 
 marker = [":","-.","--","-"];
 color = ["black","red","blue","magenta","green","yellow","cyan"];
@@ -51,9 +71,8 @@ for iter = 1:numel(temp)
             end
             file = fullfile(Options.location,lname);
             load(file,'-mat','vvv','ttt','eee','fff','ion');
-            
+            eee = eee- min(eee,[],2); % Normalize the energy amplitude to the lowest eigen-energy
             fields = vecnorm(fff);
-            E2f = 241.8; % Convert Energy to frequency
             E(:,:)=squeeze(eee)*E2f;
             %E(:,:) = eee(:,1,:)*E2F;
             Ediff = double.empty(0,size(E,1));
@@ -73,21 +92,22 @@ for iter = 1:numel(temp)
 %             hold on
 %             plot(fields,E8(:,1:8),'Color',[35 107 142]/255,'linewidth',2);
 %             xlabel('Field (T)','FontSize',15)
-%             ylabel('Energy (GHz)','FontSize',15)
+%             ylabel(ylab,'FontSize',15)
 %             xlim([0 9]);
 %             tit0='Energy spread from the mean value';
 %             title(tit0,'FontSize',15)
 %             legend(num2str(temp(iter)*1000,'T = %u mK,  A = A_{th}'))
-            %% Plot the lowest eight energy levels
+            %% Plot eigen-energies
             if Options.Elevel == true
-                fig_E = figure;
-                figs_E(:, iter2, iter3) = plot(fields,E(:,1:N_level+1),'Color',[35 107 142]/255,'linewidth',2);
+%                 fig_E = figure;
+%                 figs_E(:, iter2, iter3) = plot(fields,E(:,1:N_level+1),'Color',[35 107 142]/255,'linewidth',2);
+                figs_E(:, iter2, iter3) = plot(fields,E(:,1:N_level+1),'Color','r','linewidth',2);
                 hold on
                 set(gca,'fontsize',15);
 %                text(8,(j-1)*D+0.02,'0.1');
 %                set(fig1,'position',[100 100 600 300])
                 xlabel('Field (T)','FontSize',15)
-                ylabel('Energy (GHz)','FontSize',15)
+                ylabel(ylab,'FontSize',15)
                 grid off
                 box on;
                 tit1='Energy levels';
@@ -99,7 +119,7 @@ for iter = 1:numel(temp)
                     Elevel_frame{im_idx} = frame2im(frame);
                 end
             end
-            %% Energy difference bewteen neighbour levels
+            %% Plot excitation spectrum among neighbour levels
             if Options.Ediff == true
                 for i=1:N_level-1 % Up until the second from top level
                     Ediff(i,:) = E(:,i+1)-E(:,i); % Transition between the nearest neighbouring levels
@@ -114,10 +134,10 @@ for iter = 1:numel(temp)
                 % Plot transitions between the nearest levels
 %                 figure;
                 hold on
-                figs_dE(1, iter2, iter3) = plot(fields, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'b','LineWidth',1.5);
+                figs_dE(1, iter2, iter3) = plot(fields, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',1.5);
                 if N_level > 1
 %                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
-                    figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color','w','LineWidth',1.5);
+                    figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color','k','LineWidth',1.5);
 %                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1),'LineWidth',1.5);
                 end
                 
@@ -145,7 +165,7 @@ for iter = 1:numel(temp)
                 set(gca,'fontsize',15,'Xtick',0:1:max(fields));
                 set(gca,'XTickLabelRotation',0)
                 xlabel('Magnetic Field (T)','FontSize',15);
-                ylabel('Energy gap (GHz)','FontSize',15);
+                ylabel(ylab1,'FontSize',15);
                 grid off
                 box on;
                 xlim([min(fields) max(fields)]);
@@ -163,7 +183,7 @@ for iter = 1:numel(temp)
                 lgd = legend(squeeze(figs_dE(1,:,:)),lg);
                 lgd.FontSize = 12;
             end
-            %% Frequency span of the transitions at each field
+            %% Add frequency span of the transitions at each field
             if Options.Espan == true
                 hold on
                 eRange = double.empty(0,length(Ediff));
@@ -175,7 +195,7 @@ for iter = 1:numel(temp)
                 plot(fields(eRange == min(eRange)),min(eRange),'o','MarkerSize',4,'MarkerFaceColor','none');
                 set(gca,'fontsize',15);
                 xlabel('Field (T)','FontSize',15)
-                ylabel('Frequency range (GHz)','FontSize',15)
+                ylabel(ylab2,'FontSize',15)
                 grid off
                 box on;
                 xlim([min(fields) max(fields)]);
@@ -189,7 +209,7 @@ for iter = 1:numel(temp)
             if Options.savegif == true
                 im_idx = im_idx + 1;
             end
-            %% Spin expectations
+            %% Plot expectation values of spin moment
             if Options.Js == true
                 Jx = cell(1,4);
                 Jy = cell(1,4);
