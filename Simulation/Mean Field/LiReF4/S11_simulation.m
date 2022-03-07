@@ -50,7 +50,7 @@ rho = 4e30/(5.17*5.17*10.75); % Holmium (magnetic moment) number density [m^-3]
 % frequency parameter setup
 dE = -0.0;
 % wc = 4.7565 +dE; % Fundamental mode of the cavity
-wc = 3.643+dE;
+wc = 3.643+dE; % GHz
 % wc = 3.3+dE;
 % w2 = 4.2; % Second mode of the cavity
 % freq_l = 4.715;
@@ -65,17 +65,17 @@ freq = linspace(freq_l,freq_h,freq_pts); % Only applies when calculating from sc
 Options.scanMode = scanMode; % continuous variable choice: 1. Field, 2. Temperature
     cVar_l = 0.0; % continuous variable setup
     cVar_h = 17.0;
-    cVar_np = 1201; % number of points along field axis
+    cVar_np = 1601; % number of points along field axis
     cVar = linspace(cVar_l,cVar_h,cVar_np); % Only applies when calculating from scratch
     
-Options.simType = 3; % Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation
+Options.simType = 2; % Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation
 Options.nZee = false;
 Options.RPA = true; % Use RPA susceptibilities
 Options.noise = false; % Add white noises to the backgroud
     nlevel = 30; % signal-to-noise level (dB)
-Options.plot = true; % Option to plot data
+Options.plot = false; % Option to plot data
     Options.x1x2 = false; % Plot the matrix elements of the susceptibilities
-    Options.trace = false; % Calculate the trace of resonant frequency along field axis
+    Options.trace = true; % Calculate the trace of resonant frequency along field axis
     Options.Q_1 = false; % Calculate 1/Q plot along the field axis
     Options.Elevel = false; % Plot energy eigenstates
     Options.Ediff = false; % Plot energy levels on top
@@ -185,7 +185,7 @@ while true
                     sim.freq = freq;
                     sim.field = cVar;
             end
-            beta = 1/(sim.temp.*kB);
+            beta = f2E/(sim.temp.*kB);
             g = 0.01; % Coupling strength measured against the ground state energy
             % g = 0.01*wc;
             
@@ -194,9 +194,10 @@ while true
             %En(:,:) = eee(:,1,:)/f2E;
             Ediff = double.empty(7,size(En,1),0);
             bzF = double.empty(size(Ediff,1),size(continu_var,2),0);
+            Zn = sum(exp(-En.*beta),2); % Partition function
             for ii = 1:7
                 Ediff(ii,:,1) = En(:,ii+1)-En(:,ii);
-                bzF(ii,:,1) = exp(-En(:,ii).*beta) - exp(-En(:,ii+1).*beta); % Boltzmann factor for each transition line
+                bzF(ii,:,1) = (exp(-En(:,ii).*beta) - exp(-En(:,ii+1).*beta))./Zn; % Boltzmann factor for each transition line
             end
                       
             % Calculate perturbed discpersion relations
@@ -319,7 +320,7 @@ while true
                         return
                 end
             end
-        case 3 % Option 3: Calculate MF susceptabilities for resonant frequency shift
+        case 3 % Option 3: on-resonance cavity magnon-polariton interaction only
             if ~isfile(MF_file)
                 prompt = sprintf('Required data not found, run calculation and generate the files?\n');
                 answer = input(prompt,'s');
@@ -336,39 +337,27 @@ while true
             else
                 load(MF_file,'-mat','vvv','ttt','fff', 'eee'); % loads "eigenfunction" "temperatures", "field", "Energy"
             end
-            V = vvv;
-            eee = eee - min(eee,[],2);
+            eee = eee - min(eee,[],2); % normalize the energy levels to the ground state
             switch Options.scanMode
                 case 'field'
                     continu_var = vecnorm(fff);
                     sim.temp = dscrt_var; % Simulation temperature(s)
                     sim.field = continu_var; % Simulation field(s)
                     xlab = 'Magnetic field (T)';
-                    titl = num2str(dscrt_var, '%.2f K');
+                    titl = num2str(dscrt_var, '%.3f K');
                 case 'temp'
                     continu_var = ttt;
                     sim.temp = continu_var; % Simulation field(s)
                     sim.field = dscrt_var; % Simulation field(s)
                     xlab = 'Temperature (K)';
-                    titl = num2str(dscrt_var, '%.2f T');
+                    titl = num2str(dscrt_var, '%.3f T');
             end
             sim.freq = freq;
-            
-            beta = 1/(sim.temp.*kB);
-            En(:,:) = squeeze(eee)/f2E;
-            Ediff = double.empty(size(En,1),size(En,2)-1,0);
-            bzF = double.empty(size(En,1),size(En,2)-1,0);
-            for kk = 1:size(En,2)-1
-                Ediff(:,kk,1) = En(:,kk+1)-En(:,kk);
-                bzF(:,kk,1) = exp(-En(:,kk).*beta) - exp(-En(:,kk+1).*beta); % Boltzmann factor for each transition line
-            end
-            
-            wc = repmat(wc,1,size(freq,2)); % expand the resonant frequency to a matrix for calculations in the next step
-            
+                       
             %Initiate J operators            
             %        Er       Ho      Yb      Tm      Gd      Y
             J_tab = [15/2;    8;      7/2;    6;      7/2;    1];
-            L_tab = [6;       6;      3;      5;      0;      1];
+            L_tab = [6;       6;       3;     5;      0;      1];
             S_tab = [3/2;     2;      1/2;    1;      7/2;    1];
             I_tab = [3;      3.5;      0;     0;      1.50;   0];
             nLande = [-0.1611; 1.192; -0.2592; -0.462; -0.2265; 0]; % https://easyspin.org/documentation/isotopetable.html
@@ -384,32 +373,48 @@ while true
             Jzh=kron(Jz,eye(2*I+1)); % Expand Jz space to include nuclear degree of freedom
             Iz=diag(I:-1:-I); %Iz = -I, -I+1,...,I-1,I
             Izh=kron(eye(2*J+1),Iz); % Expand Hilbert space
+            
             Jz_exp = double.empty(0,length(continu_var(1,:)));
             JIz_exp = double.empty(0,length(continu_var));
-            for kk = 1:length(continu_var) % calculate susceptibility for all continu_var
-                v = squeeze(squeeze(V(kk,:,:,:))); % Obtain the corresponding eigen vectors
+            for ii = 1:length(continu_var) % calculate susceptibility for all continu_var
+                v = squeeze(vvv(ii,:,:,:)); % Obtain the corresponding eigen vectors
                 JzhT = Jzh * ELEf;
                 IzhT = Izh * NUCf;
                 tz = v'  * JzhT * v;
                 ttz  = v'  * (JzhT+IzhT) * v;
-                Jz_exp(1,kk) = sqrt(sum(sum((tz) .* (tz.'))));
+                Jz_exp(1,ii) = sqrt(sum(sum((tz) .* (tz.'))));
 %                 Jz_exp(1,kk) = real(sum(diag(tz)));
-                JIz_exp(1,kk) = sqrt(sum(sum((ttz) .* (ttz.'))));
+                JIz_exp(1,ii) = sqrt(sum(sum((ttz) .* (ttz.'))));
 %                 JIz_exp(1,kk) = real(sum(diag(ttz)));
             end
+                        
+            beta = f2E/(sim.temp.*kB);
+%             En(:,:) = squeeze(eee(:,1:7))/f2E;
+            En(:,:) = squeeze(eee)/f2E;
+            Ediff = double.empty(size(En,1),size(En,2)-1,0);
+            bzF = double.empty(size(En,1),size(En,2)-1,0);
+            Zn = sum(exp(-En.*beta),2); % Partition function
+            for kk = 1:size(En,2)-1
+                Ediff(:,kk,1) = En(:,kk+1)-En(:,kk);
+                bzF(:,kk,1) = (exp(-En(:,kk).*beta) - exp(-En(:,kk+1).*beta))./Zn; % Boltzmann factor for each transition line
+            end
             
-            Gamma = 0.01; % Coupling strength between the cavity field and the spin system
-            gama = kappa_i; % define spin level lifetime (meV)
-            spins = double.empty(length(continu_var),0); % A container for the elements of spin term summation in the denominator of S11
-            spin_term = double.empty(length(continu_var),size(freq,2),0); % A container for the spin term summation in the denominator of S11
+            Gamma = 0.02; % (GHz) Coupling strength between the cavity field and the spin system
+            gama = 2.5e-4; % define spin level lifetime (GHz)
+            spins = double.empty(length(continu_var),size(En,2)-1,size(freq,2),0); % A container for the elements of spin term summation in the denominator of S11
+%             spin_term = zeros(length(continu_var),size(freq,2));
             for ii = 1:length(continu_var)
                 for kk = 1:size(En,2)-1
-                    spins(kk) = JIz_exp(1,ii)*2*Gamma^2.*bzF(ii,kk)./(1i.*(Ediff(ii,kk)-wc(1,ii)) + gama); % calculate the spin term for each transition level
-%                     spins(kk) = 2*Gamma^2.*Jz_exp(1,ii)./(1i.*(Ediff(ii,kk)-wc(1,ii)) + gama);
-%                     spins(kk) = 2*Gamma^2.*popul(ii,kk,1)./(1i.*(Ediff(ii,kk) - wc(1,ii)) + 3*abs(kappa_e)); % calculate the spin term for each transition level
+                    omega = Ediff(ii,kk);
+                    omega = repmat(omega,size(freq));
+                    spins(ii,kk,:,1) = 2*Gamma^2*JIz_exp(1,ii)*bzF(ii,kk)./(1i.*(omega-freq) + gama); % calculate the spin term for each transition level
+%                     spins(ii,kk) = 2*Gamma^2.*Jz_exp(1,ii)./(1i.*(Ediff(ii,kk)-wc(1,ii)) + gama);
+%                     spins(ii,kk) = 2*Gamma^2.*bzF(ii,kk,1)./(1i.*(Ediff(ii,kk) - wc(1,ii)) + 3*abs(kappa_e)); % calculate the spin term for each transition level
+%                     spin_term(ii,:) = spin_term(ii,:) + squeeze(spins(ii,kk,:,1))';
                 end
-                spin_term(ii,:,1) = sum(spins(:)); % Sum over all levels
             end
+%             spin_term = spin_term';
+            spin_term = squeeze(sum(spins,2)); % Sum over all levels
             break;
         case 4 % calculate MF-RPA susceptibilities from scratch (takes long time)
             LiReF4_MF_Yikai('Ho',dscrt_var,cVar,theta,phi);
@@ -530,7 +535,8 @@ switch Options.simType
             end
         end
     case 3
-        S11 = 1 + 2*kappa_e./(1i.*(wc-freq) - (kappa_i + kappa_e) + spin_term); % Calculate the S11 response using spin terms
+        wc = repmat(wc,length(continu_var),size(freq,2)); % expand the resonant frequency to a matrix for calculations in the next step
+        S11 = 1 + 2*kappa_e./(1i.*(wc - freq + real(spin_term)) - (kappa_i + kappa_e) + 1i*imag(spin_term)); % Calculate the S11 response using spin terms
         S11 = S11';
         sim.S11 = S11;
         [cVar,freq] = meshgrid(continu_var,freq);%% Calculate the spin terms in the denominator without susceptibilities
@@ -570,7 +576,7 @@ if Options.Elevel == true
     marker = [":","-.","--","-"];
     figure
     hold on
-    plot(continu_var,En(:,1:nLevel+1),'Color',[35 107 142]/255,'linewidth',2);
+    plot(continu_var,En(:,1:nLevel+1),'LineStyle',marker(1),'Color',[35 107 142]/255,'linewidth',2);
     set(gca,'fontsize',10);
     % text(8,(j-1)*D+0.02,'0.1');
 %     set(fig1,'position',[100 100 600 300])
