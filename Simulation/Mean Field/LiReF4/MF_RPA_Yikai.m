@@ -20,14 +20,14 @@ Options.nZee = false;
         nZee_path = 'without Hz_I';
     end
 Options.RPA = RPA_mode; % Apply random phase approximation (RPA) correction
-    Qplot = false; % k-dependent plot for RPA susceptibilities
-    if Qplot == true
+    Kplot = false; % k-dependent plot for RPA susceptibilities
+    if Kplot == true
         % qz = (6.9:0.0025:7.5)';
         qz = (0:0.01:0.5)';
         qx = zeros(size(qz,1),1);
         qy = zeros(size(qz,1),1);
         qvec = [qx qy qz];
-        contnu_var0 = 0; % fixed point of the continuous variable for k-plot
+        contnu_var0 = [0]; % selected points of the continuous variable for k-plot
     else
         qz = 0.0;
     %         qz = 7.305; % Wavelength = 0.1369 m, frequency = 2.19 GHz
@@ -38,18 +38,18 @@ Options.RPA = RPA_mode; % Apply random phase approximation (RPA) correction
         qvec = [qx qy qz];
     end
 if Options.RPA == false
-    Qplot = flase;
+    Kplot = flase;
 end
 clearvars -except dscrt_var theta phi gama Options mion freq_total hyp qvec contnu_var0 Qplot nZee_path
 
-global dip_range ex_range muB J2meV mu0 f2E elem_idx ELEf NUCf
+global dip_range ex_range muB muN J2meV mu0 f2E elem_idx ELEf NUCf
 % Declare physical constants as global for consistency
-hbar = 1.055E-34; % Reduced Planck constant [J.s]
-muN = 3.15245e-5; % Nuclear magneton [meV/T]
-J2meV = 6.24151e+21; % Joule to meV
-f2E = hbar*2*pi*10^9*J2meV;% GHz to meV
-muB = 9.274e-24; %[J/T]
-mu0 = 4e-7*pi; % [H/m]
+hbar = 1.05457E-34; % Reduced Planck constant [J.s]
+J2meV = 6.24151e+21; % convert Joule to meV
+f2E = hbar*2*pi*1e+9*J2meV;% convert GHz to meV
+muB = 9.27401e-24; % Bohr magneton [J/T]
+muN = 5.05078e-27; % Nuclear magneton [J/T]
+mu0 = 4*pi*1e-7; % [H/m]
 dip_range = 100; % dipole summation range (number of unit cell)
 ex_range = 1; % Exchange interaction range (number of unit cell)
 
@@ -91,26 +91,26 @@ for ii = 1:length(dscrt_var)
                 end
         end
     end
-    eee = eee - min(eee,[],2); % Normalize the energies against the ground state energy
+    eee = eee - min(eee,[],2); % Normalize the eigen-energies to the ground state
     save_name1 = strcat('chi0_Li',mion,'F4_',file_part);
     save_name2 = strcat('RPA_Li',mion,'F4_',file_part);
     
     elem_idx = find(ion.prop);  
     ELEf = ion.gLande(elem_idx) * muB * J2meV; % Lande factor * Bohr magneton (meV/T)
-    NUCf = ion.nLande(elem_idx) * muN;
-    eigenE = eee; % load eigenenergy
+    NUCf = ion.nLande(elem_idx) * muN * J2meV; % [meV/T]
+    eigenE = eee; % load eigenenergy [meV]
 %     eigenE(:,9:end) = 0; % truncate the Hilbert space
     eigenW = vvv; % load eigenstates
 %     eigenW(:,9:end,9:end) = 0; % truncate the Hilbert space
     if Options.RPA == true
-        if Qplot == true
+        if Kplot == true
             bidx = int16.empty(0,length(contnu_var0));
             for jj = 1:length(contnu_var0)
                 [~,bidx(jj)] = min(abs(vecnorm(continu_var,1,1)-contnu_var0(jj)));
             end
-            eigenW = vvv(bidx,:,:);
-            eigenE = eee(bidx,:);
-            continu_var = continu_var(bidx);
+            eigenW = vvv(bidx,:,:); % eigen-functions
+            eigenE = eee(bidx,:); % eigen-energies [meV]
+            continu_var = continu_var(bidx); % magnetic field or temperature
         end
         [continu_var, freq_total, chi, ~] = linear_response(ion,eigenE,continu_var,freq_total,ttt,eigenW,gama);
         [continu_var, freq_total, chiq_J ] = RPA(qvec, continu_var, freq_total, ion, chi.ionJ); % Electronic susceptibilities
@@ -144,21 +144,21 @@ end
 
 if Options.plotting == true % Plot the susceptibilities
     plot_var = {continu_var, freq_total, chi0, gama, [0,0,0], dscrt_var(ii)};
-    if Qplot == true
+    if Kplot == true
         plot_var{3} = chiq;
         plot_var{5} = qvec;
-        figs(plot_var,Options,"\chi_{RPA}",Qplot);
+        figs(plot_var,Options,"\chi_{RPA}",Kplot);
         chi0_p = repmat(chi0,1,1,1,length(qvec));
         chi0_p = permute(chi0_p,[1 2 3 5 4]); % Add the additional dimension for the plotting purpose
         plot_var{3} = chi0_p;
-        figs(plot_var,Options,"chi_0",Qplot);
+        figs(plot_var,Options,"chi_0",Kplot);
     else
-        figs(plot_var,Options,"\chi_0",Qplot);
+        figs(plot_var,Options,"\chi_0",Kplot);
         if Options.RPA == true
             plot_var{3} = chiq;
-            figs(plot_var,Options,"\chi_{RPA}",Qplot);
+            figs(plot_var,Options,"\chi_{RPA}",Kplot);
             plot_var{3} = chiq-chi0;
-            figs(plot_var,Options,"\chi_{RPA}-\chi_0",Qplot);
+            figs(plot_var,Options,"\chi_{RPA}-\chi_0",Kplot);
         end
     end
 end
@@ -297,7 +297,7 @@ save(savefile,'temp','fields','freq_total','chi','gama','qvec','-v7.3');
 end
 
 function [continu_var, freq_total, chi, JIz_exp] = linear_response(ion,eigenE,continu_var,freq_total,temperature,eigenW,gma)
-global ELEf NUCf f2E elem_idx
+global f2E elem_idx
 % Declare susceptibility tensor
 chi0_J = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
 chi0_I = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
@@ -305,24 +305,24 @@ chi0_IJ = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
 ionJ = ion.J(elem_idx);
 ionI = ion.I(elem_idx);
 %Initiate ionJ operators
-Jz=diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
-JhT.z=kron(Jz,eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
-Jp=diag(sqrt((ionJ-((ionJ-1):-1:-ionJ) ).*(ionJ+1+( (ionJ-1):-1:-ionJ) )),1); % electronic spin ladder operator
-Jm=Jp'; % electronic spin ladder operator
-Jph=kron(Jp,eye(2*ionI+1)); % Expand to match the dimension of Hilbert space
-Jmh=kron(Jm,eye(2*ionI+1));
-JhT.x=(Jph+Jmh)/2;
-JhT.y=(Jph-Jmh)/2i;
+Jz = diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
+JhT.z = kron(Jz,eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
+Jp = diag(sqrt((ionJ-((ionJ-1):-1:-ionJ) ).*(ionJ+1+( (ionJ-1):-1:-ionJ) )),1); % electronic spin ladder operator
+Jm = Jp'; % electronic spin ladder operator
+Jph = kron(Jp,eye(2*ionI+1)); % Expand to match the dimension of Hilbert space
+Jmh = kron(Jm,eye(2*ionI+1));
+JhT.x = (Jph+Jmh)/2;
+JhT.y = (Jph-Jmh)/2i;
 
 %Initiate I operators
-Iz=diag(ionI:-1:-ionI); %Iz = -I, -I+1,...,I-1,I
-IhT.z=kron(eye(2*ionJ+1),Iz); % Expand Hilbert space
-Ip=diag(sqrt((ionI-((ionI-1):-1:-ionI)).*(ionI+1+((ionI-1):-1:-ionI))),1); % Nuclear spin ladder operator
-Im=Ip'; % Nuclear spin ladder operator
-Iph=kron(eye(2*ionJ+1),Ip); % Expand to match the dimension of Hilbert space
-Imh=kron(eye(2*ionJ+1),Im);
-IhT.x=(Iph+Imh)/2;
-IhT.y=(Iph-Imh)/2i;
+Iz = diag(ionI:-1:-ionI); %Iz = -I, -I+1,...,I-1,I
+IhT.z = kron(eye(2*ionJ+1),Iz); % Expand Hilbert space
+Ip = diag(sqrt((ionI-((ionI-1):-1:-ionI)).*(ionI+1+((ionI-1):-1:-ionI))),1); % Nuclear spin ladder operator
+Im = Ip'; % Nuclear spin ladder operator
+Iph = kron(eye(2*ionJ+1),Ip); % Expand to match the dimension of Hilbert space
+Imh = kron(eye(2*ionJ+1),Im);
+IhT.x = (Iph+Imh)/2;
+IhT.y = (Iph-Imh)/2i;
         
 % IJ_hT.x = JhT.x+NUCf/ELEf*IhT.x; % Hybridized electronuclear spin operator
 % IJ_hT.y = JhT.y+NUCf/ELEf*IhT.y;
@@ -332,8 +332,8 @@ IhT.y=(Iph-Imh)/2i;
 JIz_exp = double.empty(size(continu_var,2),size(JhT.z,1),0); % Expectation value of J-I pseudo-spin
 for kk = 1:size(continu_var,2) % calculate susceptibility for all fields
     v = squeeze(eigenW(kk,:,:)); % Obtain the corresponding eigen vectors
-    JzhT = JhT.z * ELEf;
-    IzhT = IhT.z * NUCf;
+    JzhT = JhT.z;
+    IzhT = IhT.z;
 %     JzhT = JhT.z;
 %     IzhT = 0;
     ttz  = v'  * (JzhT+IzhT) * v;
@@ -342,32 +342,33 @@ end
 
 for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
     freq = freq_total (m);
-    omega = freq*f2E;   % define frequency sweep range (meV)
+    omega = freq*f2E;   % convert frequencies to meV
 %     for k = 1:size(continu_var,2) % for debugging: calculate susceptibility for all fields
     parfor k = 1:size(continu_var,2) % calculate susceptibility for all fields
         v = squeeze(eigenW(k,:,:)); % Obtain the corresponding eigen vectors
         en = squeeze(eigenE(k,:)); % Obtain the corresponding eigen energies [meV]
         if temperature(k) ~= 0
             beta = 11.6/temperature(k); %[meV^-1]
-            zn = sum(exp(-beta*en));
-            Z = exp(-beta*en)/zn;
+            Z = sum(exp(-beta*en));
+            zn = exp(-beta*en)/Z;
 %             Z = exp(-beta*en);
 %             for nn = 1:8 % Skew the population of the lowest 8 states
 %                Z(nn) = Z(nn) - (9-nn)/2e2 + nn/2e2;
 %             end
 %             Z = Z/sum(Z);
-            [n,np] = meshgrid(Z,Z);
+            [n,np] = meshgrid(zn,zn);
             NN = n-np;
         else
-            zn = zeros(size(en));
-            zn(1) = 1;
-            [n,np] = meshgrid(zn,zn);
+            Z = zeros(size(en));
+            Z(1) = 1;
+            [n,np] = meshgrid(Z,Z);
             NN = n-np;
         end
         [ee,eep] = meshgrid(en,en);
         EE = eep-ee-omega;
         gamma = ones(size(EE))*gma;
 
+%         % computer the real an imaginary part of the susceptibilities separately        
 %         deno1 = EE ./ (EE.^2 + gamma.^2);
 %         deno2 = gamma ./ (EE.^2 + gamma.^2);
 %         chi0_J(:,:,m,k) = chi_Mx(JhT,JhT,v,NN,deno1,deno2); % Electornic spin operators
@@ -375,12 +376,13 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
 %         chi0_I(:,:,m,k) = chi_Mx(IhT,IhT,v,NN,deno1,deno2); % Nuclear spin operators        
 % %         chi0_J(:,:,m,k) = chi_Mx(IJ_hT,IJ_hT,v,NN,deno1,deno2); % hyperdized electronuclear operator
 
+        % computer the electronic and nuclear spin susceptibilities separatly  
         EE = eep-ee-omega;
         deno0 = 1 ./ (EE - 1i*gamma);
         chi0_J(:,:,m,k) = chi_Mx(JhT,JhT,v,NN,deno0); % Electornic spin operators
         chi0_IJ(:,:,m,k) = chi_Mx(JhT,IhT,v,NN,deno0); % Electro-Nuclear cross term
         chi0_I(:,:,m,k) = chi_Mx(IhT,IhT,v,NN,deno0); % Nuclear spin operators
-%         chi0_J(:,:,m,k) = chi_Mx(IJ_hT,IJ_hT,v,NN,deno0); % hyperdized electronuclear operator
+%         chi0_J(:,:,m,k) = chi_Mx(IJ_hT,IJ_hT,v,NN,deno0); % alternative: computer the chi_I and chi_J together
     end
 end
 
@@ -524,19 +526,19 @@ function [continu_var, freq_total, chiq] = RPA(qvec, continu_var, freq_total, io
 global muB mu0 J2meV dip_range ex_range elem_idx
 N = 4; % Number of magnetic atoms in unit cell
 lattice = ion.abc{elem_idx};
-gfac = (muB)^2*(mu0/4/pi)*J2meV*10^30;
+gfac = ion.gLande(elem_idx)^2*(muB)^2*(mu0/4/pi)*J2meV; % (gL * muB)^2 * mu0/(4pi)
 
 chiq = zeros(3,3,length(freq_total(1,:)),size(continu_var,2),size(qvec,1));
 D = zeros(3,3,N,N,size(qvec,1));
 for jj=1:size(qvec,1)
-    D(:,:,:,:,jj) = ion.gLande(elem_idx)^2*(gfac*dipole_direct(qvec(jj,:),dip_range,lattice))...
+    D(:,:,:,:,jj) = gfac*10^30*dipole_direct(qvec(jj,:),dip_range,lattice)...
         + exchange(qvec(jj,:),ion.ex(2),lattice,ex_range);
 end
 
 deno = zeros(3,3,size(freq_total,1),size(continu_var,2)); % RPA correction factor (denominator)
 for ii = 1:size(continu_var,2)
     for nq = 1:size(qvec,1)
-        Jq = sum(sum(D(:,:,:,:,nq),4),3)/4; % average over the four sites in the unit cell and avoid double counting
+        Jq = sum(sum(D(:,:,:,:,nq),4),3)/N; % average over the all sites in the unit cell and avoid double counting
         parfor kk = 1:length(freq_total(1,:))
             MM = chi0(:,:,kk,ii).*Jq;
             deno(:,:,kk,ii) = (ones(size(MM))- MM); % Suppress parfor warning for this line
