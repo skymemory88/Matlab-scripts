@@ -68,19 +68,19 @@ Options.scanMode = scanMode; % continuous variable choice: 1. Field, 2. Temperat
     cVar_np = 1601; % number of points along field axis
     cVar = linspace(cVar_l,cVar_h,cVar_np); % Only applies when calculating from scratch
     
-Options.simType = 3; % Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation
+Options.simType = 2; % Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation
 Options.nZee = false;
-Options.RPA = true; % Use RPA susceptibilities
+Options.RPA = false; % Use RPA susceptibilities
 Options.noise = false; % Add white noises to the backgroud
     sig2n = 30; % signal-to-noise level (dB)
-Options.plot = true; % Option to plot data
+Options.plot = false; % Option to plot data
     Options.x1x2 = false; % Plot the matrix elements of the susceptibilities
-    Options.trace = false; % Calculate the trace of resonant frequency along field axis
+    Options.trace = true; % Calculate the trace of resonant frequency along field axis
     Options.Q_1 = false; % Calculate 1/Q plot along the field axis
     Options.Elevel = false; % Plot energy eigenstates
     Options.Ediff = false; % Plot energy levels on top
-        nLevel = 7; % number of excitation spectrum (max 136);
-        ndiff = 1; % order of excitations
+        nLevel = 7; % number of excitation spectrum (max 135);
+        ndiff = 1; % order of excitations (min 1)
         nMax = nLevel + ndiff; % Hilbert space dimension
         hyp = 1.0; % hyperfine isotope proportionality
 Options.savedata = false; % Save results to a file
@@ -131,7 +131,7 @@ if Options.RPA == true
 %     scale = 2.1; % MF-RPA scaling factor
     scale = 0.15;
 else
-    scale = 2.4; % MF scaling factor
+    scale = 0.5;
 end
 % Filling factor:  %SC108: 0.112, SC200: 0.0127
 filFctr = 0.0127*scale; % SC200
@@ -141,10 +141,7 @@ filFctr = 0.0127*scale; % SC200
 % filFctr = [0.005 0.01 0.015 0.02 0.025 0.03 0.035 0.04];
 
 % coupling strength
-gw0 = sqrt(mu0*2*pi*fc*10^9*rho*filFctr/hbar/2) / (2*pi) * 1e-9; % susceptibility prefactor [T/J. Hz]*E-9
-% gw0 = sqrt(mu0*fc*10^9*rho*filFctr/hbar/2) / (2*pi) * 1e-9; % susceptibility prefactor [T/J. Hz]*E-9
-% gw0 = sqrt(mu0*wc*10^9*2*pi*rho*filFctr/hbar/2); % susceptibility prefactor [T.(J.s)^-1]
-% gw0 = gw0 * 10^-9 * meV2J * f2E; % [T]
+gw0 = sqrt(mu0*2*pi*fc*10^9*rho*filFctr/hbar/2) / (2*pi) * 1e-9; % susceptibility prefactor [T/J. GHz]
 % gw0 = filFctr^2*wc^2; % Phys.Rev.Appl. 2, 054002 (2014)
 
 % Cavity loss rates (GHz)
@@ -164,7 +161,7 @@ gw0 = sqrt(mu0*2*pi*fc*10^9*rho*filFctr/hbar/2) / (2*pi) * 1e-9; % susceptibilit
 % kappa_e = 6.92e-4; % SC127_1
 % kappa_i = 1.15e-4; % SC108
 % kappa_e = 8.18e-4; % SC108
-kappa_i = 2.91e-4;
+kappa_i = 8.43e-4;
 kappa_e = 4.02e-4;
 
 if Options.savegif == true
@@ -250,10 +247,10 @@ while true
         case 2 % Option 2 Load existing susceptibilities and interpolate
             if isfile(MF_file) && isfile(chi_file)
                 load(MF_file,'-mat','eee'); % loads eigenEnergy
-                En = squeeze(eee);
+                En = squeeze(eee - min(eee,[],2)); % normalize to the ground state energy [meV]
                 switch Options.scanMode
                     case 'field'
-                        load(chi_file,'-mat','fields','freq_total','chi');
+                        load(chi_file,'-mat','fields','freq_total','chi','unit');
                         continu_var = fields;                
                         [cVar,freq] = meshgrid(continu_var(1,:),freq_total);
                         sim.freq = freq;
@@ -261,7 +258,7 @@ while true
                         xlab = 'Magnetic Field (T)';
                         titl = num2str(dscrt_var*1000, '%u mK');
                     case 'temp'
-                        load(chi_file,'-mat','temp','freq_total','chi');
+                        load(chi_file,'-mat','temp','freq_total','chi','unit');
                         continu_var = temp;                
                         [cVar,freq] = meshgrid(continu_var(1,:),freq_total);
                         sim.freq = freq;
@@ -270,43 +267,12 @@ while true
                         titl = num2str(dscrt_var, '%.2f T');
                 end
                 chi = reshape(chi,[],size(chi,3),size(chi,4));
-                
-                chi_elem = find(chi_elem);
-                x1 = real(squeeze(chi(chi_elem,:,:)));
-                x2 = imag(squeeze(chi(chi_elem,:,:)));
                 %% Calculate excitation spectrum
                 if Options.Ediff == true
-                    Ediff = diff(En,1,2)/f2E;
+                    Ediff = diff(En,1,2)/f2E; % [GHz]
                     Ediff = Ediff(:,1:nLevel);
                 end
                 clearvars fff vvv eee
-                
-                if Options.x1x2 == true && Options.plot == true
-                    figure;
-                    hp1 = pcolor(continu_var(1,:),freq,x1);
-                    set(hp1, 'edgeColor','none')
-%                     caxis([-23 2]);
-                    colorbar
-                    xlabel(xlab)
-                    ylabel('Frequency (GHz)')
-                    if Options.RPA == true
-                        title({'Real part of \chi_{zz} with RPA'})
-                    else
-                        title({'Real part of \chi_{zz}'})
-                    end
-                    
-                    figure
-                    hp2 = pcolor(continu_var(1,:),freq,(x2));
-                    set(hp2, 'edgeColor','none')
-                    colorbar
-                    xlabel(xlab)
-                    ylabel('Frequency (GHz)')
-                    if Options.RPA == true
-                        title({strcat("Imaginary part of ", chi_labl(chi_idx), " with RPA")})
-                    else
-                        title({strcat("Imaginary part of ", chi_labl(chi_idx))})
-                    end
-                end
                 break;
             else % if file not exist, call calculation function first
                 prompt = sprintf('Not all required data file exists, run calculation and generate the files?\n');
@@ -368,8 +334,8 @@ while true
             elem_idx = 2; % LiReF4, Re = Ho
             J = J_tab(elem_idx); % Electronic moment for Ho3+
             I = I_tab(elem_idx); % Nuclear moment for Ho3+
+            muB = 9.27401e-24; % Bohr magneton [J/T]
             muN = 5.05078e-27; % Nuclear magneton [J/T]
-            muB = 9.274e-24; % [J/T]
             ELEf = gLande(L_tab(elem_idx),S_tab(elem_idx)) * muB; % Lande factor * Bohr magneton [J/T]
             NUCf = nLande(elem_idx) * muN; % [J/T]
             Jz=diag(J:-1:-J); % Jz = -J, -J+1,...,J-1,J
@@ -408,6 +374,7 @@ while true
                 Jz_exp(ii,1) = zn*diag(tz(1:nMax,1:nMax));
                 JIz_exp(ii,1) = zn*diag(ttz(1:nMax,1:nMax));
                 Gc2(ii,:,:,1) = gw0^2 * ttz(1:nMax,1:nMax) .* ttz(1:nMax,1:nMax).' .* NN; % [GHz^2]
+%                 Gc2(ii,:,:) = (squeeze(Gc2(ii,:,:)) - squeeze(Gc2(ii,:,:)).')/2; % take symmetric average to reduce numerical error
                 for kk = 1:nLevel
                     w0(ii,kk,1) = dE(kk,kk+ndiff)/f2E;
                     spins(ii,kk,:,1) = Gc2(ii,kk,kk+ndiff)./(1i*(w0(ii,kk) - freq) - gama); % calculate the spin term for each transition level
@@ -419,18 +386,14 @@ while true
             sim.JIz = JIz_exp;
             sim.omega = w0;
             sim.Gc2 = Gc2;
-            spin_term = squeeze(sum(spins,2)); % Sum over all levels
+            spin_term = squeeze(sum(spins,2)); % Sum over all levels [GHz]
             break;
         case 4 % calculate MF-RPA susceptibilities from scratch (takes long time)
             LiReF4_MF_Yikai('Ho',dscrt_var,cVar,theta,phi);
             MF_RPA_Yikai('Ho',Options.scanMode,dscrt_var,freq,theta,phi,gama,1,Options.RPA);
             
-            load(chi_file,'-mat','chi');
+            load(chi_file,'-mat','chi','unit');
             chi = reshape(chi,[],size(chi,3),size(chi,4));
-            
-            chi_elem = find(chi_elem);
-            x1 = real(squeeze(chi(chi_elem,:,:)));
-            x2 = imag(squeeze(chi(chi_elem,:,:)));
             sim.freq = freq;
             sim.field = cVar;
     end
@@ -438,9 +401,19 @@ end
 %% Simulat S11 using input-output formalism
 switch Options.simType
     case {2,4}
+        sim.unit = unit;
         for ii = 1:length(alpha) % varying phase angle
-            chi = (x1+1i*x2); % [meV.T^-2]
-            S11 = 1 + 2*kappa_e./(1i.*(freq-fc) - (kappa_i + kappa_e) + (gw0*meV2J)^2 * 1i*chi * exp(1i*alpha(ii)));
+            chi_elem = find(chi_elem); % select the susceptibility tensorial component
+            if strcmp(unit,'J')
+                chi = squeeze(chi(chi_elem,:,:)); % [J/T^2]
+            elseif strcmp(unit,'GHz')
+                chi = squeeze(chi(chi_elem,:,:))*f2E*meV2J; % [GHz/T^2] --> [J/T^2]
+            else
+                chi = squeeze(chi(chi_elem,:,:))*meV2J; % [meV/T^2] --> [J/T^2]
+            end
+            gw2 = gw0^2*f2E*meV2J; % [GHz*T^2/J]
+
+            S11 = 1 + 2*kappa_e./(1i.*(freq-fc) - (kappa_i + kappa_e) + gw2*1i*chi * exp(1i*alpha(ii)));
 %             S21_1 = kappa_e./(1i.*(freq-wc) - (kappa_i + kappa_e) + filFctr_1*1i*chi*exp(1i*alpha(ii)));
 %             S21_2 = kappa_e_2./(1i.*(freq-w2) - (kappa_i_2 + kappa_e_2) + 1i*filFctr_2*chi*exp(1i*(alpha(ii))));
 %             S21 = abs(S21_1 + S21_2);
@@ -474,6 +447,35 @@ switch Options.simType
                 end
                 xlim([cVar_l cVar_h])
                 ylim([freq_l freq_h])
+                        
+                if Options.x1x2 == true
+                    x1 = real(chi/meV2J/f2E); % [J/T^2]
+                    x2 = imag(chi/meV2J/f2E); % [J/T^2]
+                    figure;
+                    hp1 = pcolor(continu_var(1,:), freq, x1);
+                    set(hp1, 'edgeColor','none')
+                    %                     caxis([-23 2]);
+                    colorbar
+                    xlabel(xlab)
+                    ylabel('Frequency (GHz)')
+                    if Options.RPA == true
+                        title({'Real part of \chi_{zz} with RPA'})
+                    else
+                        title({'Real part of \chi_{zz}'})
+                    end
+                    
+                    figure
+                    hp2 = pcolor(continu_var(1,:), freq, x2);
+                    set(hp2, 'edgeColor','none')
+                    colorbar
+                    xlabel(xlab)
+                    ylabel('Frequency (GHz)')
+                    if Options.RPA == true
+                        title({strcat("Imaginary part of ", chi_labl(chi_idx), " with RPA")})
+                    else
+                        title({strcat("Imaginary part of ", chi_labl(chi_idx))})
+                    end
+                end
             end
             
             if Options.trace
@@ -500,7 +502,7 @@ switch Options.simType
                 for jj = 1:size(mag11,2)
                     [~,fidx] = min(mag11(:,jj));
                     f0(jj) = freq(fidx,jj);
-                    Q0(jj) = f0(jj)/(kappa_e+kappa_i+imag(chi(fidx,jj)));
+                    Q0(jj) = f0(jj)/(kappa_e + kappa_i + imag(gw2*chi(fidx,jj)));
                 end
                 sim.Qf = Q0;
                 mag = abs(S11)';
@@ -508,7 +510,8 @@ switch Options.simType
                 %find the indices to the minima (resonant frequency) of each complete frequency scan until the end of the data
                 for jj = 1:size(cVar,2) %Searching column minima (fixed field)
                     [~,idx] = min( mag(jj,:) );
-                    HM = ( max(mag(jj,:)) + min(mag(jj,:)) )/2; %
+                    HM = max(mag(jj,:))*0.7; % 70% of the magnitude as Half max of power
+%                     HM = ( max(mag(jj,:)) + min(mag(jj,:)) )/2; % midpoint of the magnitude
                     % Calculate quality factor using f0/FWHM
                     left = mag(jj,1:idx);
                     right = mag(jj,idx:end);
