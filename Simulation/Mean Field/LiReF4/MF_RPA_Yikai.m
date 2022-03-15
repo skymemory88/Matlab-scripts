@@ -10,7 +10,7 @@ function  MF_RPA_Yikai(mion,scanMode,dscrt_var,freq_total,theta,phi,gama,hyp,RPA
 % RPA_Mode: whether or not to apply RPA
 
 Options.plotting = false; % Decide whether or not to plot the data at the end
-Options.meV = false; % Energy unit choice: meV or GHz (default)
+Options.unit = 'meV'; % Energy unit choice: meV or GHz (default)
 Options.saving = true; % Options to save the susceptibility tensors
 Options.scanMode = scanMode; % 1. Field plot with RPA; 2. Temp plot with RPA; 2. wavevector plot with RPA
 Options.nZee = false;
@@ -30,28 +30,37 @@ Options.RPA = RPA_mode; % Apply random phase approximation (RPA) correction
         contnu_var0 = [0]; % selected points of the continuous variable for k-plot
     else
         qz = 0.0;
-    %         qz = 7.305; % Wavelength = 0.1369 m, frequency = 2.19 GHz
-    %         qz = 12.175; % Wavelength = 0.0821 m, frequency = 3.65 GHz
-    %         qx = [0.01 0.1 0.3 0.6 1]';
+%         qz = 7.305; % Wavelength = 0.1369 m, frequency = 2.19 GHz
+%         qz = 12.175; % Wavelength = 0.0821 m, frequency = 3.65 GHz
+%         qx = [0.01 0.1 0.3 0.6 1]';
         qy = zeros(size(qz,1),1);
         qx = zeros(size(qz,1),1);
         qvec = [qx qy qz];
     end
 if Options.RPA == false
-    Kplot = flase;
+    Kplot = false;
 end
-clearvars -except dscrt_var theta phi gama Options mion freq_total hyp qvec contnu_var0 Qplot nZee_path
+clearvars -except dscrt_var theta phi gama Options mion freq_total hyp qvec contnu_var0 Kplot nZee_path
 
 global dip_range ex_range muB muN J2meV mu0 f2E elem_idx ELEf NUCf
 % Declare physical constants as global for consistency
 hbar = 1.05457E-34; % Reduced Planck constant [J.s]
 J2meV = 6.24151e+21; % convert Joule to meV
-f2E = hbar*2*pi*1e+9*J2meV;% convert GHz to meV
+f2E = hbar*2*pi*1e+9*J2meV; % convert GHz to meV
 muB = 9.27401e-24; % Bohr magneton [J/T]
 muN = 5.05078e-27; % Nuclear magneton [J/T]
 mu0 = 4*pi*1e-7; % [H/m]
 dip_range = 100; % dipole summation range (number of unit cell)
 ex_range = 1; % Exchange interaction range (number of unit cell)
+
+% Select the final output unit (default: meV)
+if strcmp(Options.unit, 'GHz')
+    ConvUnit = 1/f2E;
+elseif strcmp(Options.unit, 'J')
+    ConvUnit = 1/J2meV;
+else
+    ConvUnit = 1;
+end
 
 for ii = 1:length(dscrt_var) 
     ipt = false;
@@ -61,7 +70,8 @@ for ii = 1:length(dscrt_var)
             case 'field'
                 location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
                             'F4 project\Data\Simulations\Matlab\Susceptibilities\', nZee_path];
-                filename = strcat(['Hscan_Li',mion,'F4_'], sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
+                filename = strcat(['Hscan_Li',mion,'F4_'],...
+                    sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
                 file = fullfile(location,filename);
                 load(file,'-mat','eee','fff','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
                 file_part = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e.mat', dscrt_var(ii), theta, phi, gama);
@@ -74,7 +84,8 @@ for ii = 1:length(dscrt_var)
             case 'temp'
                 location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
                     'F4 project\Data\Simulations\Matlab\Susceptibilities\', nZee_path];
-                filename = strcat(['Tscan_Li',mion,'F4_'], sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
+                filename = strcat(['Tscan_Li',mion,'F4_'],...
+                    sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
                 file = fullfile(location,filename);
                 load(file,'-mat','eee','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
                 file_part = sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_%4$.2e.mat', dscrt_var(ii), theta, phi, gama);
@@ -117,19 +128,21 @@ for ii = 1:length(dscrt_var)
         [continu_var, freq_total, chiq_IJ] = RPA(qvec, continu_var, freq_total, ion, chi.IJ); % cross term
         [continu_var, freq_total, chiq_I ] = RPA(qvec, continu_var, freq_total, ion, chi.ionI); % Nuclear susceptibilities
 
-        chiq = ELEf^2*chiq_J + 2*ELEf*NUCf*chiq_IJ + NUCf^2*chiq_I; % Full electronuclear susceptibility expansion
+        chiq = ELEf^2*chiq_J + 2*ELEf*NUCf*chiq_IJ + NUCf^2*chiq_I; % expanded electronuclear susceptibility [meV/T^2]
 %         chiq = ELEf^2*chiq.ionJ + 2*ELEf*NUCf*chiq.IJ; % Electron susceptibility + the cross term
 %         chiq = ELEf^2*chiq.ionJ + NUCf^2*chiq.ionI; % Electron susceptibility + nuclear susceptibilities
 %         chiq = ELEf^2*chiq.ionJ; % Electron susceptibility only
 %         chiq = NUCf^2*chiq.ionI; % Nuclear susceptibility only
+        chiq = chiq.*ConvUnit; % [J/T^2 or meV/T^2]
     else
         [continu_var, freq_total, chi, ~] = linear_response(ion,eigenE,continu_var,freq_total,ttt,eigenW,gama);
     end
-    chi0 = ELEf^2*chi.ionJ + 2*ELEf*NUCf*chi.IJ + NUCf^2*chi.ionI; % Full electronuclear susceptibility expansion
+    chi0 = ELEf^2*chi.ionJ + 2*ELEf*NUCf*chi.IJ + NUCf^2*chi.ionI; % Full electronuclear susceptibility expansion [meV/T^2]
 %     chi0 = ELEf^2*chi0.ionJ + 2*ELEf*NUCf*chi0.IJ; % Electron susceptibility + the cross term
 %     chi0 = ELEf^2*chi0.ionJ + NUCf^2*chi0.ionI; % Electron susceptibility + nuclear susceptibilities
 %     chi0 = ELEf^2*chi0.ionJ; % Electron susceptibility only
 %     chi0 = NUCf^2*chi0.ionI; % Nuclear susceptibility only
+    chi0 = chi0.*ConvUnit; % [GHz/T^2 or meV/T^2]
 
 if Options.saving == true % Save the susceptibilities
     savefile1 = fullfile(location,save_name1);
@@ -167,16 +180,15 @@ clearvars chi0 chi_p chiq
 end
 
 function figs(input_var,Options,fig_tit,Qplot)
+global f2E
 continu_var = input_var{1};
 freq_total = input_var{2};
 chi = input_var{3};
 gama = input_var{4};
 qvec = input_var{5};
 dscrt_var = input_var{6};
-global f2E
-if Options.meV == true % unit choice between meV and GHz
-    freq_total = freq_total*f2E;
-end
+freq_total = freq_total*f2E;
+
 pos0 = [100 300 600 400]; % initial figure position
 pos_inc = [150 0 0 0];
 indx = [strcat(fig_tit,"^{xx}") strcat(fig_tit,"^{yy}") strcat(fig_tit,"^{zz}")]; % index for figure legend
@@ -207,9 +219,10 @@ if Qplot == true
             legend(['\gamma =' num2str(gama,'%.2e meV')]);
             title(['Re[', char(indx(jj)), '] at ', file_part1, file_part2])
             xlabel(sprintf('Q = [h, 0, 0]'))
-            ylabel('Frequency (GHz)')
-            if Options.meV == true
+            if strcmp(Options.unit, 'meV')
                 ylabel('Energy (meV)')
+            elseif strcmp(Options.unit, 'GHz')
+                ylabel('Frequency (GHz)')
             end         
             % Plot the real part of the susceptibility of the z component
             fig(2) = figure;
@@ -223,7 +236,9 @@ if Qplot == true
             title(['Im[', char(indx(jj)), '] at ', file_part1, file_part1])
             xlabel(sprintf('Q = [h, 0, 0]'))
             ylabel('Frequency (GHz)')
-            if Options.meV == true
+            if strcmp(Options.unit, 'GHz')
+                ylabel('Frequency (GHz)')
+            else
                 ylabel('Energy (meV)')
             end
         end
@@ -256,10 +271,11 @@ else
             legend(['\gamma =' num2str(gama,'%.2e meV')]);
             title(['Im[', char(indx(jj)), '] at ', file_part1, file_part2])
             xlabel(xlab)
-            ylabel('Frequency (GHz)')
-            if Options.meV == true
+            if strcmp(Options.unit, 'GHz')
+                ylabel('Frequency (GHz)')
+            else
                 ylabel('Energy (meV)')
-            end            
+            end          
             % Plot the real part of the susceptibility of the z component
             fig(2) = figure;
             set(fig(2),'position',pos0 + jj*pos_inc);
@@ -271,10 +287,11 @@ else
             legend(['\gamma =' num2str(gama,'%.2e meV')]);
             title(['Re[', char(indx(jj)), '] at ', file_part1, file_part2])
             xlabel(xlab)
-            ylabel('Frequency (GHz)')
-            if Options.meV == true
+            if strcmp(Options.unit, 'GHz')
+                ylabel('Frequency (GHz)')
+            else
                 ylabel('Energy (meV)')
-            end
+            end 
         end
     end
 end
@@ -293,11 +310,14 @@ freq_total = save_vars{3};
 chi = save_vars{4};
 gama = save_vars{5};
 qvec = save_vars{6};
-save(savefile,'temp','fields','freq_total','chi','gama','qvec','-v7.3');
+unit = opt.unit;
+
+save(savefile,'temp','fields','freq_total','chi','gama','qvec','unit','-v7.3');
 end
 
 function [continu_var, freq_total, chi, JIz_exp] = linear_response(ion,eigenE,continu_var,freq_total,temperature,eigenW,gma)
-global f2E elem_idx
+global elem_idx f2E
+kB = 8.61733e-2; % [meV/K]
 % Declare susceptibility tensor
 chi0_J = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
 chi0_I = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
@@ -324,9 +344,9 @@ Imh = kron(eye(2*ionJ+1),Im);
 IhT.x = (Iph+Imh)/2;
 IhT.y = (Iph-Imh)/2i;
         
-% IJ_hT.x = JhT.x+NUCf/ELEf*IhT.x; % Hybridized electronuclear spin operator
-% IJ_hT.y = JhT.y+NUCf/ELEf*IhT.y;
-% IJ_hT.z = JhT.z+NUCf/ELEf*IhT.z;
+% IJ_hT.x = JhT.x + NUCf/ELEf*IhT.x; % Hybridized electronuclear spin operator
+% IJ_hT.y = JhT.y + NUCf/ELEf*IhT.y;
+% IJ_hT.z = JhT.z + NUCf/ELEf*IhT.z;
 
 % Single out <Jz+Iz> calculations
 JIz_exp = double.empty(size(continu_var,2),size(JhT.z,1),0); % Expectation value of J-I pseudo-spin
@@ -348,7 +368,7 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
         v = squeeze(eigenW(k,:,:)); % Obtain the corresponding eigen vectors
         en = squeeze(eigenE(k,:)); % Obtain the corresponding eigen energies [meV]
         if temperature(k) ~= 0
-            beta = 11.6/temperature(k); %[meV^-1]
+            beta = 1/(kB*temperature(k)); %[meV^-1]
             Z = sum(exp(-beta*en));
             zn = exp(-beta*en)/Z;
 %             Z = exp(-beta*en);
@@ -360,13 +380,13 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
             NN = n-np;
         else
             Z = zeros(size(en));
-            Z(1) = 1;
+            Z(1) = 1; % Occupy the ground state with unity probability
             [n,np] = meshgrid(Z,Z);
             NN = n-np;
         end
         [ee,eep] = meshgrid(en,en);
-        EE = eep-ee-omega;
-        gamma = ones(size(EE))*gma;
+        EE = (eep-ee-omega); % [meV]
+        gamma = ones(size(EE))*gma; % [meV]
 
 %         % computer the real an imaginary part of the susceptibilities separately        
 %         deno1 = EE ./ (EE.^2 + gamma.^2);
@@ -376,13 +396,12 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
 %         chi0_I(:,:,m,k) = chi_Mx(IhT,IhT,v,NN,deno1,deno2); % Nuclear spin operators        
 % %         chi0_J(:,:,m,k) = chi_Mx(IJ_hT,IJ_hT,v,NN,deno1,deno2); % hyperdized electronuclear operator
 
-        % computer the electronic and nuclear spin susceptibilities separatly  
-        EE = eep-ee-omega;
-        deno0 = 1 ./ (EE - 1i*gamma);
-        chi0_J(:,:,m,k) = chi_Mx(JhT,JhT,v,NN,deno0); % Electornic spin operators
-        chi0_IJ(:,:,m,k) = chi_Mx(JhT,IhT,v,NN,deno0); % Electro-Nuclear cross term
-        chi0_I(:,:,m,k) = chi_Mx(IhT,IhT,v,NN,deno0); % Nuclear spin operators
-%         chi0_J(:,:,m,k) = chi_Mx(IJ_hT,IJ_hT,v,NN,deno0); % alternative: computer the chi_I and chi_J together
+        % computer the electronic and nuclear spin susceptibilities separatly 
+        deno0 = 1 ./ (EE - 1i*gamma); % [meV^-1]
+        chi0_J(:,:,m,k) = chi_Mx(JhT, JhT, v, NN, deno0); % Electornic spin operators
+        chi0_IJ(:,:,m,k) = chi_Mx(JhT, IhT, v, NN, deno0); % Electro-Nuclear cross term
+        chi0_I(:,:,m,k) = chi_Mx(IhT, IhT, v, NN, deno0); % Nuclear spin operators
+%         chi0_J(:,:,m,k) = chi_Mx(IJ_hT, IJ_hT, v, NN, deno0); % alternative: computer the chi_I and chi_J together
     end
 end
 
@@ -526,19 +545,19 @@ function [continu_var, freq_total, chiq] = RPA(qvec, continu_var, freq_total, io
 global muB mu0 J2meV dip_range ex_range elem_idx
 N = 4; % Number of magnetic atoms in unit cell
 lattice = ion.abc{elem_idx};
-gfac = ion.gLande(elem_idx)^2*(muB)^2*(mu0/4/pi)*J2meV; % (gL * muB)^2 * mu0/(4pi)
+gfac = ion.gLande(elem_idx)^2*(muB)^2*(mu0/4/pi); % (gL * muB)^2 * mu0/(4pi) [J.m^3]
 
 chiq = zeros(3,3,length(freq_total(1,:)),size(continu_var,2),size(qvec,1));
 D = zeros(3,3,N,N,size(qvec,1));
 for jj=1:size(qvec,1)
-    D(:,:,:,:,jj) = gfac*10^30*dipole_direct(qvec(jj,:),dip_range,lattice)...
-        + exchange(qvec(jj,:),ion.ex(2),lattice,ex_range);
+    D(:,:,:,:,jj) = J2meV*gfac*10^30*dipole_direct(qvec(jj,:),dip_range,lattice)...
+        + exchange(qvec(jj,:),ion.ex(2),lattice,ex_range); % [meV]
 end
 
 deno = zeros(3,3,size(freq_total,1),size(continu_var,2)); % RPA correction factor (denominator)
 for ii = 1:size(continu_var,2)
     for nq = 1:size(qvec,1)
-        Jq = sum(sum(D(:,:,:,:,nq),4),3)/N; % average over the all sites in the unit cell and avoid double counting
+        Jq = sum(sum(D(:,:,:,:,nq),4),3)/N; % average over the all sites in the unit cell and avoid double counting [meV]
         parfor kk = 1:length(freq_total(1,:))
             MM = chi0(:,:,kk,ii).*Jq;
             deno(:,:,kk,ii) = (ones(size(MM))- MM); % Suppress parfor warning for this line
