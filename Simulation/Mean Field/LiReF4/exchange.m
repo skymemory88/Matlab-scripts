@@ -21,12 +21,6 @@ switch nargin
         error('Incorrect number of input argument for exchange()!')
 end
 
-% % Parameters for LiHoF4
-% % Unit vectors in aangstroms
-% a=[5.162 0 0
-%    0 5.162 0
-%    0 0 10.70];
-
 % Positions of the moments within the unit cell
 tau=[0 0 0
      0 1/2 1/4
@@ -89,12 +83,12 @@ for nt=1:size(tau,1)
         exp_qr=exp(-1i*q*r');
         for n=1:3
             for m=1:3
-                d(n,m,nt,mt)=exp_qr*(rr<(N*10.75)^2)*Jex*eq(n,m); % exchange interaction
-%                 d(n,m,nt,mt)=exp_qr*(rr<14)*Jex*delta(n,m); % original code, unsure of the rr<14
+                d(n,m,nt,mt) = exp_qr*(rr<(N*10.75)^2)*Jex*eq(n,m); % exchange interaction
+%                 d(n,m,nt,mt) = exp_qr*(rr<14)*Jex*delta(n,m); % original code, unsure of the rr<14
             end
         end
-        %  d(:,:,nt,mt)=d(:,:,nt,mt)+(4*pi/3)*0.01389*eye(3)/4; %Lorentz
-        d(:,:,mt,nt)=conj(d(:,:,nt,mt));
+        %  d(:,:,nt,mt) = d(:,:,nt,mt)+(4*pi/3)*0.01389*eye(3)/4; %Lorentz
+        d(:,:,mt,nt) = conj(d(:,:,nt,mt));
     end
 end
 % Sometimes the coupling is given in units of the unit cell volume:
