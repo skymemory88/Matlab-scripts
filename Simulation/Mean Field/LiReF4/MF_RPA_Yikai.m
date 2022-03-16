@@ -1,16 +1,17 @@
 function  MF_RPA_Yikai(mion,scanMode,dscrt_var,freq_total,theta,phi,gama,hyp,RPA_mode)
 % Current version assumes complete symmetrical equivalence among the four spin moments per unit cell
 % mion: Magnetic ion type: 'Er', 'Ho'
-% dscrt_var: discrete variable, can be temperature of field.
-% freq_total frequency range in GHz
-% theta: misalignment angle from c-axis
+% scanMode: 'field' or 'temp' scan
+% dscrt_var: discrete variable (temperature or field)
+% freq_total frequency range [GHz]
+% theta: misalignment angle from c-axis [degree]
 % phi: inplane angle in ab-plane between the magnetic field and a/b-axis [degree]
 % gama: linewidth of hyperfine levels [meV].
-% hyp: Hyperfine isotope proportion
-% RPA_Mode: whether or not to apply RPA
+% hyp: Hyperfine isotope proportion (0~1)
+% RPA_Mode: RPA option (true/false)
 
 Options.plotting = false; % Decide whether or not to plot the data at the end
-Options.unit = 'meV'; % Energy unit choice: meV or GHz (default)
+Options.unit = 'meV'; % Energy unit choice: J, GHz, meV (default)
 Options.saving = true; % Options to save the susceptibility tensors
 Options.scanMode = scanMode; % 1. Field plot with RPA; 2. Temp plot with RPA; 2. wavevector plot with RPA
 Options.nZee = false;
@@ -42,22 +43,21 @@ if Options.RPA == false
 end
 clearvars -except dscrt_var theta phi gama Options mion freq_total hyp qvec contnu_var0 Kplot nZee_path
 
-global dip_range ex_range muB muN J2meV mu0 f2E elem_idx ELEf NUCf
 % Declare physical constants as global for consistency
-hbar = 1.05457E-34; % Reduced Planck constant [J.s]
-J2meV = 6.24151e+21; % convert Joule to meV
-f2E = hbar*2*pi*1e+9*J2meV; % convert GHz to meV
-muB = 9.27401e-24; % Bohr magneton [J/T]
-muN = 5.05078e-27; % Nuclear magneton [J/T]
-mu0 = 4*pi*1e-7; % [H/m]
-dip_range = 100; % dipole summation range (number of unit cell)
-ex_range = 1; % Exchange interaction range (number of unit cell)
+const.hbar = 1.05457E-34; % Reduced Planck constant [J.s]
+const.J2meV = 6.24151e+21; % convert Joule to meV
+const.Gh2mV = const.hbar*2*pi*1e+9*const.J2meV; % convert GHz to meV
+const.muB = 9.27401e-24; % Bohr magneton [J/T]
+const.muN = 5.05078e-27; % Nuclear magneton [J/T]
+const.mu0 = 4*pi*1e-7; % [H/m]
+const.dpRng = 100; % dipole summation range (number of unit cell)
+const.exchg = 1; % Exchange interaction range (number of unit cell)
 
 % Select the final output unit (default: meV)
 if strcmp(Options.unit, 'GHz')
-    ConvUnit = 1/f2E;
+    ConvUnit = 1/const.Gh2mV;
 elseif strcmp(Options.unit, 'J')
-    ConvUnit = 1/J2meV;
+    ConvUnit = 1/const.J2meV;
 else
     ConvUnit = 1;
 end
@@ -106,9 +106,9 @@ for ii = 1:length(dscrt_var)
     save_name1 = strcat('chi0_Li',mion,'F4_',file_part);
     save_name2 = strcat('RPA_Li',mion,'F4_',file_part);
     
-    elem_idx = find(ion.prop);  
-    ELEf = ion.gLande(elem_idx) * muB * J2meV; % Lande factor * Bohr magneton (meV/T)
-    NUCf = ion.nLande(elem_idx) * muN * J2meV; % [meV/T]
+    const.elem = find(ion.prop);  
+    ELEf = ion.gLande(const.elem) * const.muB * const.J2meV; % Lande factor * Bohr magneton (meV/T)
+    NUCf = ion.nLande(const.elem) * const.muN * const.J2meV; % [meV/T]
     eigenE = eee; % load eigenenergy [meV]
 %     eigenE(:,9:end) = 0; % truncate the Hilbert space
     eigenW = vvv; % load eigenstates
@@ -123,26 +123,26 @@ for ii = 1:length(dscrt_var)
             eigenE = eee(bidx,:); % eigen-energies [meV]
             continu_var = continu_var(bidx); % magnetic field or temperature
         end
-        [continu_var, freq_total, chi, ~] = linear_response(ion,eigenE,continu_var,freq_total,ttt,eigenW,gama);
-        [continu_var, freq_total, chiq_J ] = RPA(qvec, continu_var, freq_total, ion, chi.ionJ); % Electronic susceptibilities
-        [continu_var, freq_total, chiq_IJ] = RPA(qvec, continu_var, freq_total, ion, chi.IJ); % cross term
-        [continu_var, freq_total, chiq_I ] = RPA(qvec, continu_var, freq_total, ion, chi.ionI); % Nuclear susceptibilities
+        [continu_var, freq_total, chi, ~] = linear_response(ion, eigenE, continu_var, freq_total, ttt, eigenW, gama, const);
+        [continu_var, freq_total, chiq_J ] = RPA(qvec, continu_var, freq_total, ion, chi.ionJ, const); % Electronic susceptibilities
+        [continu_var, freq_total, chiq_IJ] = RPA(qvec, continu_var, freq_total, ion, chi.IJ, const); % cross term
+        [continu_var, freq_total, chiq_I ] = RPA(qvec, continu_var, freq_total, ion, chi.ionI, const); % Nuclear susceptibilities
 
         chiq = ELEf^2*chiq_J + 2*ELEf*NUCf*chiq_IJ + NUCf^2*chiq_I; % expanded electronuclear susceptibility [meV/T^2]
 %         chiq = ELEf^2*chiq.ionJ + 2*ELEf*NUCf*chiq.IJ; % Electron susceptibility + the cross term
 %         chiq = ELEf^2*chiq.ionJ + NUCf^2*chiq.ionI; % Electron susceptibility + nuclear susceptibilities
 %         chiq = ELEf^2*chiq.ionJ; % Electron susceptibility only
 %         chiq = NUCf^2*chiq.ionI; % Nuclear susceptibility only
-        chiq = chiq.*ConvUnit; % [J/T^2 or meV/T^2]
+        chiq = chiq.*ConvUnit; % [J/T^2 or GHz/T^2 or meV/T^2]
     else
-        [continu_var, freq_total, chi, ~] = linear_response(ion,eigenE,continu_var,freq_total,ttt,eigenW,gama);
+        [continu_var, freq_total, chi, ~] = linear_response(ion, eigenE, continu_var, freq_total, ttt, eigenW, gama, const);
     end
     chi0 = ELEf^2*chi.ionJ + 2*ELEf*NUCf*chi.IJ + NUCf^2*chi.ionI; % Full electronuclear susceptibility expansion [meV/T^2]
 %     chi0 = ELEf^2*chi0.ionJ + 2*ELEf*NUCf*chi0.IJ; % Electron susceptibility + the cross term
 %     chi0 = ELEf^2*chi0.ionJ + NUCf^2*chi0.ionI; % Electron susceptibility + nuclear susceptibilities
 %     chi0 = ELEf^2*chi0.ionJ; % Electron susceptibility only
 %     chi0 = NUCf^2*chi0.ionI; % Nuclear susceptibility only
-    chi0 = chi0.*ConvUnit; % [GHz/T^2 or meV/T^2]
+    chi0 = chi0.*ConvUnit; % [J/T^2 or GHz/T^2 or meV/T^2]
 
 if Options.saving == true % Save the susceptibilities
     savefile1 = fullfile(location,save_name1);
@@ -160,18 +160,18 @@ if Options.plotting == true % Plot the susceptibilities
     if Kplot == true
         plot_var{3} = chiq;
         plot_var{5} = qvec;
-        figs(plot_var,Options,"\chi_{RPA}",Kplot);
+        figs(plot_var, Options, const, "\chi_{RPA}", Kplot);
         chi0_p = repmat(chi0,1,1,1,length(qvec));
         chi0_p = permute(chi0_p,[1 2 3 5 4]); % Add the additional dimension for the plotting purpose
         plot_var{3} = chi0_p;
-        figs(plot_var,Options,"chi_0",Kplot);
+        figs(plot_var, Options, const, "chi_0", Kplot);
     else
-        figs(plot_var,Options,"\chi_0",Kplot);
+        figs(plot_var, Options, const, "\chi_0", Kplot);
         if Options.RPA == true
             plot_var{3} = chiq;
-            figs(plot_var,Options,"\chi_{RPA}",Kplot);
+            figs(plot_var, Options, const, "\chi_{RPA}", Kplot);
             plot_var{3} = chiq-chi0;
-            figs(plot_var,Options,"\chi_{RPA}-\chi_0",Kplot);
+            figs(plot_var, Options, const, "\chi_{RPA}-\chi_0", Kplot);
         end
     end
 end
@@ -179,16 +179,25 @@ end
 clearvars chi0 chi_p chiq
 end
 
-function figs(input_var,Options,fig_tit,Qplot)
-global f2E
+function figs(input_var, Options, const, fig_tit, Qplot)
 continu_var = input_var{1};
 freq_total = input_var{2};
 chi = input_var{3};
 gama = input_var{4};
 qvec = input_var{5};
 dscrt_var = input_var{6};
-freq_total = freq_total*f2E;
 
+% convert frequency axis to appropriate choice
+if strcmp(Options.unit, 'J')
+    freq_total = freq_total*const.Gh2mV/const.J2meV;
+    ylab = "Energy (J)"; % yaxis label
+elseif strcmp(Options.unit, 'meV')
+    freq_total = freq_total*const.Gh2mV;
+    ylab = "Energy (meV)";
+else
+    ylab = "Frequency (GHz)";
+end
+ 
 pos0 = [100 300 600 400]; % initial figure position
 pos_inc = [150 0 0 0];
 indx = [strcat(fig_tit,"^{xx}") strcat(fig_tit,"^{yy}") strcat(fig_tit,"^{zz}")]; % index for figure legend
@@ -219,11 +228,8 @@ if Qplot == true
             legend(['\gamma =' num2str(gama,'%.2e meV')]);
             title(['Re[', char(indx(jj)), '] at ', file_part1, file_part2])
             xlabel(sprintf('Q = [h, 0, 0]'))
-            if strcmp(Options.unit, 'meV')
-                ylabel('Energy (meV)')
-            elseif strcmp(Options.unit, 'GHz')
-                ylabel('Frequency (GHz)')
-            end         
+            ylabel(ylab)
+      
             % Plot the real part of the susceptibility of the z component
             fig(2) = figure;
             set(fig(2),'position',pos0 + jj*pos_inc);
@@ -236,11 +242,7 @@ if Qplot == true
             title(['Im[', char(indx(jj)), '] at ', file_part1, file_part1])
             xlabel(sprintf('Q = [h, 0, 0]'))
             ylabel('Frequency (GHz)')
-            if strcmp(Options.unit, 'GHz')
-                ylabel('Frequency (GHz)')
-            else
-                ylabel('Energy (meV)')
-            end
+            ylabel(ylab)
         end
     end
 else
@@ -271,11 +273,8 @@ else
             legend(['\gamma =' num2str(gama,'%.2e meV')]);
             title(['Im[', char(indx(jj)), '] at ', file_part1, file_part2])
             xlabel(xlab)
-            if strcmp(Options.unit, 'GHz')
-                ylabel('Frequency (GHz)')
-            else
-                ylabel('Energy (meV)')
-            end          
+            ylabel(ylab)
+            
             % Plot the real part of the susceptibility of the z component
             fig(2) = figure;
             set(fig(2),'position',pos0 + jj*pos_inc);
@@ -287,11 +286,7 @@ else
             legend(['\gamma =' num2str(gama,'%.2e meV')]);
             title(['Re[', char(indx(jj)), '] at ', file_part1, file_part2])
             xlabel(xlab)
-            if strcmp(Options.unit, 'GHz')
-                ylabel('Frequency (GHz)')
-            else
-                ylabel('Energy (meV)')
-            end 
+            ylabel(ylab)
         end
     end
 end
@@ -315,15 +310,14 @@ unit = opt.unit;
 save(savefile,'temp','fields','freq_total','chi','gama','qvec','unit','-v7.3');
 end
 
-function [continu_var, freq_total, chi, JIz_exp] = linear_response(ion,eigenE,continu_var,freq_total,temperature,eigenW,gma)
-global elem_idx f2E
+function [continu_var, freq_total, chi, JIz_exp] = linear_response(ion, eigenE, continu_var, freq_total, temperature, eigenW, gma, const)
 kB = 8.61733e-2; % [meV/K]
 % Declare susceptibility tensor
 chi0_J = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
 chi0_I = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
 chi0_IJ = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
-ionJ = ion.J(elem_idx);
-ionI = ion.I(elem_idx);
+ionJ = ion.J(const.elem);
+ionI = ion.I(const.elem);
 %Initiate ionJ operators
 Jz = diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
 JhT.z = kron(Jz,eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
@@ -362,7 +356,7 @@ end
 
 for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
     freq = freq_total (m);
-    omega = freq*f2E;   % convert frequencies to meV
+    omega = freq*const.Gh2mV;   % convert frequencies to meV
 %     for k = 1:size(continu_var,2) % for debugging: calculate susceptibility for all fields
     parfor k = 1:size(continu_var,2) % calculate susceptibility for all fields
         v = squeeze(eigenW(k,:,:)); % Obtain the corresponding eigen vectors
@@ -540,18 +534,16 @@ elseif nargin == 5 % Compute the complex matrix element
 end
 end
 
-function [continu_var, freq_total, chiq] = RPA(qvec, continu_var, freq_total, ion, chi0)
-
-global muB mu0 J2meV dip_range ex_range elem_idx
+function [continu_var, freq_total, chiq] = RPA(qvec, continu_var, freq_total, ion, chi0, const)
 N = 4; % Number of magnetic atoms in unit cell
-lattice = ion.abc{elem_idx};
-gfac = ion.gLande(elem_idx)^2*(muB)^2*(mu0/4/pi); % (gL * muB)^2 * mu0/(4pi) [J.m^3]
+lattice = ion.abc{const.elem};
+gfac = ion.gLande(const.elem)^2*(const.muB)^2*(const.mu0/4/pi)*const.J2meV; % (gL * const.muB)^2 * const.mu0/(4pi) [meV.m^3]
 
 chiq = zeros(3,3,length(freq_total(1,:)),size(continu_var,2),size(qvec,1));
 D = zeros(3,3,N,N,size(qvec,1));
 for jj=1:size(qvec,1)
-    D(:,:,:,:,jj) = J2meV*gfac*10^30*dipole_direct(qvec(jj,:),dip_range,lattice)...
-        + exchange(qvec(jj,:),ion.ex(2),lattice,ex_range); % [meV]
+    D(:,:,:,:,jj) = gfac*10^30*dipole_direct(qvec(jj,:),const.dpRng,lattice)...
+        + exchange(qvec(jj,:),ion.ex(2),lattice,const.exchg); % [meV]
 end
 
 deno = zeros(3,3,size(freq_total,1),size(continu_var,2)); % RPA correction factor (denominator)
