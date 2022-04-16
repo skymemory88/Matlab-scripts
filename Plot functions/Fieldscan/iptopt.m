@@ -32,13 +32,13 @@ num_res = ioFit.total-1; % total number of total spin resonances
 if  idx > 2 && idx < num_res
     NN1 = mod(idx+1-1, num_res)+1; % Nearest neighbour (right)
     NN2 = mod(idx-1-1, num_res)+1; % Nearest neighbour (left)
-elseif idx == num_res % right most spin resonance
+elseif idx == num_res % right most spin resonance on PM side
     NN1 = mod(idx-1-1, num_res)+1; % Nearest neighbour
     NN2 = mod(idx-2-1, num_res)+1; % Next Nearest neighbour
-elseif idx == 2 % left most spin resonance
+elseif idx == 2 % left most spin resonance on PM side
     NN1 = mod(idx+1-1, num_res)+1; % Nearest neighbour
     NN2 = mod(idx+2-1, num_res)+1; % Next Nearest neighbour
-elseif idx == 1
+elseif idx == 1 % spin resonance on FM side
     % do nothing (no neighbours on FM side)
 end
 
@@ -84,12 +84,14 @@ switch ioFit.mode
         % Fit model to data.
         [fitresult, gof] = fit(xData, yData, ft, opts, 'problem', {kpe, kpi, wc, attn});
     case 2 
-        % fit to two neighbouring spin resonances with fixed cavity paramters
+        % fit to one neighbouring spin resonances with fixed cavity paramters
         w1 = aux_param.f0(NN1);
-%         gma1 = aux_param.gma(NN1);
+        gma1 = aux_param.gma(NN1);
         opts.StartPoint(6) = aux_param.gc(NN1); % ['Gc1']
         
         opts.StartPoint(7) = w1; % ['w1']
+%         opts.Lower(7) = w1;
+%         opts.Upper(7) = w1; 
         opts.Lower(7) = -Inf;
         opts.Upper(7) = Inf; 
 
@@ -98,12 +100,12 @@ switch ioFit.mode
 %         opts.Upper(7) = []; 
         
         % Set up fittype and options.
-        ft = fittype( @(omega, Gc, gma, xr, xi, Gc1, w1, kpe, kpi, wc, attn, x) (abs(1+2*kpe./...
-            (1i*(x-wc) - (kpe+kpi) + 1i*(xr+1i*xi) + Gc^2./(1i*(x-omega)-gma) + Gc1^2./(1i*(x-w1)-gma))).*attn),...
+        ft = fittype( @(omega, Gc, gma, xr, xi, Gc1, w1, kpe, kpi, wc, attn, gma1, x) (abs(1+2*kpe./...
+            (1i*(x-wc) - (kpe+kpi) + 1i*(xr+1i*xi) + Gc^2./(1i*(x-omega)-gma) + Gc1^2./(1i*(x-w1)-gma1))).*attn),...
             'independent', {'x'}, 'dependent', {'y'},'coefficients', {'omega','Gc','gma','xr','xi','Gc1','w1'},...
-            'problem', {'kpe','kpi','wc','attn'});
+            'problem', {'kpe','kpi','wc','attn','gma1'});
         % Fit model to data.
-        [fitresult, gof] = fit( xData, yData, ft, opts, 'problem', {kpe, kpi, wc, attn});
+        [fitresult, gof] = fit( xData, yData, ft, opts, 'problem', {kpe, kpi, wc, attn, gma1});
     case 3
         % fit with fixed cavity paramters and two auxilliary spin resonance (auxilliary coupling strengths fixed, spin linewidth loose)
         w1 = aux_param.f0(NN1);
@@ -129,11 +131,11 @@ switch ioFit.mode
         % Fit model to data.
         [fitresult, gof] = fit( xData, yData, ft, opts, 'problem',{kpe, kpi, wc, attn, w1, w2, aGc1, aGc2});
     case 4 
-        % fit with fixed cavity paramters and two auxilliary spin resonance (auxilliary coupling strengths and spin linewidths loose)
+        % fit with fixed cavity paramters and two auxilliary spin resonance (auxilliary coupling strengths loose, spin linewidths fixed)
         w1 = aux_param.f0(NN1);
-%         gma1 = aux_param.gma(NN1);
+        gma1 = aux_param.gma(NN1);
         w2 = aux_param.f0(NN2);
-%         gma2 = aux_param.gma(NN2);
+        gma2 = aux_param.gma(NN2);
 
         opts.StartPoint(6) = aux_param.gc(NN1); % ['Gc1']
         opts.StartPoint(7) = aux_param.gc(NN2); % ['Gc2']
@@ -141,15 +143,15 @@ switch ioFit.mode
 %         opts.StartPoint(7) = aux_param.gma(NN2); % ['gma2']
         
         % Set up fittype and options
-        ft = fittype( @(omega, Gc, gma, xr, xi, Gc1, Gc2, kpe, kpi, wc, w1, w2, attn, x)...
+        ft = fittype( @(omega, Gc, gma, xr, xi, Gc1, Gc2, kpe, kpi, wc, w1, w2, attn, gma1, gma2, x)...
             (abs(1+2*kpe./(1i*(x-wc) - (kpe+kpi) + 1i*(xr+1i*xi) + Gc^2./(1i*(x-omega)-gma)...
-            + Gc1^2./(1i*(x-w1)-gma) + Gc2^2./(1i*(x-w2)-gma))).*attn),...
+            + Gc1^2./(1i*(x-w1)-gma1) + Gc2^2./(1i*(x-w2)-gma2))).*attn),...
             'independent', {'x'}, 'dependent', {'y'}, 'coefficients',{'omega', 'Gc', 'gma', 'xr', 'xi', 'Gc1', 'Gc2'},...
-            'problem', {'kpe','kpi','wc','w1','w2','attn'});
+            'problem', {'kpe','kpi','wc','w1','w2','attn','gma1','gma2'});
         % Fit model to data.
-        [fitresult, gof] = fit( xData, yData, ft, opts, 'problem',{kpe, kpi, wc, w1, w2, attn});
+        [fitresult, gof] = fit( xData, yData, ft, opts, 'problem',{kpe, kpi, wc, w1, w2, attn, gma1, gma2});
     case 5 
-        % fit with fixed cavity paramters and all five auxilliary spin resonances (all auxilliary coupling strengths fixed)
+        % fit with fixed cavity paramters and all auxilliary spin resonances (all auxilliary coupling strengths fixed)
         aux_spin = 0;
         sr = 1:num_res;
         sr = sr(sr ~= idx); % remove the fitting target spin resonance
@@ -206,6 +208,7 @@ if plt
     figure( 'Name', sprintf('S11_inptopt_fit at B = %.3f T',field) );
     h = plot( fitresult, xData, yData );
     legend( h, 'Data', 'S11_fit', 'Location', 'NorthEast', 'Interpreter', 'none' );
+    set(h, 'LineWidth', 1.5);
     % Label axes
     xlabel( 'Frequency (GHz)', 'Interpreter', 'none' );
     ylabel( '|S11|', 'Interpreter', 'none' );
