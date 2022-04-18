@@ -2,7 +2,7 @@ function [B0, gcs, gc_err, gama, gama_err] = batch_plot(temp, fig_opt)
 % batch retrieve fitted parameters from multiple measurements
 
 Options.figure = fig_opt;
-Options.colmap = true;
+Options.colmap = false;
 Options.data = true;
 Options.ebar = false;
 Options.mean = true;
@@ -23,6 +23,10 @@ for ii = 1:length(aux_files)
     gcs(ii) = mean(gc);
     gama(ii) = mean(gma);
     gama_err(ii) = mae(abs(gma_ci(:,1)-gma_ci(:,2)));
+%     % save the raw data in an ascii file (.txt)
+%     g_fit = [reshape(H0,length(H0),1) reshape(gc,length(gc),1) reshape(gma,length(gma),1)];
+%     loc = 'C:\Users\yiyang\Desktop\';
+%     save(fullfile(loc,sprintf('SC239_%umK_%u_gFit.txt',temp*1000,ii)),'g_fit','-ascii');
 
     if Options.figure == true
         if ii == 1
