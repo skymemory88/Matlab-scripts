@@ -11,14 +11,14 @@ rho = 4/(5.175e-10 * 5.175e-10 * 10.75e-10); % magnetic moment number density in
 
 % frequency parameter setup
 dE = -0.0;
-% fc = 4.7353 +dE; % Fundamental mode of the cavity [Ghz]
-fc = 3.642+dE; % cavity resonance frequency [GHz]
-% fc = 3.3+dE;
+fc = 4.7353 +dE; % Fundamental mode of the cavity [Ghz]
+% fc = 3.642 + dE; % cavity resonance frequency [GHz]
+% fc = 3.3 + dE;
 % fc2 = 4.2; % Second mode of the cavity
-% freq_l = 4.705; % frequency range lower limit [GHz]
-% freq_h = 4.745; % frequency range upper limit [GHz]
-freq_l = 3.52; % frequency range lower limit [GHz]
-freq_h = 3.76; % frequency range upper limit [GHz]
+freq_l = 4.700; % frequency range lower limit [GHz]
+freq_h = 4.745; % frequency range upper limit [GHz]
+% freq_l = 3.52; % frequency range lower limit [GHz]
+% freq_h = 3.76; % frequency range upper limit [GHz]
 % freq_l = fc-0.1;
 % freq_h = fc+0.1;
 freq_pts = 2001; % number of points along frequency axis
@@ -26,11 +26,11 @@ freq = linspace(freq_l,freq_h,freq_pts); % Only applies when calculating from sc
 
 Options.scanMode = scanMode; % continuous variable choice: 1. Field, 2. Temperature
     cVar_l = 0.0; % continuous variable setup
-    cVar_h = 17.0;
+    cVar_h = 9.0;
     cVar_np = 801; % number of points along field axis
     cVar = linspace(cVar_l,cVar_h,cVar_np); % Only applies when calculating from scratch
     
-Options.simType = 3; % Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation
+Options.simType = 2; % Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation
 Options.nZee = false;
 Options.RPA = true; % Use RPA susceptibilities
 Options.noise = false; % Add white noises to the backgroud
@@ -49,9 +49,9 @@ Options.savedata = false; % Save results to a file
 Options.savegif = false; % Save a series of color plots as a gif
 
 if Options.nZee == true
-    nZeePath = 'with Hz_I';
+    nZeePath = 'with Hz_I\';
 else
-    nZeePath = 'without Hz_I';
+    nZeePath = 'without Hz_I\';
 end
 location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
     'F4 project\Data\Simulations\Matlab\Susceptibilities\'];
@@ -92,7 +92,8 @@ chi_elem = [0 0 0
 chi_idx = find(chi_elem); % index of chi element choice.
 
 if Options.RPA == true
-    scale = 1.06;
+    scale = 1.05;
+%     scale = 1.11;
 else
     scale = 1.10;
 end
@@ -120,15 +121,15 @@ gw2 = gw0^2 * 2*pi * 1e-9; % [T^2/J. GHz]
 
 % kappa_i = 5.74e-4; % SC239: 2021_06_0040.dat
 % kappa_e = 3.66e-4; % SC239: 2021_06_0040.dat
-kappa_i = 3.81e-4; % SC239: 2021_07_0003.dat
-kappa_e = 5.56e-4; % SC239: 2021_07_0003.dat
+% kappa_i = 3.81e-4; % SC239: 2021_07_0003.dat
+% kappa_e = 5.56e-4; % SC239: 2021_07_0003.dat
 
 % kappa_i = 1.77e-4; % SC127_1
 % kappa_e = 6.92e-4; % SC127_1
 % kappa_i = 1.15e-4; % SC108
 % kappa_e = 8.18e-4; % SC108
-% kappa_i = 8.43e-4;
-% kappa_e = 4.02e-4;
+kappa_i = 8.43e-4;
+kappa_e = 4.02e-4;
 
 if Options.savegif == true
 %     im_t = numel(alpha); % a series with varying phase angle
@@ -347,23 +348,27 @@ while true
                 JIz_exp(ii,1) = zn*diag(ttz(1:nMax,1:nMax));
                 Gc2(ii,:,:,1) = gw2 * abs(ttz(1:nMax,1:nMax) .* ttz(1:nMax,1:nMax).') .* NN / meV2J * mV2Gh; % [GHz^2]
 %                 Gc2(ii,:,:) = (squeeze(Gc2(ii,:,:)) - squeeze(Gc2(ii,:,:)).')/2; % take symmetric average to reduce numerical error
+                gma = gama*ones(1,nLevel);
+%                 % replace the assumed line width with fitted values from experiments
+%                 gma_load = load([location, nZeePath, sprintf('Exp_fit_gamma_%umK.mat', dscrt_var*1000)],'gma');
+%                 gma(1:length(gma_load.gma)) = flip(gma_load.gma);
+
                 for kk = 1:nLevel
                     w0(ii,kk,1) = dE(kk,kk+ndiff) * mV2Gh;
                     gc2 = Gc2(ii,kk+ndiff,kk);
-                    gma_abs = 0; % stimulated absorption [GHz]
-%                     gma_abs = 2*pi/hbar * gf*squeeze(abs(ttz(kk,kk+1))).*(1-zn(kk+1))'; % stimulated absorption [Hz.rad^2]
-                    if kk > 1
-                        gma_emi = 2*pi/hbar * (gf*sum(squeeze(abs(ttz(1:kk-1,kk)))))^2/(En(kk)*meV2J); % stimulated emission [Hz.rad^2]
-                    else
-                        gma_emi = 0; % no stimulated emission for ground state [GHz]
-                    end 
-                    gma(ii) = (gma_abs + gma_emi)/(2*pi)^2/1e9; % spin linewidth [GHz]
-%                     gma(ii) = gama*mV2Gh; % uniform spin linewidth across all spin levels [GHz]
-%                     spins(ii,kk) = Gc2(ii)./(Ediff(ii,kk) - wc(1,ii) - 1i*gma);
+%                     gma_abs = 0; % stimulated absorption [GHz]
+% %                     gma_abs = 2*pi/hbar * gf*squeeze(abs(ttz(kk,kk+1))).*(1-zn(kk+1))'; % stimulated absorption [Hz.rad^2]
+%                     if kk > 1
+%                         gma_emi = 2*pi/hbar * (gf*sum(squeeze(abs(ttz(1:kk-1,kk)))))^2/(En(kk)*meV2J); % stimulated emission [Hz.rad^2]
+%                     else
+%                         gma_emi = 0; % no stimulated emission for ground state [GHz]
+%                     end 
+%                     gma(ii) = (gma_abs + gma_emi)/(2*pi)^2/1e9; % spin linewidth [GHz]
+% %                     gma(ii) = gama*mV2Gh; % uniform spin linewidth across all spin levels [GHz]
 %                     spins(ii,kk,:,1) = gc2./(1i*(freq - w0(ii,kk)) - gma); % spin term for each transition level [GHz]
-                    spins(ii,kk,:,1) = gc2./(1i*(freq - w0(ii,kk)) - gma(ii)); % spin term for each transition level [GHz]
-%                     coop(ii,kk,1) = gc2/(kappa_i + kappa_e)/(gma);
-                    coop(ii,kk,1) = gc2/(kappa_i + kappa_e)/gma(ii);
+                    spins(ii,kk,:,1) = gc2./(1i*(freq - w0(ii,kk)) - gma(kk)); % spin term for each transition level [GHz]
+%                     coop(ii,kk,1) = gc2/(kappa_i + kappa_e)/gma;
+                    coop(ii,kk,1) = gc2/(kappa_i + kappa_e)/gma(kk);
                 end
             end
             sim.Jz = Jz_exp;
@@ -414,8 +419,8 @@ switch Options.simType
             if Options.plot == true
                 s_para = figure;
                 map = pcolor(cVar,freq,mag2db(abs(S11))); % color plot of the S11 response
-                %         map = pcolor(field,freq,mag2db(real(S11))); % color plot of the S11 response
-                %         map = pcolor(field,freq,mag2db(S21)); % color plot of the S21 response
+%                 map = pcolor(field,freq,mag2db(real(S11))); % color plot of the S11 response
+%                 map = pcolor(field,freq,mag2db(S21)); % color plot of the S21 response
                 map.EdgeColor = 'none';
                 cmap = unique([[0 0 0];[zeros(20,1),linspace(0,0.5,20)',linspace(0.4,1,20)'];...
                                [linspace(0,1,36)',0.5*ones(36,1),linspace(1,0,36)'];...

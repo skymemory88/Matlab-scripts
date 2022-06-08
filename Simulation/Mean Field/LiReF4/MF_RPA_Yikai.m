@@ -11,15 +11,10 @@ function  MF_RPA_Yikai(mion,scanMode,dscrt_var,freq_total,theta,phi,gama,hyp,RPA
 % RPA_Mode: RPA option (true/false)
 
 Options.plotting = false; % Decide whether or not to plot the data at the end
-Options.unit = 'meV'; % Energy unit choice: J, GHz, meV (default)
+Options.unit = 'GHz'; % Energy unit choice: J, GHz, meV (default)
 Options.saving = true; % Options to save the susceptibility tensors
 Options.scanMode = scanMode; % 1. Field plot with RPA; 2. Temp plot with RPA; 2. wavevector plot with RPA
 Options.nZee = false;
-    if Options.nZee == true
-        nZee_path = 'with Hz_I';
-    else
-        nZee_path = 'without Hz_I';
-    end
 Options.RPA = RPA_mode; % Apply random phase approximation (RPA) correction
     Kplot = false; % k-dependent plot for RPA susceptibilities
     if Kplot == true
@@ -65,30 +60,33 @@ end
 for ii = 1:length(dscrt_var) 
     ipt = false;
     cntr = 0;
+    if Options.nZee == true
+        nZee_path = 'with Hz_I';
+    else
+        nZee_path = 'without Hz_I';
+    end
+    location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
+        'F4 project\Data\Simulations\Matlab\Susceptibilities\', nZee_path];
     while ~ipt
         switch Options.scanMode % 1. Field plot with RPA. 2. wavevector plot with RPA
             case 'field'
-                location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
-                            'F4 project\Data\Simulations\Matlab\Susceptibilities\', nZee_path];
                 filename = strcat(['Hscan_Li',mion,'F4_'],...
                     sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
                 file = fullfile(location,filename);
                 load(file,'-mat','eee','fff','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
-                file_part = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e.mat', dscrt_var(ii), theta, phi, gama);
+                file_part = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e_%5$.3f-%6$.3fGHz'...
+                    , dscrt_var(ii), theta, phi, gama, min(freq_total), max(freq_total));
                 continu_var = vecnorm(fff,2,1); % choose the continuous variable to be field
-                % ttt = 0; % To account for only the lowest eigen-state contributiont
-                % continu_var = continu_var(continu_var <= 5); % Truncate the field range
                 ttt = repelem(ttt,length(continu_var));
                 ipt = true;
                 fprintf('Calculating for T = %.3f K.\n', dscrt_var(ii));
             case 'temp'
-                location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
-                    'F4 project\Data\Simulations\Matlab\Susceptibilities\', nZee_path];
                 filename = strcat(['Tscan_Li',mion,'F4_'],...
                     sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
                 file = fullfile(location,filename);
                 load(file,'-mat','eee','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
-                file_part = sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_%4$.2e.mat', dscrt_var(ii), theta, phi, gama);
+                file_part = sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_%4$.2e_%5$.3f-%6$.3fGHz'...
+                    , dscrt_var(ii), theta, phi, gama, min(freq_total), max(freq_total));
                 continu_var = ttt; % choose the continuous variable to be temperature
                 ipt = true;
                 fprintf('Calculating for B = %.3f T.\n', dscrt_var(ii));
@@ -103,8 +101,8 @@ for ii = 1:length(dscrt_var)
         end
     end
     eee = eee - min(eee,[],2); % Normalize the eigen-energies to the ground state
-    save_name1 = strcat('chi0_Li',mion,'F4_',file_part);
-    save_name2 = strcat('RPA_Li',mion,'F4_',file_part);
+    save_name1 = strcat('chi0_Li',mion,'F4_',file_part, '.mat');
+    save_name2 = strcat('RPA_Li',mion,'F4_',file_part, '.mat');
     
     const.elem = find(ion.prop);  
     ELEf = ion.gLande(const.elem) * const.muB * const.J2meV; % Lande factor * Bohr magneton (meV/T)
@@ -216,7 +214,7 @@ if Qplot == true
                 return
         end
         for jj = 3 % plot only chi_zz component
-            % for jj = 1:3
+%         for jj = 1:3
             % Color plot the imaginary part of the susceptibilities of z component
             fig(1) = figure;
             set(fig(1),'position',pos0 + (jj-1)*pos_inc);
@@ -316,8 +314,8 @@ kB = 8.61733e-2; % [meV/K]
 chi0_J = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
 chi0_I = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
 chi0_IJ = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
-ionJ = ion.J(const.elem);
 ionI = ion.I(const.elem);
+ionJ = ion.J(const.elem);
 %Initiate ionJ operators
 Jz = diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
 JhT.z = kron(Jz,eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
@@ -343,26 +341,31 @@ IhT.y = (Iph-Imh)/2i;
 % IJ_hT.z = JhT.z + NUCf/ELEf*IhT.z;
 
 % Single out <Jz+Iz> calculations
+ELEf = gLande(ion.L(const.elem), ion.S(const.elem)) * const.muB; % Lande factor * Bohr magneton [J/T]
+NUCf = ion.nLande(const.elem) * const.muN; % [J/T]
 JIz_exp = double.empty(size(continu_var,2),size(JhT.z,1),0); % Expectation value of J-I pseudo-spin
-for kk = 1:size(continu_var,2) % calculate susceptibility for all fields
-    v = squeeze(eigenW(kk,:,:)); % Obtain the corresponding eigen vectors
-    JzhT = JhT.z;
-    IzhT = IhT.z;
-%     JzhT = JhT.z;
-%     IzhT = 0;
-    ttz  = v'  * (JzhT+IzhT) * v;
-    JIz_exp(kk,:,1) = real(diag(ttz));
+for ii = 1:size(continu_var,2) % calculate susceptibility for all fields
+    v = squeeze(eigenW(ii,:,:)); % Obtain the corresponding eigen vectors
+    JzhT = JhT.z; % Electronic spin
+    IzhT = IhT.z; % Nuclear spin
+%     IzhT = 0; % set nuclear spin component to zero
+    ttz  = v'  * (JzhT + NUCf/ELEf * IzhT) * v;
+    JIz_exp(ii,:,1) = real(diag(ttz));
 end
 
-for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
-    freq = freq_total (m);
+% % use experimentally fitted values for the spin linewidths
+% location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\';
+% gma_load = load([location, 'Exp_fit_gamma_180mK.mat'],'gma');
+% gma_load = flip(gma_load.gma)*const.Gh2mV; % [meV]
+for ii = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
+    freq = freq_total (ii);
     omega = freq*const.Gh2mV;   % convert frequencies to meV
 %     for k = 1:size(continu_var,2) % for debugging: calculate susceptibility for all fields
-    parfor k = 1:size(continu_var,2) % calculate susceptibility for all fields
-        v = squeeze(eigenW(k,:,:)); % Obtain the corresponding eigen vectors
-        en = squeeze(eigenE(k,:)); % Obtain the corresponding eigen energies [meV]
-        if temperature(k) ~= 0
-            beta = 1/(kB*temperature(k)); %[meV^-1]
+    parfor jj = 1:size(continu_var,2) % calculate susceptibility for all fields
+        v = squeeze(eigenW(jj,:,:)); % Obtain the corresponding eigen vectors
+        en = squeeze(eigenE(jj,:)); % Obtain the corresponding eigen energies [meV]
+        if temperature(jj) ~= 0
+            beta = 1/(kB*temperature(jj)); %[meV^-1]
             Z = sum(exp(-beta*en));
             zn = exp(-beta*en)/Z;
 %             Z = exp(-beta*en);
@@ -381,7 +384,13 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
         [ee,eep] = meshgrid(en,en);
         EE = (eep-ee-omega); % [meV]
         gamma = ones(size(EE))*gma; % [meV]
-
+        
+%         % use experimentally fitted values for the spin linewidths
+%         for kk = 1:length(gma_load)
+%             gamma(kk,kk+1) = gma_load(kk);
+%             gamma(kk+1,kk) = gma_load(kk);
+%         end
+        
 %         % computer the real an imaginary part of the susceptibilities separately        
 %         deno1 = EE ./ (EE.^2 + gamma.^2);
 %         deno2 = gamma ./ (EE.^2 + gamma.^2);
@@ -392,10 +401,10 @@ for m = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
 
         % computer the electronic and nuclear spin susceptibilities separatly 
         deno0 = 1 ./ (EE - 1i*gamma); % [meV^-1]
-        chi0_J(:,:,m,k) = chi_Mx(JhT, JhT, v, NN, deno0); % Electornic spin operators
-        chi0_IJ(:,:,m,k) = chi_Mx(JhT, IhT, v, NN, deno0); % Electro-Nuclear cross term
-        chi0_I(:,:,m,k) = chi_Mx(IhT, IhT, v, NN, deno0); % Nuclear spin operators
-%         chi0_J(:,:,m,k) = chi_Mx(IJ_hT, IJ_hT, v, NN, deno0); % alternative: computer the chi_I and chi_J together
+        chi0_J(:,:,ii,jj) = chi_Mx(JhT, JhT, v, NN, deno0); % Electornic spin operators
+        chi0_IJ(:,:,ii,jj) = chi_Mx(JhT, IhT, v, NN, deno0); % Electro-Nuclear cross term
+        chi0_I(:,:,ii,jj) = chi_Mx(IhT, IhT, v, NN, deno0); % Nuclear spin operators
+%         chi0_J(:,:,ii,jj) = chi_Mx(IJ_hT, IJ_hT, v, NN, deno0); % alternative: computer the chi_I and chi_J together
     end
 end
 
@@ -535,12 +544,12 @@ end
 end
 
 function [continu_var, freq_total, chiq] = RPA(qvec, continu_var, freq_total, ion, chi0, const)
-N = 4; % Number of magnetic atoms in unit cell
+unitN = 4; % Number of magnetic atoms in unit cell
 lattice = ion.abc{const.elem};
 gfac = ion.gLande(const.elem)^2*(const.muB)^2*(const.mu0/4/pi)*const.J2meV; % (gL * const.muB)^2 * const.mu0/(4pi) [meV.m^3]
 
 chiq = zeros(3,3,length(freq_total(1,:)),size(continu_var,2),size(qvec,1));
-D = zeros(3,3,N,N,size(qvec,1));
+D = zeros(3,3,unitN,unitN,size(qvec,1));
 for jj=1:size(qvec,1)
     D(:,:,:,:,jj) = gfac*10^30*dipole_direct(qvec(jj,:),const.dpRng,lattice)...
         + exchange(qvec(jj,:),ion.ex(2),lattice,const.exchg); % [meV]
@@ -549,9 +558,9 @@ end
 deno = zeros(3,3,size(freq_total,1),size(continu_var,2)); % RPA correction factor (denominator)
 for ii = 1:size(continu_var,2)
     for nq = 1:size(qvec,1)
-        Jq = sum(sum(D(:,:,:,:,nq),4),3)/N; % average over the all sites in the unit cell and avoid double counting [meV]
+        Jq = sum(sum(D(:,:,:,:,nq),4),3)/unitN; % average over the all sites in the unit cell and avoid double counting [meV]
         parfor kk = 1:length(freq_total(1,:))
-            MM = chi0(:,:,kk,ii).*Jq;
+            MM = chi0(:,:,kk,ii).*Jq; %[meV*meV^-1]
             deno(:,:,kk,ii) = (ones(size(MM))- MM); % Suppress parfor warning for this line
             chiq(:,:,kk,ii,nq) = squeeze(deno(:,:,kk,ii)).\chi0(:,:,kk,ii);
         end

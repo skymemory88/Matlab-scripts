@@ -54,8 +54,8 @@ fields = [Hx;Hy;Hz];
 %Ions' names
 ion.name = [{'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}];
 ion.name_hyp = [{'Er_hyp'};{'Ho_hyp'};{'Yb_hyp'};{'Tm_hyp'};{'Gd_hyp'};{'Y_hyp'}];
-ion.prop = [0;0;0;0;0;0]; % ion proportion
-ion.cfRot = [0;11;0;0;0;0]; % crystal field basis rotation (in degrees)
+ion.prop = [0; 0; 0; 0; 0; 0]; % ion proportion
+ion.cfRot = [0; 11; 0; 0; 0; 0]; % crystal field basis rotation (in degrees)
 ion.h4 = 0;
 demagn = true; % Demagnetization factor included if TRUE
     alpha = 0; % shape in calculating demagnetization factor is a needle (0), sphere (1), disc (inf)
@@ -108,7 +108,7 @@ ion.A = [A_Er; A_Ho; 0; 0; A_Gd; 0];
 
 %Ions' lattice parameters
 ion.abc = [{[5.162 0 0; 0 5.162 0; 0 0 10.70]}      %Er
-           {[5.175 0 0; 0 5.175 0; 0 0 10.74]}      %Ho
+           {[5.175 0 0; 0 5.175 0; 0 0 10.75]}      %Ho
            {[5.132 0 0; 0 5.132 0; 0 0 10.59]}      %Yb
            {[5.150 0 0; 0 5.150 0; 0 0 10.64]}      %Tm
            {[5.162 0 0; 0 5.162 0; 0 0 10.70]}      %Gd
@@ -117,11 +117,11 @@ ion.abc = [{[5.162 0 0; 0 5.162 0; 0 0 10.70]}      %Er
 
 % Ions' cf parameters (ueV)
 ion.B = [[60.2258   -0.1164   -4.3280   0.00   -0.0019   -0.0850   -0.0227]   % Er
-%          [-57.9   0.309   3.51   0.00   0.000540   0.0511   0.0140]          % Ho -- test
+%          [-57.9   0.309   3.51   0.00   0.000540   0.0575   0.0136]          % Ho -- test
+         [-57.9   0.309   3.60   0.00   0.000540   0.0570   0.0130]          % Ho -- SC239 (0.785*Jz) {phi=2.3, nZ=0} {phi=5.5, nZ=1}
 %          [-54.7   0.262   2.91   0.00   0.000400   0.0511   0.0138]          % Ho -- SC239 (0.785*Jz) {phi=1, nZ=0} & {phi=4, nZ=1}, PRB2015 low limit 
-         [-57.9   0.309   3.51   0.00   0.000540   0.0541   0.0158]          % Ho -- SC239 {phi=3, nZ=1} & {phi=0, nZ=0}
-%          [-60.0   0.309   3.51   0.00   0.000680   0.0680   0.0125]          % Ho -- SC239 (0.785*Jz) {phi=15, nZ=1}
-%          [-57.9   0.320   3.51   0.00   0.000751   0.0505   0.0145]          % Ho -- SC239 {phi=3.5, nZ=1} {phi=0, nZ=0}
+%          [-57.9   0.320   3.51   0.00   0.000751   0.0505   0.0145]          % Ho -- SC239  {phi=0, nZ=0} {phi=3.5, nZ=1}
+%          [-57.9   0.309   3.51   0.00   0.000540   0.0541   0.0158]          % Ho -- SC239 {phi=0, nZ=0} {phi=3, nZ=1}
 %          [-57.9   0.309   3.51   0.00   0.000540   0.0631   0.0171]          % Ho -- Phys. Rev. B 92, 144422 (2015)
 %          [-60.0   0.350   3.60   0.00   0.000400   0.0700   0.0098]          % Ho -- Phys. Rev. B 75, 054426 (2007)
 %          [-56.2   0.325   3.61   0.00   0.000181   0.0758   0.0000]          % Ho -- Handbook phys. & chem. Rare-Earths V.23 (1996)
@@ -139,16 +139,16 @@ ion.B = ion.B/1000.0; % ueV to meV
 
 %Ions' renorm
 ion.renorm=[[1,1,1]         % Er
-%             [1,1,0.785]     % Ho -- Phys. Rev. B 75, 054426 (2007), Phys. Rev. B 49, 11833 (1994)
-            [1,1,1]         % Ho
+            [1,1,0.785]     % Ho -- Phys. Rev. B 75, 054426 (2007), Phys. Rev. B 49, 11833 (1994)
+%             [1,1,1]         % Ho
             [1,1,1]         % Yb
             [1,1,1]         % Tm
             [1,1,1]         % Gd
             [1,1,1]];       % Y
 
-%Exchange
-ex.Er = 0; % magnetic exchange in J*S_iS_j
-ex.Ho = -0.0001; %0.1 microeV from Henrik and Jens PRB
+% magnetic exchange interaction in J*S_i*S_j
+ex.Er = 0;
+ex.Ho = -0.0001; % Phys. Rev. B 75, 054426 (2007)
 % exHo = -0.000542; % from Bitko et al.
 % exHo = -0.000436; % from Conradin
 ex.Yb = 0;
