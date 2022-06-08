@@ -28,7 +28,7 @@ ioFit = varargin{7};
 if ioFit.init == true; ioFit.mode = 0; end
 
 idx = ioFit.tarIdx;
-num_res = ioFit.total-1; % total number of total spin resonances
+num_res = ioFit.total; % total number of spin resonances
 if  idx > 2 && idx < num_res
     NN1 = mod(idx+1-1, num_res)+1; % Nearest neighbour (right)
     NN2 = mod(idx-1-1, num_res)+1; % Nearest neighbour (left)
@@ -84,10 +84,12 @@ switch ioFit.mode
         % Fit model to data.
         [fitresult, gof] = fit(xData, yData, ft, opts, 'problem', {kpe, kpi, wc, attn});
     case 2 
-        % fit to one neighbouring spin resonances with fixed cavity paramters
+        % fit to two neighbouring spin resonances with fixed cavity paramters
         w1 = aux_param.f0(NN1);
         gma1 = aux_param.gma(NN1);
         opts.StartPoint(6) = aux_param.gc(NN1); % ['Gc1']
+%         opts.Lower(6) = aux_param.gc(NN1);
+%         opts.Upper(6) = aux_param.gc(NN1); 
         
         opts.StartPoint(7) = w1; % ['w1']
 %         opts.Lower(7) = w1;
@@ -139,8 +141,8 @@ switch ioFit.mode
 
         opts.StartPoint(6) = aux_param.gc(NN1); % ['Gc1']
         opts.StartPoint(7) = aux_param.gc(NN2); % ['Gc2']
-%         opts.StartPoint(6) = aux_param.gma(NN1); % ['gma1']
-%         opts.StartPoint(7) = aux_param.gma(NN2); % ['gma2']
+        opts.StartPoint(6) = aux_param.gma(NN1); % ['gma1']
+        opts.StartPoint(7) = aux_param.gma(NN2); % ['gma2']
         
         % Set up fittype and options
         ft = fittype( @(omega, Gc, gma, xr, xi, Gc1, Gc2, kpe, kpi, wc, w1, w2, attn, gma1, gma2, x)...
