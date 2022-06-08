@@ -11,13 +11,13 @@ Options.ion = ion; % support 'Er' and 'Ho'
     elem_idx = find(strcmp(Options.ion,[{'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}]));
 Options.hyp = 1.00; % Hyperfine isotope proportion
 Options.nZee = false; % nuclear Zeeman interaction
-Options.RPA = false; % not enabled yet
-Options.Elevel = false; % eigen-energies
+Options.RPA = true; % not enabled yet
+Options.Elevel = true; % eigen-energies
 Options.Ediff = true; % excitation spectrum
     Options.deltaI2 = 0; % Transitions between the next nearest neightbouring levels
-Options.Js = false; % spin expectation values
+Options.Js = true; % spin expectation values
 Options.Mx = true; % nearest off diagonal element of spin matrix
-Options.Espan = false;
+Options.Espan = true;
     f_cav = 3.645; % Resonant frequency of the cavity (GHz)
     filFctr = 0.0127*2.1; % filling factor
 Options.eUnit = 'GHz';
@@ -140,7 +140,7 @@ for iter = 1:numel(temp)
                 % frequency = { '1.682 GHz', '3.436 GHz', '3.924 GHz', '4.449 GHz', '5.604 GHz' }; % frequency reference lines
 
                 % Plot transitions between the nearest levels
-%                 figure;
+                figure;
                 hold on
                 figs_dE(1, iter2, iter3) = plot(fields, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',1.5);
                 if N_level > 1
@@ -216,43 +216,46 @@ for iter = 1:numel(temp)
             end
 %% Plot expectation values of spin moment
             if Options.Js == true
-                Jx = cell(1,4);
+                Jx = cell(1,4); % create one cell for each of the four ions in the same unit cell
                 Jy = cell(1,4);
                 Jz = cell(1,4);
                 Jnorm = cell(1,4);
                 
                 figure;
+                box on
                 hold on
                 for ii = 1:4
-                    Jx{ii} = double.empty(4,length(fff(1,:)),0);
-                    Jy{ii} = double.empty(4,length(fff(1,:)),0);
-                    Jz{ii} = double.empty(4,length(fff(1,:)),0);
-                    for jj = 1:length(fff(1,:))
-                        Jx{ii}(:,jj,1) = ion.Js_hyp(ii,1,jj,1);
-                        Jy{ii}(:,jj,1) = ion.Js_hyp(ii,2,jj,1);
-                        Jz{ii}(:,jj,1) = ion.Js_hyp(ii,3,jj,1);
+                    Jx{ii} = double.empty(4,length(fields),0);
+                    Jy{ii} = double.empty(4,length(fields),0);
+                    Jz{ii} = double.empty(4,length(fields),0);
+                    for jj = 1:length(fields)
+                        Jx{ii}(:,jj,1) = ion.Js_hyp(ii,1,jj,elem_idx);
+                        Jy{ii}(:,jj,1) = ion.Js_hyp(ii,2,jj,elem_idx);
+                        Jz{ii}(:,jj,1) = ion.Js_hyp(ii,3,jj,elem_idx);
                     end
-                    Jnorm{ii} = vecnorm([Jx{ii};Jy{ii};Jz{ii}]);
-                    plot(vecnorm(fff),Jnorm{ii},'o')
+                    Jnorm{ii} = vecnorm([Jx{ii};Jy{ii};Jz{ii}])';
                 end
+                plot(fields, mean(cell2mat(Jnorm), 2),'o'); % plot <J> averaged over the four ions in the unit cell
                 legend(strcat(Options.ion,'-1'),strcat(Options.ion,'-2'),strcat(Options.ion,'-3'),strcat(Options.ion,'-4'))
                 xlabel('Magnetic field (T)')
                 ylabel('<J>')
                 
-                Jmx = double.empty(4,length(fff(1,:)),0);
-                Jmy = double.empty(4,length(fff(1,:)),0);
-                Jmz = double.empty(4,length(fff(1,:)),0);
+                Jmx = double.empty(4,length(fields),0);
+                Jmy = double.empty(4,length(fields),0);
+                Jmz = double.empty(4,length(fields),0);
                 for ii = 1:length(fff(1,:))
-                    Jmx(:,ii,1) = ion.Jmom_hyp(1,ii,1);
-                    Jmy(:,ii,1) = ion.Jmom_hyp(2,ii,1);
-                    Jmz(:,ii,1) = ion.Jmom_hyp(3,ii,1);
+                    Jmx(:,ii,1) = ion.Jmom_hyp(1,ii,elem_idx);
+                    Jmy(:,ii,1) = ion.Jmom_hyp(2,ii,elem_idx);
+                    Jmz(:,ii,1) = ion.Jmom_hyp(3,ii,elem_idx);
                 end
                 results.Js{iter,iter2,iter3} = cat(3,Jmx,Jmy,Jmz);
+                
                 figure
+                box on
                 hold on
-                plot(vecnorm(fff),Jmx,'-s')
-                plot(vecnorm(fff),Jmy,'-s')
-                plot(vecnorm(fff),Jmz,'-s')
+                plot(fields,Jmx,'-s')
+                plot(fields,Jmy,'-s')
+                plot(fields,Jmz,'-s')
                 legend('<Jx>','<Jx>','<Jz>')
                 xlabel('Magnetic field (T)')
                 ylabel('<J_i>')
