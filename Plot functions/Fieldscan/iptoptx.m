@@ -1,4 +1,4 @@
-function [fitresult, gof] = iptoptx(x, y, field, gc, P0, low, upr, weight, plt)
+function [fitresult, gof] = iptoptx(x, y, field, P0, low, upr, weight, plt)
 %CREATEFIT(omega,S11)
 %  S11 input-output fit:
 %      X Input : frequency
@@ -15,12 +15,8 @@ function [fitresult, gof] = iptoptx(x, y, field, gc, P0, low, upr, weight, plt)
 
 [xData, yData] = prepareCurveData( x, y );
 % Set up fittype and options.
-% ft = fittype( @(kpe, kpi, xr, xi, w0, x) (abs(1+2*kpe./...
-%     (1i*(x-wc) - (kpe + kpi) + 1i*g^2*wc*(xr + 1i*xi)))),...
-%     'independent', {'x'}, 'dependent', {'y'}, 'coefficients',{'kpe', 'kpi', 'xr', 'xi', 'wc'});
-
 ft = fittype( @(kpe, kpi, xr, xi, wc, x) (abs(1+2*kpe./...
-    ( 1i*(x-wc) - (kpe + kpi) + gc*1i*(xr + 1i*xi) ))),...
+    ( 1i*(x-wc) - (kpe + kpi) + 1i*(xr + 1i*xi) ))),...
     'independent', {'x'}, 'dependent', {'y'}, 'coefficients',{'kpe', 'kpi', 'xr', 'xi', 'wc'});
 
 opts = fitoptions( 'Method', 'NonlinearLeastSquares');

@@ -6,13 +6,13 @@ Options.nZee = false; % Option to include nuclear Zeeman effect
 Options.gamma = true; % Option to plot spin linewidth from fitting
 
 fc = 3.642; % cavity resonant frequency [GHz]
-theta = 0;
+theta = 0.0;
 phi = 2.3;
 n_trans = 6;
 
-% sim_temps = [0.05 0.1:0.01:0.3]; % simulation temperatures
-sim_temps = [0.1 0.13 0.25]; % simulation temperatures
-exp_temps = [0.1 0.135 0.25]; % experimental temperatures
+% sim_temps = [0.0 0.05 0.1:0.01:0.3]; % simulation temperatures
+sim_temps = [0.1 0.130 0.18 0.22]; % simulation temperatures
+exp_temps = [0.1 0.135 0.18 0.25]; % experimental temperatures
 lgd_sim = string(sim_temps.*1000);
 lgd_sim = 'Sim.' + lgd_sim + ' mK';
 lgd_exp = string(exp_temps.*1000);
@@ -50,12 +50,15 @@ for ii = 1:length(sim_temps)
     eigenE = eigenE(:,1:n_trans+1);
     fields = vecnorm(fff); % Magnetic field [T]
     Ediff = diff(eigenE,1,2); % Transition between the nearest neighbouring levels
-    sim = S11_simulation('Ho', 'field', sim_temps(ii), 0, 2.3, 9e-5, false);
+%     calc = S11_simulation('Ho', 'field', sim_temps(ii), 0, 2.3, 1e-4, false);
+%     Gc2 = poermute(calc.Gc2{:},[2,3,1]);
+    calc = EngyLevels('Ho', sim_temps(ii), theta, phi, 7, false);
+    Gc2 = calc.Gc2{:};
 %     b0 = double.empty(size(Ediff,2),0);
     for jj = 1:size(Ediff,2)
         [~,idx] = min(abs(Ediff(:,jj)-fc));
 %         b0(jj) = fields(idx);
-        g_sim(ii,jj) = sqrt(sim.Gc2(idx,jj+1,jj));
+        g_sim(ii,jj) = sqrt(squeeze(Gc2(jj+1,jj,idx)));
     end
 %     % save the raw data in an ascii file (.txt)
 %     data_sim = [reshape(b0,length(b0),1) reshape(g_sim(ii,:),length(g_sim(ii,:)),1)];
@@ -153,14 +156,26 @@ end
 
 if Options.gamma == true
     xx = 1:6;
-    figure
+    gfig = figure;
+    hold on
+    box on
+    cfig = figure;
     hold on
     box on
     for ii = 1:length(exp_temps)
         xp = xx(gma_exp(ii,:) ~= 0);
+        figure(gfig)
         plot(xp, nonzeros(gma_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', 'k', 'MarkerSize', 6,...
             'MarkerEdgeColor', 'k');
+        figure(cfig)
+        plot(xp, nonzeros(g_exp(ii,:)).^2./nonzeros(gma_exp(ii,:))/5e-4, 'Marker', mkr(ii), 'MarkerFaceColor', 'k', 'MarkerSize', 6,...
+            'MarkerEdgeColor', 'k');
     end
+    figure(gfig)
+    ylabel('Spin line width (GHz)')
+    legend([lgd_exp], 'Location', 'northwest')
+    figure(cfig)
+    ylabel('Cooperativity')
     legend([lgd_exp], 'Location', 'northwest')
 end
 cd(currentLoc)
