@@ -2,7 +2,7 @@ Options.RPA  = true;
 Options.nZee = false; % Nuclear Zeeman interaction
 Options.sample = 239; % Sample to use (SC###)
 
-temps = [0.1 0.3 0.6 1.2]; % temperatures
+temps = [0.1 0.3 0.8 1.2]; % temperatures
 % temp = 1;
 theta = 0.0; % c-axis deviation
 phi = 2.3; % in-plane (a-b) rotation
@@ -30,7 +30,7 @@ Gh2mV = hbar * 2*pi / meV2J * 10^9; % [meV/GHz]
 exp_loc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC',...
     num2str(Options.sample),'\'];
 
-dat_lst = readtable(fullfile(exp_loc, "off_res_list.xlsx"));
+dat_lst = readtable(fullfile(exp_loc, sprintf("SC%u_off_list.xlsx", Options.sample)));
 folder = table2array(dat_lst(:,1));
 efiles = table2array(dat_lst(:,2));
 etemps = table2array(dat_lst(:,3));
@@ -41,7 +41,7 @@ if Options.nZee == true
         'Susceptibilities\with Hz_I\'];
 else
     sim_loc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\',...
-        'Susceptibilities\without Hz_I\backup\'];
+        'Susceptibilities\without Hz_I\'];
 end
 
 % plot the data
@@ -58,8 +58,8 @@ for ii = 1:length(temps)
 
 
     figure(chi_fig)
-    scatter(continu_var(1,1:10:end), analysis.xr(1:10:end), 'Marker', mkr(ii),...
-        'MarkerEdgeColor', mc(ii,:), 'MarkerFaceColor', mc(ii,:)); % plot the experimental data
+    scatter(continu_var(1,1:10:end), analysis.xr(1:10:end), 'Marker', mkr(mod(ii,length(mkr))),...
+        'MarkerEdgeColor', mc(mod(ii,size(mc,1)),:), 'MarkerFaceColor', mc(mod(ii,size(mc,1)),:)); % plot the experimental data
 
     sim_file = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e_4*GHz', temps(ii), theta, phi, gama);
     if Options.RPA == true
@@ -84,7 +84,7 @@ for ii = 1:length(temps)
     
     [~, fidx] = min(abs(freq_total - fc));
     figure(chi_fig);
-    plot(fields, real(chiz(fidx,:))/ConvUnit, '-','Color', mc(ii,:), 'lineWidth', 1.5);
+    plot(fields, real(chiz(fidx,:))/ConvUnit, 'LineStyle', lin(1), 'Color', mc(mod(ii,size(mc,1)),:), 'lineWidth', 1.5);
 end
 
 lgd_exp = string(exp_temps.*1000); % legends for experimental data
@@ -95,5 +95,5 @@ lgd = lgd(:); % interweaved legends
 legend(lgd, 'Location', 'northwest')
 xlim([0 9])
 title('Easy axis susceptibilities')
-xlabel('Magnetick Field (T)');
+xlabel('Magnetic Field (T)');
 ylabel(xlab);
