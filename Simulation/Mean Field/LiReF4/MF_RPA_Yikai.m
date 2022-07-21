@@ -308,14 +308,17 @@ unit = opt.unit;
 save(savefile,'temp','fields','freq_total','chi','gama','qvec','unit','-v7.3');
 end
 
-function [continu_var, freq_total, chi, JIz_exp] = linear_response(ion, eigenE, continu_var, freq_total, temperature, eigenW, gma, const)
-kB = 8.61733e-2; % [meV/K]
+function [continu_var, freq_total, chi, JIz_exp] = linear_response(ion, eigenE, continu_var, freq_total, temperatures, eigenW, gma, const)
+kB = 8.61733e-2; % Boltzmann constant [meV/K]
+gamma = ones(size(eigenE,2))*gma; % spin linewidth [meV]
+
 % Declare susceptibility tensor
 chi0_J = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
 chi0_I = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
 chi0_IJ = zeros(3,3,length(freq_total(1,:)),size(continu_var,2));
 ionI = ion.I(const.elem);
 ionJ = ion.J(const.elem);
+
 %Initiate ionJ operators
 Jz = diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
 JhT.z = kron(Jz,eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
@@ -353,19 +356,27 @@ for ii = 1:size(continu_var,2) % calculate susceptibility for all fields
     JIz_exp(ii,:,1) = real(diag(ttz));
 end
 
-% % use experimentally fitted values for the spin linewidths
-% location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\';
-% gma_load = load([location, 'Exp_fit_gamma_180mK.mat'],'gma');
-% gma_load = flip(gma_load.gma)*const.Gh2mV; % [meV]
+ % If exists, load spin-linewidths extracted from experiments for field scan simulation
+if temperatures(1) == temperatures(end) && ismember(temperatures(1), [0.1 0.13 0.25])
+    location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\';
+    gma_load = load([location, sprintf('Exp_fit_gamma_%umK.mat', 1000*temperatures(1))],'gma');
+    gma_load = flip(gma_load.gma)*const.Gh2mV; % [meV]
+    % use experimentally fitted values for the spin linewidths
+    for kk = 1:length(gma_load)
+        gamma(kk,kk+1) = gma_load(kk);
+        gamma(kk+1,kk) = gma_load(kk);
+    end
+end
+
 for ii = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
     freq = freq_total (ii);
     omega = freq*const.Gh2mV;   % convert frequencies to meV
-%     for k = 1:size(continu_var,2) % for debugging: calculate susceptibility for all fields
+%     for jj = 1:size(continu_var,2) % for debugging: calculate susceptibility for all fields
     parfor jj = 1:size(continu_var,2) % calculate susceptibility for all fields
         v = squeeze(eigenW(jj,:,:)); % Obtain the corresponding eigen vectors
         en = squeeze(eigenE(jj,:)); % Obtain the corresponding eigen energies [meV]
-        if temperature(jj) ~= 0
-            beta = 1/(kB*temperature(jj)); %[meV^-1]
+        if temperatures(jj) ~= 0
+            beta = 1/(kB*temperatures(jj)); %[meV^-1]
             Z = sum(exp(-beta*en));
             zn = exp(-beta*en)/Z;
 %             Z = exp(-beta*en);
@@ -383,14 +394,7 @@ for ii = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
         end
         [ee,eep] = meshgrid(en,en);
         EE = (eep-ee-omega); % [meV]
-        gamma = ones(size(EE))*gma; % [meV]
-        
-%         % use experimentally fitted values for the spin linewidths
-%         for kk = 1:length(gma_load)
-%             gamma(kk,kk+1) = gma_load(kk);
-%             gamma(kk+1,kk) = gma_load(kk);
-%         end
-        
+               
 %         % computer the real an imaginary part of the susceptibilities separately        
 %         deno1 = EE ./ (EE.^2 + gamma.^2);
 %         deno2 = gamma ./ (EE.^2 + gamma.^2);

@@ -1,5 +1,5 @@
-function [results, fields] = EngyLevels(ion, temp, theta, phi, N_level)
-clearvars -except ion temp theta phi N_level
+function [results, fields] = EngyLevels(ion, temp, theta, phi, N_level, plotOpt)
+clearvars -except ion temp theta phi N_level plotOpt
 
 kB = 8.617333e-2; % [meV/K]
 hbar = 1.055E-34; % Reduced Planck constant [J.s]
@@ -11,15 +11,15 @@ Options.ion = ion; % support 'Er' and 'Ho'
     elem_idx = find(strcmp(Options.ion,[{'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}]));
 Options.hyp = 1.00; % Hyperfine isotope proportion
 Options.nZee = false; % nuclear Zeeman interaction
-Options.RPA = true; % not enabled yet
-Options.Elevel = true; % eigen-energies
+Options.RPA = false; % not enabled yet
+Options.Elevel = false; % eigen-energies
 Options.Ediff = true; % excitation spectrum
-    Options.deltaI2 = 0; % Transitions between the next nearest neightbouring levels
-Options.Js = true; % spin expectation values
-Options.Mx = true; % nearest off diagonal element of spin matrix
-Options.Espan = true;
-    f_cav = 3.645; % Resonant frequency of the cavity (GHz)
-    filFctr = 0.0127*2.1; % filling factor
+Options.deltaI2 = 0; % Transitions between the next nearest neightbouring levels
+Options.Js = false; % spin expectation values
+Options.Mx = false; % nearest off diagonal element of spin matrix
+Options.Espan = false;
+f_cav = 3.645; % Resonant frequency of the cavity (GHz)
+filFctr = 0.01005*1.06; % filling factor
 Options.eUnit = 'GHz';
 Options.savedata = 0;
 Options.savegif = 0;
@@ -28,7 +28,7 @@ if Options.nZee == true
         'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
 else
     Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',Options.ion,...
-        'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I'];
+        'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\R=0.84'];
 end
 
 marker = [":","-.","--","-"];
@@ -68,7 +68,7 @@ results.JImx = {};
 for iter = 1:numel(temp)
     for iter2 = 1:numel(theta)
         for iter3 = 1:numel(phi)
-            if Options.RPA == true
+            if Options.RPA == true % yet to implement
                 lname=['Hscan_Li',Options.ion,'F4_',...
                     sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f',temp(iter),theta(iter2),phi(iter3),Options.hyp),'.mat'];
             else
@@ -83,7 +83,7 @@ for iter = 1:numel(temp)
             fields = vecnorm(fff);
             Ediff = double.empty(0,size(eigenE,1));
             if Options.deltaI2; Ediff2 = double.empty(0,size(eigenE,1)); end
-%%          Deviation of the energy from the mean value
+%% Deviation of the energy from the mean value
 %             aver = double.empty(size(E,1),0);
 %             E8=E(:,1:8);
 %             for j=1:size(E,1)
@@ -104,7 +104,7 @@ for iter = 1:numel(temp)
 %             title(tit0,'FontSize',15)
 %             legend(num2str(temp(iter)*1000,'T = %u mK,  A = A_{th}'))
 %% Plot eigen-energies
-            if Options.Elevel == true
+            if Options.Elevel == true && plotOpt == true
                 fig_E = figure;
 %                 figs_E(:, iter2, iter3) = plot(fields,E(:,1:N_level+1),'Color',[35 107 142]/255,'linewidth',2);
                 results.En{iter,iter2,iter3} = eigenE(:,1:N_level+1);
@@ -140,55 +140,60 @@ for iter = 1:numel(temp)
                 % frequency = { '1.682 GHz', '3.436 GHz', '3.924 GHz', '4.449 GHz', '5.604 GHz' }; % frequency reference lines
 
                 % Plot transitions between the nearest levels
-                figure;
-                hold on
-                figs_dE(1, iter2, iter3) = plot(fields, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',1.5);
-                if N_level > 1
-%                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
-                    figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color','k','LineWidth',1.5);
-%                     figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1),'LineWidth',1.5);
-                end
-                
-%                 % Plot transitions between the next nearest levels
-                if Options.deltaI2
-                    figs_dE2(1, iter2, iter3) = plot(fields, Ediff2(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
-                    if N_level > 2
-                        figs_dE2(2:end, iter2, iter3) = plot(fields, Ediff2(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
+
+                if plotOpt == true
+%                     figure;
+                    hold on
+                    figs_dE(1, iter2, iter3) = plot(fields, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',1.5);
+                    if N_level > 1
+%                         figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
+                        figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color','k','LineWidth',1.5);
+%                         figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle', marker(1),'LineWidth',1.5);
                     end
 
-                    hpcfr1 = plot(fields, Ediff,'Color','blue','linewidth',2);
-%                     hpcfr1 = plot(fields, Ediff(2:end,:),'Color','black','linewidth',2);
-%                     hpcfr1 = plot(fields, Ediff,'Color',[35 107 142]/255,'linewidth',2,'LineStyle','-');
-                    legend(num2str(temp(iter),'T = %.2f K, A = A_{th}'),num2str(temp(iter),'T = %.2f K, A = A_{th}'))
+                    % Plot transitions between the next nearest levels
+                    if Options.deltaI2
+                        figs_dE2(1, iter2, iter3) = plot(fields, Ediff2(1,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', 'r','LineWidth',2);
+                        if N_level > 2
+                            figs_dE2(2:end, iter2, iter3) = plot(fields, Ediff2(2:end,:), 'Marker', 'none', 'LineStyle', marker(1), 'Color', color(iter3),'LineWidth',2);
+                        end
 
-                    % Plot the resonant frequency of a bare cavity
-                    plot([0 max(fields)],[f_cav f_cav],'-r','LineWidth',1.5);
+                        hpcfr1 = plot(fields, Ediff,'Color','blue','linewidth',2);
+%                         hpcfr1 = plot(fields, Ediff(2:end,:),'Color','black','linewidth',2);
+%                         hpcfr1 = plot(fields, Ediff,'Color',[35 107 142]/255,'linewidth',2,'LineStyle','-');
+                        legend(num2str(temp(iter),'T = %.2f K, A = A_{th}'),num2str(temp(iter),'T = %.2f K, A = A_{th}'))
 
-                    yyaxis(gca,'left');
-                    xticks(linspace(0.1,max(fields),10))
-%                     text(8,(j-1)*D+0.02,'0.1');
-                    set(figs_dE2,'position',[800 100 600 300]);
+                        % Plot the resonant frequency of a bare cavity
+                        plot([0 max(fields)],[f_cav f_cav],'-r','LineWidth',1.5);
+
+                        yyaxis(gca,'left');
+                        xticks(linspace(0.1,max(fields),10))
+%                         text(8,(j-1)*D+0.02,'0.1');
+                        set(figs_dE2,'position',[800 100 600 300]);
+                    end
+                    set(gca,'fontsize',15,'Xtick',0:1:max(fields));
+                    set(gca,'XTickLabelRotation',0)
+                    currYlim = get(gca,'ylim');
+                    xlabel('Magnetic Field (T)','FontSize',15);
+                    ylabel(ylab1,'FontSize',15);
+                    grid off
+                    box on;
+                    xlim([min(fields) max(fields)]);
+                    xticks('auto')
+                    ylim(currYlim);
+%                     ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
+%                     ylim([1 5]);
+%                     ylim([3.59 3.71]) % adjust y-axis range to fit experimental data
+                    tit4 = 'Energy gaps at ';
+                    title([tit4 sprintf('T = %.3f K',temp(iter))],'FontSize',15)
+                    if Options.savegif == true
+                        drawnow
+                        frame = getframe(fig_dE);
+                        Ediff_frame{im_idx} = frame2im(frame);
+                    end
+                    lgd = legend(squeeze(figs_dE(1,:,:)),lg);
+                    lgd.FontSize = 12;
                 end
-                set(gca,'fontsize',15,'Xtick',0:1:max(fields));
-                set(gca,'XTickLabelRotation',0)
-                xlabel('Magnetic Field (T)','FontSize',15);
-                ylabel(ylab1,'FontSize',15);
-                grid off
-                box on;
-                xlim([min(fields) max(fields)]);
-                xticks('auto')
-                ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
-%                 ylim([1 5]);
-%                 ylim([3.59 3.71]) % adjust y-axis range to fit experimental data
-                tit4 = 'Energy gaps at ';
-                title([tit4 sprintf('T = %.3f K',temp(iter))],'FontSize',15)
-                if Options.savegif == true
-                    drawnow
-                    frame = getframe(fig_dE);
-                    Ediff_frame{im_idx} = frame2im(frame);
-                end
-                lgd = legend(squeeze(figs_dE(1,:,:)),lg);
-                lgd.FontSize = 12;
             end
 %% Add frequency span of the transitions at each field
             if Options.Espan == true
@@ -221,9 +226,6 @@ for iter = 1:numel(temp)
                 Jz = cell(1,4);
                 Jnorm = cell(1,4);
                 
-                figure;
-                box on
-                hold on
                 for ii = 1:4
                     Jx{ii} = double.empty(4,length(fields),0);
                     Jy{ii} = double.empty(4,length(fields),0);
@@ -235,11 +237,7 @@ for iter = 1:numel(temp)
                     end
                     Jnorm{ii} = vecnorm([Jx{ii};Jy{ii};Jz{ii}])';
                 end
-                plot(fields, mean(cell2mat(Jnorm), 2),'o'); % plot <J> averaged over the four ions in the unit cell
-                legend(strcat(Options.ion,'-1'),strcat(Options.ion,'-2'),strcat(Options.ion,'-3'),strcat(Options.ion,'-4'))
-                xlabel('Magnetic field (T)')
-                ylabel('<J>')
-                
+                                
                 Jmx = double.empty(4,length(fields),0);
                 Jmy = double.empty(4,length(fields),0);
                 Jmz = double.empty(4,length(fields),0);
@@ -249,16 +247,27 @@ for iter = 1:numel(temp)
                     Jmz(:,ii,1) = ion.Jmom_hyp(3,ii,elem_idx);
                 end
                 results.Js{iter,iter2,iter3} = cat(3,Jmx,Jmy,Jmz);
-                
-                figure
-                box on
-                hold on
-                plot(fields,Jmx,'-s')
-                plot(fields,Jmy,'-s')
-                plot(fields,Jmz,'-s')
-                legend('<Jx>','<Jx>','<Jz>')
-                xlabel('Magnetic field (T)')
-                ylabel('<J_i>')
+
+                if plotOpt == true
+                    figure;
+                    box on
+                    hold on
+                    plot(fields, mean(cell2mat(Jnorm), 2),'o'); % plot <J> averaged over the four ions in the unit cell
+                    legend(strcat(Options.ion,'-1'),strcat(Options.ion,'-2'),strcat(Options.ion,'-3'),strcat(Options.ion,'-4'))
+                    xlabel('Magnetic field (T)')
+                    ylabel('<J>')
+
+
+                    figure
+                    box on
+                    hold on
+                    plot(fields,Jmx,'-s')
+                    plot(fields,Jmy,'-s')
+                    plot(fields,Jmz,'-s')
+                    legend('<Jx>','<Jx>','<Jz>')
+                    xlabel('Magnetic field (T)')
+                    ylabel('<J_i>')
+                end
             end
 %% Plot the matrix elements of the CMP coupling strength
             if Options.Mx == true
@@ -269,7 +278,7 @@ for iter = 1:numel(temp)
                 I_tab = [3;      3.5;      0;     0;      1.50;   0];
                 nLande = [-0.1611; 1.192; -0.2592; -0.462; -0.2265; 0]; % https://easyspin.org/documentation/isotopetable.html
 
-                %Ions' lattice parameters
+                % Ions' lattice parameters
                 lattice = [{[5.162 0 0; 0 5.162 0; 0 0 10.70]}      %Er
                            {[5.175 0 0; 0 5.175 0; 0 0 10.75]}      %Ho
                            {[5.132 0 0; 0 5.132 0; 0 0 10.59]}      %Yb
@@ -282,15 +291,16 @@ for iter = 1:numel(temp)
                 ionJ = J_tab(elem_idx); % Electronic moment for Ho3+
                 ionI = I_tab(elem_idx); % Nuclear moment for Ho3+
 
-                muN = 5.05078e-27; % Nuclear magneton [J/T]
                 muB = 9.274e-24; %[J/T]
+                muN = 5.05078e-27; % Nuclear magneton [J/T]
                 mu0 = 4*pi*1e-7; % [H/m]
                 ELEf = gLande(L_tab(elem_idx),S_tab(elem_idx)) * muB; % Lande factor * Bohr magneton (J/T)
                 NUCf = nLande(elem_idx) * muN; % (J/T)
                 rho = 4e30 / det(lattice); % magnetic ion number density [m^-3]
-                gw0 = sqrt(mu0*2*pi*f_cav*10^9*rho*filFctr/hbar/2) / (2*pi) * 1e-9; % susceptibility prefactor [T/J. Hz]*E-9
+                gw0 = sqrt(mu0 * 2*pi * f_cav*1e9 * rho/2) * filFctr; % susceptibility prefactor [T^2/J. rad/s]^1/2
+                gw2 = gw0^2 * 2*pi * 1e-9; % [T^2/J. GHz]
 
-                %Initiate ionJ operators
+                % Initiate ionJ operators
                 Jz=diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
                 JhT.z=kron(Jz,eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
                 Jp=diag(sqrt((ionJ-((ionJ-1):-1:-ionJ) ).*(ionJ+1+( (ionJ-1):-1:-ionJ) )),1); % electronic spin ladder operator
@@ -300,7 +310,7 @@ for iter = 1:numel(temp)
                 JhT.x=(Jph+Jmh)/2;
                 JhT.y=(Jph-Jmh)/2i;
                 
-                %Initiate I operators
+                % Initiate I operators
                 Iz=diag(ionI:-1:-ionI); %Iz = -I, -I+1,...,I-1,I
                 IhT.z=kron(eye(2*ionJ+1),Iz); % Expand Hilbert space
                 Ip=diag(sqrt((ionI-((ionI-1):-1:-ionI)).*(ionI+1+((ionI-1):-1:-ionI))),1); % Nuclear spin ladder operator
@@ -320,11 +330,6 @@ for iter = 1:numel(temp)
                         beta = 1/E2f / (kB*temperature(kk)); % [1/meV or 1/GHz]
                         Z = sum(exp(-beta*en));
                         zn = exp(-beta*en)/Z;
-%                         Z = exp(-beta*en);
-%                         for nn = 1:8 % Skew the population of the lowest 8 states
-%                             Z(nn) = Z(nn) - (9-nn)/2e2 + nn/2e2;
-%                         end
-%                         Z = Z/sum(Z);
                         [n,np] = meshgrid(zn,zn);
                         NN = n-np;
                     else
@@ -339,21 +344,23 @@ for iter = 1:numel(temp)
                     IzhT = IhT.z * NUCf;
                     tz(:,:,kk,1) = v' * JzhT * v;
                     ttz(:,:,kk,1)  = v' * (JzhT+IzhT) * v;
-                    Gc2(:,:,kk,1) = gw0^2 * ttz(:,:,kk,1) .* ttz(:,:,kk,1).' .* NN;
+                    Gc2(:,:,kk,1) = gw2 * ttz(:,:,kk,1) .* ttz(:,:,kk,1).' .* NN * J2meV / Gh2mV;
                 end
                 results.Jmx{iter,iter2,iter3} = tz;
                 results.JImx{iter,iter2,iter3} = ttz;
                 results.Gc2{iter,iter2,iter3} = Gc2;
 
-                figure;
-                hold on
-                for ii = 1:N_level
-                    plot(fields, sqrt(squeeze(abs(Gc2(ii,ii+1,:)))),'.');
-%                     plot(fields, sqrt(abs(squeeze(Gc2(ii+1,ii,:)))),'o'); % symmetrical part of the matrix
+                if plotOpt == true
+                    figure;
+                    hold on
+                    for ii = 1:N_level
+                        plot(fields, sqrt(squeeze(abs(Gc2(ii,ii+1,:)))),'.');
+%                         plot(fields, sqrt(abs(squeeze(Gc2(ii+1,ii,:)))),'o'); % symmetrical part of the matrix
+                    end
+                    xlabel('Magnetic Field (T)')
+                    ylabel(ylab)
+                    title('Nearest level excitation coupling strength')
                 end
-                xlabel('Magnetic Field (T)')
-                ylabel(ylab)
-                title('Nearest level excitation coupling strength')
             end
         end
     end
@@ -363,7 +370,7 @@ if Options.savedata == true
     filename = strcat('sim_',num2str(temp*1000,'%u'),'mK_trans.mat','-v7.3');
     save(filename,'fields','Ediff');
 end
-if Options.savegif == true
+if Options.savegif == true && plotOpt == true
     if Options.Elevel == true
         filename = strcat('sim_',num2str(min(temp)*1000,'%u'),'-',num2str(max(temp)*1000,'%u'),'mK_Elevel.gif');
         fileobj = fullfile(Options.location,filename);

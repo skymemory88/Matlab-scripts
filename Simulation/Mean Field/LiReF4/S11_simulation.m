@@ -11,14 +11,14 @@ rho = 4/(5.175e-10 * 5.175e-10 * 10.75e-10); % magnetic moment number density in
 
 % frequency parameter setup
 dE = -0.0;
-fc = 4.7353 +dE; % Fundamental mode of the cavity [Ghz]
-% fc = 3.642 + dE; % cavity resonance frequency [GHz]
+% fc = 4.7353 +dE; % Fundamental mode of the cavity [Ghz]
+fc = 3.642 + dE; % cavity resonance frequency [GHz]
 % fc = 3.3 + dE;
 % fc2 = 4.2; % Second mode of the cavity
-freq_l = 4.700; % frequency range lower limit [GHz]
-freq_h = 4.745; % frequency range upper limit [GHz]
-% freq_l = 3.52; % frequency range lower limit [GHz]
-% freq_h = 3.76; % frequency range upper limit [GHz]
+% freq_l = 4.71; % frequency range lower limit [GHz]
+% freq_h = 4.745; % frequency range upper limit [GHz]
+freq_l = 3.52; % frequency range lower limit [GHz]
+freq_h = 3.76; % frequency range upper limit [GHz]
 % freq_l = fc-0.1;
 % freq_h = fc+0.1;
 freq_pts = 2001; % number of points along frequency axis
@@ -26,7 +26,7 @@ freq = linspace(freq_l,freq_h,freq_pts); % Only applies when calculating from sc
 
 Options.scanMode = scanMode; % continuous variable choice: 1. Field, 2. Temperature
     cVar_l = 0.0; % continuous variable setup
-    cVar_h = 9.0;
+    cVar_h = 17.0;
     cVar_np = 801; % number of points along field axis
     cVar = linspace(cVar_l,cVar_h,cVar_np); % Only applies when calculating from scratch
     
@@ -93,7 +93,7 @@ chi_idx = find(chi_elem); % index of chi element choice.
 
 if Options.RPA == true
     scale = 1.05;
-%     scale = 1.11;
+%     scale = 1.18;
 else
     scale = 1.10;
 end
@@ -198,7 +198,7 @@ while true
                 Ham(2:end,1) = gs';
                 ww(1,:,jj) = eig(Ham);
             end
-            % pick out the frequencies along the field axis that is closest to bare frequency of the cavity
+%             % pick out the frequencies along the field axis that is closest to bare frequency of the cavity
             wn = abs(squeeze(ww) - fc);
             fc = ww(wn == min(wn,[],1));
             sim.wr = fc;
@@ -312,7 +312,7 @@ while true
             JzhT = Jzh * ELEf; % electronic spin moment [J/T]
             IzhT = Izh * NUCf; % nuclear spin moment [J/T]
                                    
-            gf = sqrt(mu0 * hbar * 2*pi * fc*10^9 * rho/2) * filFctr; % [J/(A*m^2)]
+%             gf = sqrt(mu0 * hbar * 2*pi * fc*10^9 * rho/2) * filFctr; % [J/(A*m^2)]
             spins = double.empty(length(continu_var), nLevel, size(freq,2),0); % A container for the elements of spin term summation in the denominator of S11
             Jz_exp = double.empty(length(continu_var), 0); % J spin expectation value
             JIz_exp = double.empty(length(continu_var), 0); % J-I pseudo-spin expectation value
@@ -414,7 +414,7 @@ switch Options.simType
             if Options.noise == true
                 fprintf('Adding white noise (%d dB) to the background.\n',sig2n);
                 S11 = awgn(S11,sig2n,'measured');
-                %         S11 = S11 + randn(size(S11))*0.01;
+%                 S11 = S11 + randn(size(S11))*0.01;
             end
             if Options.plot == true
                 s_para = figure;
@@ -422,9 +422,9 @@ switch Options.simType
 %                 map = pcolor(field,freq,mag2db(real(S11))); % color plot of the S11 response
 %                 map = pcolor(field,freq,mag2db(S21)); % color plot of the S21 response
                 map.EdgeColor = 'none';
-                cmap = unique([[0 0 0];[zeros(20,1),linspace(0,0.5,20)',linspace(0.4,1,20)'];...
-                               [linspace(0,1,36)',0.5*ones(36,1),linspace(1,0,36)'];...
-                               [ones(30,1),linspace(0.5,1,30)',linspace(0,1,30)']],'rows');
+                cmap = unique([[0 0 0];[zeros(200,1),linspace(0,0.5,200)',linspace(0.4,1,200)'];...
+                    [linspace(0,1,200)',0.5*ones(200,1),linspace(1,0,200)'];...
+                    [ones(200,1),linspace(0.5,1,200)',linspace(0,1,200)']],'rows');
                 cmap = flip(cmap,1);
                 colormap(cmap)
                 colorbar
@@ -437,11 +437,11 @@ switch Options.simType
                 else
                     title(['MF simulation of S11 at ', titl])
                 end
-                caxis('auto')
-                %         caxis([-30 2])
+%                 caxis('auto')
+                caxis([-10 1])
                 if Options.Ediff == true
                     hold on
-                    plot(cVar(1,:), Ediff(:,:)*mV2Gh, ':k', 'linewidth', 1.3); % plot the transition levels on top of the S11 color map
+                    plot(cVar(1,:), Ediff(:,:)*mV2Gh, ':w', 'linewidth', 1.3); % plot the transition levels on top of the S11 color map
                 end
                 xlim([cVar_l cVar_h])
                 ylim([freq_l freq_h])
@@ -452,9 +452,9 @@ switch Options.simType
                     figure;
                     hp1 = pcolor(continu_var(1,:), freq, x1);
                     set(hp1, 'edgeColor','none')
-                    cmap = unique([[0 0 0];[zeros(20,1),linspace(0,0.5,20)',linspace(0.4,1,20)'];...
-                                  [linspace(0,1,36)',0.5*ones(36,1),linspace(1,0,36)'];...
-                                  [ones(30,1),linspace(0.5,1,30)',linspace(0,1,30)']],'rows');
+                    cmap = unique([[0 0 0];[zeros(200,1),linspace(0,0.5,200)',linspace(0.4,1,200)'];...
+                        [linspace(0,1,200)',0.5*ones(200,1),linspace(1,0,200)'];...
+                        [ones(200,1),linspace(0.5,1,200)',linspace(0,1,200)']],'rows');
                     cmap = flip(cmap,1);
                     colormap(cmap)
 %                     caxis([-23 2]);
@@ -469,9 +469,9 @@ switch Options.simType
                     
                     figure
                     hp2 = pcolor(continu_var(1,:), freq, x2);
-                    cmap = unique([[0 0 0];[zeros(20,1),linspace(0,0.5,20)',linspace(0.4,1,20)'];...
-                                  [linspace(0,1,36)',0.5*ones(36,1),linspace(1,0,36)'];...
-                                  [ones(30,1),linspace(0.5,1,30)',linspace(0,1,30)']],'rows');
+                    cmap = unique([[0 0 0];[zeros(200,1),linspace(0,0.5,200)',linspace(0.4,1,200)'];...
+                            [linspace(0,1,200)',0.5*ones(200,1),linspace(1,0,200)'];...
+                            [ones(200,1),linspace(0.5,1,200)',linspace(0,1,200)']],'rows');
                     cmap = flip(cmap,1);
                     colormap(cmap)
                     set(hp2, 'edgeColor','none')
@@ -581,9 +581,9 @@ if Options.plot == true
     s_para = figure;
     map = pcolor(cVar,freq,mag2db(abs(S11))); % color plot of the S11 response
     map.EdgeColor = 'none';
-    cmap = unique([[0 0 0];[zeros(20,1),linspace(0,0.5,20)',linspace(0.4,1,20)'];...
-                  [linspace(0,1,36)',0.5*ones(36,1),linspace(1,0,36)'];...
-                  [ones(30,1),linspace(0.5,1,30)',linspace(0,1,30)']],'rows');
+    cmap = unique([[0 0 0];[zeros(200,1),linspace(0,0.5,200)',linspace(0.4,1,200)'];...
+        [linspace(0,1,200)',0.5*ones(200,1),linspace(1,0,200)'];...
+        [ones(200,1),linspace(0.5,1,200)',linspace(0,1,200)']],'rows');
     cmap = flip(cmap,1);
     colormap(cmap)
     colorbar('northoutside')
