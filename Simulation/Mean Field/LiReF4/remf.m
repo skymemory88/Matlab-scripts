@@ -7,9 +7,9 @@ for i=1:size(ion.name,1)
         elem = i;
         if ion.prop(i)==1
             if ion.hyp(i) > 0
-                H_dims = (2*ion.I(elem)+1)*(2*ion.J(elem)+1); % Claculate the dimension of the Hilbert space
+                H_dims = (2*ion.I(elem)+1)*(2*ion.J(elem)+1); % Calculate the dimension of the Hilbert space
             elseif ion.hyp(i) == 0
-                H_dims = 2*ion.J(elem)+1; % Claculate the dimension of the Hilbert space
+                H_dims = 2*ion.J(elem)+1; % Calculate the dimension of the Hilbert space
             end
         end
     end
@@ -18,14 +18,14 @@ end
 dip_range = 100; %The range over which the dipolar interaction is included
 nn = 1; % range of exchange interaction in unit of unit cell dimension
 if(isempty(dipole))
-    dipole=dipole_direct([0 0 0],dip_range,ion.abc{elem});
+    dipole = dipole_direct([0 0 0],dip_range,ion.abc{elem});
     for i=1:size(ion.name,1)
         ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:),ion.cfRot(i))};
         ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.abc{elem},nn)};
     end
 end
 if rundipole == true
-    dipole=dipole_direct([0 0 0],dip_range,ion.abc{elem});
+    dipole = dipole_direct([0 0 0],dip_range,ion.abc{elem});
     for i=1:size(ion.name,1)
         ion.cf(:,:,i)={cf(ion.J(i),ion.B(i,:),ion.cfRot(i))};
         ion.exch(:,:,i)={exchange([0,0,0],ion.ex(i),ion.abc{elem},nn)};
@@ -99,9 +99,9 @@ for iterations=1:NiterMax
     momente_old = momente_mean;
 %     E=zeros(1,length(energies(1,:)));
     energies = zeros(4, H_dims); % H_dims = (2*I+1) x (2*J+1)
-%     energies = zeros(4,2); % truncate the energy levels to Ising basis
+%     energies = zeros(4, 2); % truncate the energy levels to Ising basis
     for ionn=1:4 % each Ho3+ ion in the unit cell
-        %calculate meanfield
+        % calculate MF magnetic moments
         h_dipol = zeros([size(ion.name,1),3]);
         h_dipol_hyp = zeros([size(ion.name,1),3]);
         h_ex = zeros([size(ion.name,1),3]);
@@ -122,7 +122,7 @@ for iterations=1:NiterMax
             for j = 1:size(ion.name,1)-1 % this may be problematic for doped samples --Yikai
                 k = (i+j>size(ion.name,1))*size(ion.name,1); % cyclic (periorid) condition
                 h_mf(i,:) = h_mf(i,:) + ion.prop(i+j-k)*((1-ion.hyp(i+j-k))*ion.gLande(i)*h_dipol(i+j-k,:) +...
-                    ion.hyp(i+j-k)*ion.gLande(i)*h_dipol_hyp(i+j-k,:));% other kinds of ions
+                    ion.hyp(i+j-k)*ion.gLande(i)*h_dipol_hyp(i+j-k,:)); % other kinds of ions
             end
         end
 
@@ -216,10 +216,10 @@ elseif strategies.expfit && mod(iterations,strategies.expfit_period)==0
        end
     end
 %    if isempty(find(enNr>=1,1))
-%        feNNr=(Jnew-Jnow)./(enNr-1);
-%        J=Jnow-feNNr;
+%        feNNr = (Jnew-Jnow)./(enNr-1);
+%        J = Jnow-feNNr;
 %    else
-%        J=Jnew;
+%        J = Jnew;
 %    end
 else
     J = strategies.damping*squeeze(evolution(end,ionn,:))'+(1-strategies.damping)*Jnew;
@@ -230,14 +230,14 @@ function [jx,jy,jz,energies,v] = MF_moments(hvec,h_dipol,t,J,gLande,Hcf,h4)
 global muB J2meV
 ELEf = gLande*muB*J2meV;     % Lande factor * Bohr magneton (meV T^-1)
 
-%Initiate J operators
+% Initiate J operators
 Jz = diag(J:-1:-J);
 Jp = diag(sqrt((J-[(J-1):-1:-J]).*(J+1+[(J-1):-1:-J])),1);
 Jm = Jp';
 Jx = (Jp+Jm)/2;
 Jy = (Jp-Jm)/2i;
 
-%Calculate Hamiltonian
+% Calculate Hamiltonian
 Hzeeman = -ELEf*(hvec(1)*Jx + hvec(2)*Jy + hvec(3)*Jz); %in meV (Yikai)
 HvM = -(h_dipol(1)*Jx+h_dipol(2)*Jy+h_dipol(3)*Jz);
 Ham = Hcf + Hzeeman + HvM;
@@ -246,7 +246,7 @@ Ham = Hcf + Hzeeman + HvM;
 O44 = (Jp^4+Jm^4)/2;
 Ham = Ham + h4*O44*h_dipol(1)^2;
 
-%Diagonalize
+% Diagonalize
 [v,e] = eig(Ham); %in meV
 e = real(diag(e));
 [e,n] = sort(e);
@@ -257,7 +257,7 @@ v = v(:,n);
 % v = v(:,1:2); % truncate the basis to form an Ising basis
 beta = 11.6/t; % [kB*T]^-1 in [meV]
 
-%Calculate Matrixelements and Moments
+% Calculate Matrixelements and Moments
 if t==0 % At zero temperature, use only lowest eigenvalue.
     jx = real(v(:,1)'*Jx*v(:,1));
     jy = real(v(:,1)'*Jy*v(:,1));
@@ -329,14 +329,13 @@ energies = e; % save the unnormalized eigenenergies
 e = e-min(e); % Normalize the energy amplitude to the lowest eigen-energy
 beta = 11.6/t; % [kB*T]^-1 in [meV]
 
-%Calculate Matrix elements and Moments
+% Calculate Matrix elements and Moments
 if t==0 
     % energies=e(1,1); % At zero temperature, use only lowest eigenvalue.
     jx = real(v(:,1)'*Jxh*v(:,1));
     jy = real(v(:,1)'*Jyh*v(:,1));
     jz = real(v(:,1)'*Jzh*v(:,1));
 else % Boltzman factor (with t in Kelvin)
-    % energien korrigieren, damit positiv, sonst NaN Fehler mit exp()
     z = exp(-e*beta)/sum(exp(-e*beta)); % Partition function
     jx = real(diag(v'*Jxh*v))'*z; % Calculate the expectation values
     jy = real(diag(v'*Jyh*v))'*z;

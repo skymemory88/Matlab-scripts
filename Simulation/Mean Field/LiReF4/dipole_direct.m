@@ -1,13 +1,13 @@
-function [d]=dipole_direct(q,N,a)
+function [d] = dipole_direct(q,N,a)
 % This function performs a brute force summation of
 % the q-dependent dipole coupling fo a non-Bravais lattice.
 % q=[h k l] is the q-vector given in Miller-indicies.
 % N is the number of unit cells that should be summed in each direction.
 
-tau=[0 0 0
-     0 1/2 1/4
-     1/2 1/2 1/2
-     1/2 0 3/4];
+tau = [0 0 0
+       0 1/2 1/4
+       1/2 1/2 1/2
+       1/2 0 3/4];
 
 % Parameters for Ho2Ti2O7
 % a=[10.12 0 0
