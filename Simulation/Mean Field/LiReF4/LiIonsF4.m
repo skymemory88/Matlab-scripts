@@ -19,7 +19,7 @@ history = cell([length(temp),size(field,2)]);
 
 idx = find(ion.prop);
 if ion.hyp(idx) > 0
-    H_dims = (2*ion.I(idx)+1)*(2*ion.J(idx)+1); % Claculate the dimension of the Hilbert space
+    H_dims = (2*ion.I(idx)+1)*(2*ion.J(idx)+1); % Calculate the dimension of the Hilbert space
 elseif ion.hyp(idx) == 0
     H_dims = 2*ion.J(idx)+1; % Claculate the dimension of the Hilbert space
 end

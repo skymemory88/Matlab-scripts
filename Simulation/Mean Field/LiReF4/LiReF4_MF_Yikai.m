@@ -34,7 +34,7 @@ if Options.nZee == true
         'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
 else
     Options.filepath = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
-        'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I'];
+        'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\R=0.785'];
 end
 
 if length(Bfield) > length(temp)
@@ -62,10 +62,10 @@ demagn = true; % Demagnetization factor included if TRUE
         
 %Ions' hyperfine
 if Options.hyperfine
-%     ion.hyp=[1;1;0;0;0;0]; % Er, Ho, Yb, Tm, Gd, Y
-    ion.hyp=[0.23;1;0;0;0.14;0]; % Er, Ho, Yb, Tm, Gd, Y
+%     ion.hyp = [1; 1; 0; 0; 0; 0]; % Er, Ho, Yb, Tm, Gd, Y
+    ion.hyp = [0.23; 1; 0; 0; 0.14; 0]; % Er, Ho, Yb, Tm, Gd, Y
 else
-    ion.hyp = [0;0;0;0;0;0];
+    ion.hyp = [0; 0; 0; 0; 0; 0];
 end
 
 %Ions' proportions
@@ -118,8 +118,8 @@ ion.abc = [{[5.162 0 0; 0 5.162 0; 0 0 10.70]}      %Er
 % Ions' cf parameters (ueV)
 ion.B = [[60.2258   -0.1164   -4.3280   0.00   -0.0019   -0.0850   -0.0227]   % Er
 %          [-57.9   0.309   3.51   0.00   0.000540   0.0575   0.0136]          % Ho -- test
-         [-57.9   0.309   3.60   0.00   0.000540   0.0570   0.0130]          % Ho -- SC239 (0.785*Jz) {phi=2.3, nZ=0} {phi=5.5, nZ=1}
-%          [-54.7   0.262   2.91   0.00   0.000400   0.0511   0.0138]          % Ho -- SC239 (0.785*Jz) {phi=1, nZ=0} & {phi=4, nZ=1}, PRB2015 low limit 
+%          [-57.9   0.309   3.60   0.00   0.000540   0.0570   0.0130]          % Ho -- SC239 (0.785*Jz) {phi=2.3, nZ=0} {phi=5.5, nZ=1}
+         [-54.7   0.262   2.91   0.00   0.000400   0.0511   0.0138]          % Ho -- SC239 (0.785*Jz) {phi=0.7, nZ=0} & {phi=4, nZ=1}, PRB2015 low limit 
 %          [-57.9   0.320   3.51   0.00   0.000751   0.0505   0.0145]          % Ho -- SC239  {phi=0, nZ=0} {phi=3.5, nZ=1}
 %          [-57.9   0.309   3.51   0.00   0.000540   0.0541   0.0158]          % Ho -- SC239 {phi=0, nZ=0} {phi=3, nZ=1}
 %          [-57.9   0.309   3.51   0.00   0.000540   0.0631   0.0171]          % Ho -- Phys. Rev. B 92, 144422 (2015)
@@ -159,7 +159,6 @@ ion.ex = [ex.Er; ex.Ho; ex.Yb; ex.Tm; 0; 0];
 % ion.mom(:,:,1) = [1 0 0; 1 0 0; -1 0 0; -1 0 0];        % Er (Original code--Yikai)
 ion.mom(:,:,1) = [1 0 0; -1 0 0; -1 0 0; 1 0 0];       % Er Domain-1
 % ion.mom(:,:,1) = [0 1 0; 0 1 0; 0 -1 0; 0 -1 0];       % Er Domain-2
-% ion.mom(:,:,2)  =[0 0 1;  0 0 1;  0 0 1; 0 0 1]*2.6;   % Ho % Original code: Why multiplied by 2.6 (Yikai)?
 ion.mom(:,:,2) = [0 0 1;  0 0 1;  0 0 1; 0 0 1];        % Ho
 % ion.mom(:,:,2) = [3.473 -0.045 0.1;...
 %                   3.473 -0.045 0.1;...
