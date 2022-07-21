@@ -50,16 +50,16 @@ for n = 1:nf
 end
 
 % Check file for frequency scan from ZVL
-if size(mm,2) > nf    %Counting the elements of each line to check ZVL data
-        N = int16(size(mm,2) - nf - 1)/(1+(2*nZVL));
-%         N = (size(mm,2) - nf)/(2*(1+nZVL));
+if size(mm,2) > nf    % Counting the elements of each line to check ZVL data
+        N = int16(size(mm,2) - nf - 1)/(1+(2*nZVL)); % for dataset sharing one set of frequncy points 
+%         N = (size(mm,2) - nf)/(2*(1 + nZVL)); % for datasets with duplicated frequency points
         out.data.ZVLfreq = mm(:,(nf+1):(nf + N));
         out.data.ZVLreal = mm(:,(nf+N+1):2:(nf + 3*N)); % S11 data
         out.data.ZVLimag = mm(:,(nf+N+2):2:(nf + 3*N));
     if nZVL == 2
-%         out.data.ZVLreal2 = mm(:,(nf+3*N+1):2:(nf + 5*N)); % S21 data
+%         out.data.ZVLreal2 = mm(:,(nf+3*N+1):2:(nf + 5*N)); % S21 data for dataset sharing one set of frequncy points
 %         out.data.ZVLimag2 = mm(:,(nf+3*N+2):2:(nf + 5*N));
-        out.data.ZVLreal2 = mm(:,(nf+4*N+1):2:(nf + 6*N)); % S21 data
+        out.data.ZVLreal2 = mm(:,(nf+4*N+1):2:(nf + 6*N)); % S21 data for datasets with duplicated frequency points
         out.data.ZVLimag2 = mm(:,(nf+4*N+2):2:(nf + 6*N));
     end
 end
