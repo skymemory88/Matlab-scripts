@@ -14,7 +14,7 @@ Nmols = Nions*(mpwd/molarmass);
 % measuring field
 Hmsr = 100;    % in Oe
 
-LiDyF4 = importdata('G:\My Drive\Programming scripts\Matlab\0066.dc.dat',',',31);
+LiDyF4 = importdata('G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\Transverse Ising model\0066.dc.dat',',',31);
 
 xpwd = LiDyF4.data(:,4);
 ypwd = LiDyF4.data(:,5)/Hmsr/Nmols; % in emu/mol Oe
@@ -53,10 +53,10 @@ O64s=-1i*0.25*((11*Jz^2-X*eye(n)-38*eye(n))*(Jp^4-Jm^4)+(Jp^4-Jm^4)*(11*Jz^2-X*e
 Hcf=B(1)*O20+B(2)*O40+B(3)*O44+B(4)*O60+B(5)*O64c+B(6)*O64s;
 
 Scal = 6.0;
-H = 0.001;
-Hzez = -muB*gJ*Jz*H;
-Hzex = -muB*gJ*Jx*H;
-Hzey = -muB*gJ*Jy*H;
+H = [0.001  0.001   0.001];
+Hzez = -muB*gJ*Jz*H(1);
+Hzex = -muB*gJ*Jx*H(2);
+Hzey = -muB*gJ*Jy*H(3);
 
 Htotz = Hcf + Hzez;
 Htotx = Hcf + Hzex;
@@ -72,7 +72,7 @@ xsiy = zeros(1,length(Temp));
 %xsizz = zeros(size(Temp));
 
 
-for j = 1:length(Temp);
+for j = 1:length(Temp)
        
     Beta = 1/(k*Temp(j));
     
@@ -85,9 +85,9 @@ for j = 1:length(Temp);
     Zz = trace(exp(-Beta*Ez));
     Zx = trace(exp(-Beta*Ex));
     Zy = trace(exp(-Beta*Ey));
-    xsiz(j) = muB*gJ*trace(real(Vz'*Jz*Vz).*exp(-Beta.*Ez)/Zz)/H;
-    xsix(j) = muB*gJ*trace(real(Vx'*Jx*Vx).*exp(-Beta.*Ex)/Zx)/H;
-    xsiy(j) = muB*gJ*trace(real(Vy'*Jy*Vy).*exp(-Beta.*Ey)/Zy)/H;
+    xsiz(j) = muB*gJ*trace(real(Vz'*Jz*Vz).*exp(-Beta.*Ez)/Zz)/H(1);
+    xsix(j) = muB*gJ*trace(real(Vx'*Jx*Vx).*exp(-Beta.*Ex)/Zx)/H(2);
+    xsiy(j) = muB*gJ*trace(real(Vy'*Jy*Vy).*exp(-Beta.*Ey)/Zy)/H(3);
     
     % ajz(j) = real(diag(Vz'*Jz*Vz)'*(exp(-Beta.*diag(Ez))/Zz));
     % xsizz(j) = muB*gJ*ajz(j)/H;
@@ -96,10 +96,9 @@ for j = 1:length(Temp);
 end
 
 N = zeros(1,length(Temp)); % Demagnitizing factor
-for j = 1:length(Temp);
+for j = 1:length(Temp)
     N(j) = (xsix(j)-Temp(j))/(xsix(j)*Temp(j));
 end
-
 % There is some problem with demagnetizing factor
 
 %plot(Temp, 1./xsiz,'s', Temp,1./xsix,'o',Temp, 1./xsiy,'-')

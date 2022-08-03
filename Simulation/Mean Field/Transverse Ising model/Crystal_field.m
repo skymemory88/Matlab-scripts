@@ -1,7 +1,7 @@
-%% To get started:
-
+function Hcf = Crystal_field(J)
 % Crystal field parameter coefficients:
-B = [-130 0.65 7.2 0 -0.055 -0.0084]/1e3; %[meV] converted from Romanova, Mag Res Sol 8, 1 (2006)
+% B = [-130 0.65 7.2 0 -0.055 -0.0084]/1e3; %[meV] converted from Romanova, Mag Res Sol 8, 1 (2006)
+B = [-57.9   0.309   3.51   0.000540   0.0532   0.0125]; % refined frmo Phys. Rev. B 92, 144422 (2015)
 
 % Define operators:
 Jz=diag(J:-1:-J);
