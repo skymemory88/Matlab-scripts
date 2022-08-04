@@ -16,7 +16,7 @@ addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functi
 % Process options:
 Options.analysis = 3; % Analysis options (1.simple plot, 2.on-resonance fit, 3.off-resonance fit, 4.temp scan)
 Options.save = 'n'; % Option to save the analysis
-Options.dType = 'interp'; % Input data type: 1. Experimental ('raw'), 2. Simulated ('sim'), 3. pre-processed exp. data ('interp')
+Options.dType = 'proc'; % Input data type: 1. Experimental ('raw'), 2. Simulated ('sim'), 3. pre-processed exp. data ('proc')
 Options.lnwd = 1.5; % plot linewidth
 Options.ftsz = 12; % plot font size
 Options.mksz = 2; % plot marker size
@@ -44,7 +44,7 @@ switch Options.dType
         LoadObj = fullfile(Options.fileloc,[loadname, '.mat']);
         Options.save = 'n'; % Option to save the analysis
         Options.bgdmode = 0; % no background renormalization for simulated data
-    case 'interp'
+    case 'proc'
         Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
             'SC239\2022.08.03'];
         loadname = '2022_08_0005';
@@ -2080,7 +2080,7 @@ else
                 HH = continu_var;
                 mag = abs(S11);
                 break
-            case 'interp'
+            case 'proc'
                 load(LoadObj,'continu_var', 'freq', 'S11', 'analysis');
                 HH = continu_var;
                 mag = S11;
