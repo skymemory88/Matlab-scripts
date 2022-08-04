@@ -1,3 +1,12 @@
+%% 2D |S11|/|S21| data analysis and plot
+%  input: raw data (column format)
+%  output: 2D color plot and 1D fits
+%  Options: 
+%       1: simple plot without analysis.
+%       2: On-resonance field scan data with input-output formalism fitting.
+%       3: Off-resonance field scan data with input-output formalism fitting.
+%       4: temperature scan data with input-output formalism fitting.
+
 format long;
 clearvars -except continu_var freq S11 analysis
 
@@ -6,34 +15,42 @@ addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functi
 
 % Process options:
 Options.analysis = 3; % Analysis options (1.simple plot, 2.on-resonance fit, 3.off-resonance fit, 4.temp scan)
-Options.save = 'y'; % Option to save the analysis
-Options.dType = 'exp'; % Input data type: 1. Experimental ('exp'), 2. Simulated ('sim')
+Options.save = 'n'; % Option to save the analysis
+Options.dType = 'interp'; % Input data type: 1. Experimental ('raw'), 2. Simulated ('sim'), 3. pre-processed exp. data ('interp')
 Options.lnwd = 1.5; % plot linewidth
 Options.ftsz = 12; % plot font size
 Options.mksz = 2; % plot marker size
-Options.bgdmode = 2; % Background normalization (0: no normalization. 1: Stitch background. 2: Load background. 3: S11 fit)
+Options.bgdmode = 0; % Background normalization (0: no normalization. 1: Stitch background. 2: Load background. 3: S11 fit)
 Options.nData = 1; % Number of dataset from VNA
 Options.phPlot = false; % Option to plot phase in color plots
 Options.fitfunc = 1; % Fitting function (only for analysis-3): (1) Input-output or (2) Lorentzian
-Options.fill = 0.01005*1.03; % Filling factor (SC239, SC200, SC251)
+Options.fill = 0.01005*1.06; % Filling factor * scaling factor (1.06 for SC239, SC200, SC251)
 
 % Determin file location base on data type
-if strcmp(Options.dType, 'exp')
-    Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
-        'SC239\2021.07.26'];
-    loadname = '2021_07_0030';
-    LoadObj = fullfile(Options.fileloc,[loadname,'.dat']);
-    SaveObj = fullfile(Options.fileloc,[loadname,'_interp', '.mat']);
-elseif strcmp(Options.dType, 'sim')
-    Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\',...
-        'Matlab\Susceptibilities\S11 parameters'];
-    loadname = 'S11_LiHoF4_0.200K_3.65GHz_0.02Deg_15.5Deg_1.00e-04';
-    LoadObj = fullfile(Options.fileloc,[loadname, '.mat']);
-    Options.save = 'n'; % Option to save the analysis
-    Options.bgdmode = 0; % no background renormalization for simulated data
-else
-    fprintf(['Unknow data type:',Options.dType])
-    return
+switch Options.dType
+    case 'raw'
+        Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
+            'SC239\2022.08.03'];
+        loadname = '2022_08_0005';
+%         Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
+%             'SC239\2021.07.17'];
+%         loadname = '2021_07_0016';
+        LoadObj = fullfile(Options.fileloc,[loadname,'.dat']);
+        SaveObj = fullfile(Options.fileloc,[loadname,'_interp', '.mat']);
+    case 'sim'
+        Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\',...
+            'Matlab\Susceptibilities\S11 parameters'];
+        loadname = 'S11_LiHoF4_0.200K_3.65GHz_0.02Deg_15.5Deg_1.00e-04';
+        LoadObj = fullfile(Options.fileloc,[loadname, '.mat']);
+        Options.save = 'n'; % Option to save the analysis
+        Options.bgdmode = 0; % no background renormalization for simulated data
+    case 'interp'
+        Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
+            'SC239\2022.08.03'];
+        loadname = '2022_08_0005';
+        LoadObj = fullfile(Options.fileloc,[loadname,'_interp.mat']);
+    otherwise
+        fprintf(['Unknown data type: ',Options.dType,'\n'])
 end
 
 if exist('analysis','var') && exist('freq','var') && exist('S11','var') && exist('continu_var','var')
@@ -165,8 +182,8 @@ while true
         [~,cidx] = min(mag(:,bidx)); % find the resonant peak to be replaced
 %         [~,Hpos] = max(mag0); % Method 1. scan of max reflection
 %         [~,Hpos] = max(mag(cidx,:)); % Method 2. scan of max reflection at f0 (frequency)
-%         [~,Hpos] = max(medfilt1(abs(f0-f0(bidx)))); % Method 3. scan with the resonant peak deviates from f0 the furtherest
-        [~,Hpos] = min(abs(B0-3.12)); % Method 4. Manually set the patch slice of the frequency scan
+        [~,Hpos] = max(medfilt1(abs(f0-f0(bidx)))); % Method 3. scan with the resonant peak deviates from f0 the furtherest
+%         [~,Hpos] = min(abs(B0-3.12)); % Method 4. Manually set the patch slice of the frequency scan
         mag_dif = abs(mag(:,bidx)-mag(:,Hpos));
         [lidx,~] = find(mag_dif(1:cidx) <= 1e-3, 1, 'last'); % left boundary of the resonant peak to be replaced
         [ridx,~] = find(mag_dif(cidx:end) <= 1e-3, 1, 'first'); % right boundary of the resonant peak to be replaced
@@ -1165,6 +1182,7 @@ Temperature = analysis.temp;
 
 % field_l = 2.0; % Manually set field range
 % field_h = 5.0;
+mB0 = 4.786;
 field_l = min(HH(1,:));
 field_h = max(HH(1,:));
 freq_l = min(freq(:,1));
@@ -1397,13 +1415,18 @@ mag = mag(:,f0 >= freq_l & f0 <= freq_h);
 clearvars c idx ia ii HM trunc1 trunc2 dupl nop trimIdx
 
 f_init = f0(B0 == min(B0)); % Initial guess of the cavity resonant frequency
-weight = double.empty(size(mag,1),size(mag,2),0);
-for jj = 1:size(mag,2)
-    for ii = 1:size(mag,1)
-        weight(ii,jj,1) = abs((mag(ii,jj)-max(mag(:,jj)))./mag(ii,jj));
-    end
-    weight(:,jj) = weight(:,jj)./max(weight(:,jj));
-end
+weight(:,:,1) = abs(1./mag(:,:));      % Weight function option 1
+% weight = 1./gradientweight(mag);       % Weight function option 2
+% weight(isinf(weight)) = 1e4;           % Remove infinities in weight function
+% weight = ones(size(mag));                % Weight function option 3 (uniform)
+% weight = double.empty(size(mag,1),size(mag,2),0); % Weight function option 4
+% for jj = 1:size(mag,2)
+%     for ii = 1:size(mag,1)
+%         weight(ii,jj,1) = abs((mag(ii,jj)-max(mag(:,jj)))./mag(ii,jj));
+%     end
+%     weight(:,jj) = weight(:,jj)./max(weight(:,jj));
+% end
+
 switch Options.fitfunc % Pick fitting function from either (1) custom function of (2) spec1d
     case 1 %Option 1: Custom function by Input-output formalism
         % Step 1: Fit the data for the first time to extract "kpe" and "w0" far from the level crossing
@@ -1414,7 +1437,7 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
         wc = double.empty(length(B0),0);
         [~,Hc0] = min(B0);
 %         Hc0 = bidx;
-        % starting value for param = {'kpe', 'kpi', 'omega', 'Gc', 'gma', 'wc', 'attn'}
+        % Fit the zero-field data for cavity properties
         param  =  [1e-4    1e-4    0     0    f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
         bound_l = [ 0       0      0     0    freq_l]; % lower bound of fitting parameters
         bound_h = [Inf     Inf     0     0    freq_h]; % upper bound of fitting parameters
@@ -1444,7 +1467,7 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
             end
             % Fit using input-output formalism
             param  =  [kpe0  kpi0     0      0    f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
-            bound_l = [kpe0  kpi0     0      0    f_init]; % lower bound of fitting parameters
+            bound_l = [kpe0  kpi0   -Inf   -Inf   f_init]; % lower bound of fitting parameters
             bound_h = [kpe0  kpi0    Inf    Inf   f_init]; % upper bound of fitting parameters
             fit = iptoptx(freq(:,ii), mag(:,ii), B0(ii), param, bound_l, bound_h, weight(:,ii), plt);
                      
@@ -1954,7 +1977,7 @@ else
     Options = varargin{2};
     while true
         switch Options.dType
-            case 'exp'
+            case 'raw'
                 out = readdata_v4(LoadObj,Options.nData);
                 freq = out.data.ZVLfreq/1e9;
                 S11 = out.data.ZVLreal + 1i*out.data.ZVLimag;
@@ -2056,6 +2079,11 @@ else
                 load(LoadObj,'continu_var','freq','S11','analysis');
                 HH = continu_var;
                 mag = abs(S11);
+                break
+            case 'interp'
+                load(LoadObj,'continu_var', 'freq', 'S11', 'analysis');
+                HH = continu_var;
+                mag = S11;
                 break
             otherwise
                 Options.dType = input('Unknown data type!\n','s');
