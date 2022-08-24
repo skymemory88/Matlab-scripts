@@ -15,7 +15,7 @@ dE = -0.0;
 fc = 3.642 + dE; % cavity resonance frequency [GHz]
 % fc = 3.3 + dE;
 % fc2 = 4.2; % Second mode of the cavity
-% freq_l = 4.71; % frequency range lower limit [GHz]
+% freq_l = 4.710; % frequency range lower limit [GHz]
 % freq_h = 4.745; % frequency range upper limit [GHz]
 freq_l = 3.52; % frequency range lower limit [GHz]
 freq_h = 3.76; % frequency range upper limit [GHz]
@@ -51,7 +51,7 @@ Options.savegif = false; % Save a series of color plots as a gif
 if Options.nZee == true
     nZeePath = 'with Hz_I\';
 else
-    nZeePath = 'without Hz_I\';
+    nZeePath = 'without Hz_I\CEF_2015_mod_R=0.785_phi=2.3';
 end
 location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
     'F4 project\Data\Simulations\Matlab\Susceptibilities\'];
@@ -92,8 +92,8 @@ chi_elem = [0 0 0
 chi_idx = find(chi_elem); % index of chi element choice.
 
 if Options.RPA == true
-    scale = 1.05;
-%     scale = 1.18;
+    scale = 1.06;
+%     scale = 1.00;
 else
     scale = 1.10;
 end

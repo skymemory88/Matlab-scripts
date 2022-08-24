@@ -63,7 +63,7 @@ for ii = 1:length(dscrt_var)
     if Options.nZee == true
         nZee_path = 'with Hz_I';
     else
-        nZee_path = 'without Hz_I';
+        nZee_path = 'without Hz_I/CEF_2015_mod_R=0.890_phi=0.0';
     end
     location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
         'F4 project\Data\Simulations\Matlab\Susceptibilities\', nZee_path];
@@ -115,7 +115,7 @@ for ii = 1:length(dscrt_var)
         if Kplot == true
             bidx = int16.empty(0,length(contnu_var0));
             for jj = 1:length(contnu_var0)
-                [~,bidx(jj)] = min(abs(vecnorm(continu_var,1,1)-contnu_var0(jj)));
+                [~,bidx(jj)] = min(abs(vecnorm(continu_var,2,1)-contnu_var0(jj)));
             end
             eigenW = vvv(bidx,:,:); % eigen-functions
             eigenE = eee(bidx,:); % eigen-energies [meV]
@@ -422,7 +422,7 @@ function chi0 = chi_Mx(varargin)
 % opr1: operator 1
 % opr2: operator 2
 % wav: eigenfunction of the hamiltonian
-% NN: population differene between two eigenstates
+% NN: population difference between two eigenstates
 % deno1: denominator for real part of the susceptibility
 % deno2: denominator for imaginary part of the susceptibility
 opr1 = varargin{1};
