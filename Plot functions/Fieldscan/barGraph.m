@@ -1,18 +1,19 @@
 %% Make a bar graph of coupling strenght and spin linewidth of electro-nuclear transitions in LiHoF4
 clearvars
 
-Options.figSty = 'Bar1D'; % 1: Bar1D grouped, 2. Bar2D stacked, 3. Bar3D detached, 4. TempFig
+Options.figSty = 'TempFig'; % 1: Bar1D grouped, 2. Bar2D stacked, 3. Bar3D detached, 4. TempFig
 Options.nZee = false; % Option to include nuclear Zeeman effect
 Options.gamma = true; % Option to plot spin linewidth from fitting
 
 fc = 3.642; % cavity resonant frequency [GHz]
-theta = 0.0;
-phi = 2.3;
-n_trans = 6;
+Hc = 5; % critical field (T)
+theta = 0.0; % magnetic field angle in a-c plane
+phi = 2.3; % magnetic field angle in a-b plane
+n_trans = 6; % number of excitation spectra to include
 
-% sim_temps = [0.0 0.05 0.1:0.01:0.3]; % simulation temperatures
-sim_temps = [0.1 0.130 0.18 0.22]; % simulation temperatures
-exp_temps = [0.1 0.135 0.18 0.25]; % experimental temperatures
+sim_temps = [0.0 0.015 0.035 0.05 0.075 0.1:0.005:0.3]; % simulation temperatures
+% sim_temps = [0.1 0.130 0.18 0.22]; % simulation temperatures
+exp_temps = [0.1 0.135 0.18 0.24 0.25]; % experimental temperatures
 lgd_sim = string(sim_temps.*1000);
 lgd_sim = 'Sim.' + lgd_sim + ' mK';
 lgd_exp = string(exp_temps.*1000);
@@ -36,14 +37,15 @@ if Options.nZee == true
         'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
 else
     Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li', 'Ho',...
-        'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I'];
+        'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\CEF_2015_mod_R=0.785_phi=2.3'];
 end
 
-g_sim = zeros(length(exp_temps), n_trans);
+g_sim = zeros(length(exp_temps), n_trans); % coupling strengths
+g2s_sim = zeros(length(exp_temps), 1); % coupling strengths
 for ii = 1:length(sim_temps)
     cd 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4'
     lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f', sim_temps(ii), theta, phi, 1),'.mat'];
-    eFile = fullfile(Options.location,lname);
+    eFile = fullfile(Options.location, lname);
     load(eFile,'-mat','eee','fff');
     eee = eee- min(eee,[],2); % Normalize the energy amplitude to the lowest eigen-energy
     eigenE = squeeze(eee) / Gh2mV; % [GHz]
@@ -53,13 +55,17 @@ for ii = 1:length(sim_temps)
 %     calc = S11_simulation('Ho', 'field', sim_temps(ii), 0, 2.3, 1e-4, false);
 %     Gc2 = poermute(calc.Gc2{:},[2,3,1]);
     calc = EngyLevels('Ho', sim_temps(ii), theta, phi, 7, false);
-    Gc2 = calc.Gc2{:};
+    Gc2 = squeeze(calc.Gc2{:});
 %     b0 = double.empty(size(Ediff,2),0);
+%     wDif = double.empty(size(Ediff,2),0); % debug tool: cavity-spin mode crossing checkpoint
     for jj = 1:size(Ediff,2)
-        [~,idx] = min(abs(Ediff(:,jj)-fc));
+%         [~,idx] = min(abs(Ediff(:,jj)-fc)); % search at the entire field range
+        [~,idxl] = min(abs(Ediff(fields <= Hc,jj)-fc)); % search only below critical field
+%         [~,idxh] = min(abs(Ediff(fields > Hc,jj)-fc)); % search only above critical field
 %         b0(jj) = fields(idx);
-        g_sim(ii,jj) = sqrt(squeeze(Gc2(jj+1,jj,idx)));
+        g_sim(ii,jj) = sqrt(Gc2(jj+1,jj,idxl));
     end
+    g2s_sim(ii) = sqrt( sum(g_sim(ii,:).^2,2) );
 %     % save the raw data in an ascii file (.txt)
 %     data_sim = [reshape(b0,length(b0),1) reshape(g_sim(ii,:),length(g_sim(ii,:)),1)];
 %     loc = 'C:\Users\yiyang\Desktop\';
@@ -100,7 +106,7 @@ switch Options.figSty
         for ii = 1:length(exp_temps)
             xp = xx(g_exp(ii,:) ~= 0);
             xx = xx + 0.1;
-            plot(xp, nonzeros(g_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', 'k', 'MarkerSize', 10,...
+            plot(xp, nonzeros(g_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', mc(ii,:), 'MarkerSize', 10,...
                 'MarkerEdgeColor', 'k', 'Color', 'k');
         end
         set(gca,'XTickLabel',xnames)
@@ -142,6 +148,7 @@ switch Options.figSty
 legend([lgd_sim lgd_exp], 'Location', 'northwest')
     case 'TempFig'
         plot(sim_temps, g_sim, '-');
+        plot(sim_temps, g2s_sim, '--k');        
         for ii = 1:length(exp_temps)
             fcol = mc(g_exp(ii,:) ~= 0,:);
             scatter(exp_temps(ii), nonzeros(g_exp(ii,:)), 30, fcol, 'filled','MarkerEdgeColor', 'k');
@@ -165,10 +172,10 @@ if Options.gamma == true
     for ii = 1:length(exp_temps)
         xp = xx(gma_exp(ii,:) ~= 0);
         figure(gfig)
-        plot(xp, nonzeros(gma_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', 'k', 'MarkerSize', 6,...
+        plot(xp, nonzeros(gma_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', mc(ii,:), 'MarkerSize', 6,...
             'MarkerEdgeColor', 'k');
         figure(cfig)
-        plot(xp, nonzeros(g_exp(ii,:)).^2./nonzeros(gma_exp(ii,:))/5e-4, 'Marker', mkr(ii), 'MarkerFaceColor', 'k', 'MarkerSize', 6,...
+        plot(xp, nonzeros(g_exp(ii,:)).^2./nonzeros(gma_exp(ii,:))/5e-4, 'Marker', mkr(ii), 'MarkerFaceColor', mc(ii,:), 'MarkerSize', 6,...
             'MarkerEdgeColor', 'k');
     end
     figure(gfig)
