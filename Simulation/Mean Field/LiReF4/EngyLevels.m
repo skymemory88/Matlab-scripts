@@ -1,36 +1,64 @@
-function [results, fields] = EngyLevels(ion, temp, theta, phi, N_level, plotOpt)
-clearvars -except ion temp theta phi N_level plotOpt
+function [results, continu_var] = EngyLevels(varargin)
+clearvars -except varargin
+
+% default options
+Options.ion = 'Ho'; % support 'Er' and 'Ho'
+Options.hyp = 1.00; % Hyperfine isotope proportion
+Options.nZee = false; % nuclear Zeeman interaction
+% Options.RPA = false; % not implemented yet
+Options.Enorm = false; % Normalize the energy states to the ground state
+Options.Elevel = false; % eigen-energies
+Options.Ediff = true; % excitation spectrum
+Options.deltaI2 = false; % Transitions between the next nearest neightbouring levels
+Options.Js = false; % spin expectation values
+Options.Mx = false; % off diagonal element of spin matrix
+Options.popul = false; % thermal populations of each states
+Options.Espan = false; % energy span of magnon modes
+f_cav = 3.645; % Resonant frequency of the cavity (GHz)
+filFctr = 0.01005*1.06; % filling factor
+Options.eUnit = 'GHz'; % unit choice: 'J', 'meV', 'GHz'
+Options.plot = true; % plot option
+Options.ScanMode = 'field'; % temperature/field scan option
+Options.savedata = false;
+Options.savegif = false;
+
+if nargin == 5
+    dscrt_var = varargin{1};
+    theta = varargin{2};
+    phi = varargin{3};
+    N_level = varargin{4};
+    opt = varargin{5};
+    custom = fieldnames(opt); % options to change
+    change = intersect(fieldnames(Options), custom);
+    for ii = 1:length(change)
+        Options.(change{ii}) = opt.(change{ii});
+%         Options = setfield(Options, change{ii}, opt.change(ii));
+    end
+elseif nargin == 6
+    Options.ion = varargin{1};
+    dscrt_var = varargin{2};
+    theta = varargin{3};
+    phi = varargin{4};
+    N_level = varargin{5};
+    Options.plot = varargin{6};
+end
 
 kB = 8.617333e-2; % [meV/K]
 hbar = 1.055E-34; % Reduced Planck constant [J.s]
 J2meV = 6.24151e+21; % [meV/J]
 Gh2mV = hbar*2*pi*10^9*J2meV; % [meV/GHz]
+elem_idx = find(strcmp(Options.ion,[{'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}]));
 
-% temp =  [1.774 1.776 1.778 1.780 1.781 1.782 1.783 1.784 1.785 1.787];
-Options.ion = ion; % support 'Er' and 'Ho'
-    elem_idx = find(strcmp(Options.ion,[{'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}]));
-Options.hyp = 1.00; % Hyperfine isotope proportion
-Options.nZee = false; % nuclear Zeeman interaction
-Options.RPA = false; % not implemented yet
-Options.Enorm = true; % Normalize the energy states to the ground state
-Options.Elevel = false; % eigen-energies
-Options.Ediff = true; % excitation spectrum
-Options.deltaI2 = false; % Transitions between the next nearest neightbouring levels
-Options.Js = true; % spin expectation values
-Options.Mx = false; % nearest off diagonal element of spin matrix
-Options.popul = false; % thermal populations of each states
-Options.Espan = false;
-f_cav = 3.645; % Resonant frequency of the cavity (GHz)
-filFctr = 0.01005*1.06; % filling factor
-Options.eUnit = 'GHz';
-Options.savedata = 0;
-Options.savegif = 0;
 if Options.nZee == true
-    Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',Options.ion,...
-        'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
+    Options.location = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
+        '\PhD program\Research projects\Li', Options.ion, 'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
+%     Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',Options.ion,...
+%         'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
 else
-    Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',Options.ion,...
-        'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\test'];
+    Options.location = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
+            '\PhD program\Research projects\Li', Options.ion, 'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\test'];
+%     Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',Options.ion,...
+%         'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\test'];
 end
 
 marker = [":","-.","--","-"];
@@ -54,7 +82,7 @@ figs_E = gobjects(N_level,numel(theta),numel(phi));
 figs_dE = gobjects(N_level-1,numel(theta),numel(phi));
 if Options.deltaI2; figs_dE2 = gobjects(N_level-2,numel(theta),numel(phi)); end
 if Options.savegif == true
-    im_t = numel(temp)*numel(theta)*numel(phi);
+    im_t = numel(dscrt_var)*numel(theta)*numel(phi);
     im_idx = 1;
     if Options.Elevel == true
         Elevel_frame = []*im_t;
@@ -68,22 +96,38 @@ results.Ediff = {};
 results.Js = {};
 results.Jmx = {};
 results.JImx = {};
-for iter = 1:numel(temp)
+for iter = 1:numel(dscrt_var)
     for iter2 = 1:numel(theta)
         for iter3 = 1:numel(phi)
-            if Options.RPA == true % yet to implement
-                lname=['Hscan_Li',Options.ion,'F4_',...
-                    sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f',temp(iter),theta(iter2),phi(iter3),Options.hyp),'.mat'];
-            else
-                lname=['Hscan_Li',Options.ion,'F4_',...
-                    sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f',temp(iter),theta(iter2),phi(iter3),Options.hyp),'.mat'];
+            switch Options.ScanMode % 1. Field plot with RPA. 2. wavevector plot with RPA
+                case 'field'
+                    lname = strcat(['Hscan_Li', Options.ion, 'F4_'], sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f',...
+                        dscrt_var(iter), theta(iter2), phi(iter3), Options.hyp),'.mat');
+                    file = fullfile(Options.location,lname);
+                    load(file,'-mat','vvv','ttt','eee','fff','ion');
+                    continu_var = vecnorm(fff,2,1); % choose the continuous variable to be field
+                    temperature = repmat(ttt, length(continu_var), 1);
+                    xlab = 'Magnetic Field (T)';
+                case 'temp'
+                    lname = strcat(['Tscan_Li', Options.ion, 'F4_'], sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f',...
+                        dscrt_var(iter), theta(iter2), phi(iter3), Options.hyp),'.mat');
+                    file = fullfile(Options.location,lname);
+                    load(file,'-mat','vvv','ttt','eee','fff','ion');
+                    continu_var = ttt; % choose the continuous variable to be temperature
+                    temperature = ttt;
+                    xlab = 'Temperature (K)';
             end
-            file = fullfile(Options.location,lname);
-            load(file,'-mat','vvv','ttt','eee','fff','ion');
-            if Options.Enorm == true; eee = eee- min(eee,[],2); end% Normalize the energy amplitude to the lowest eigen-energy
+
+            if Options.Enorm == true; eee = eee - min(eee,[],2); end% Normalize the energy amplitude to the lowest eigen-energy
+%             if Options.Enorm == true
+%                 for ii = 1:N_level
+%                     eee(:,ii) = eee(:,ii) - E0/E2f; % Normalize the energy amplitude to reference point E0 (manual)
+%                 end
+%             end
             eigenE = squeeze(eee) * E2f;
             eigenW = vvv;
-            fields = vecnorm(fff,2,1);
+            results.En{iter,iter2,iter3} = eigenE(:,1:N_level); % Energy eigenstate
+            results.wav = vvv; % needs to implementing truncation by N_level
             Ediff = double.empty(0,size(eigenE,1));
             if Options.deltaI2; Ediff2 = double.empty(0,size(eigenE,1)); end
 %% Deviation of the energy from the mean value
@@ -100,29 +144,29 @@ for iter = 1:numel(temp)
 %             figure
 %             hold on
 %             plot(fields,E8(:,1:8),'Color',[35 107 142]/255,'linewidth',2);
-%             xlabel('Magnetic Field (T)','FontSize',15)
+%             xlabel(xlab,'FontSize',15)
 %             ylabel(ylab,'FontSize',15)
 %             xlim([0 9]);
 %             tit0='Energy spread from the mean value';
 %             title(tit0,'FontSize',15)
-%             legend(num2str(temp(iter)*1000,'T = %u mK,  A = A_{th}'))
+%             legend(num2str(dscrt_var(iter)*1000,'T = %u mK,  A = A_{th}'))
 %% Plot eigen-energies
-            if Options.Elevel == true && plotOpt == true
+            if Options.Elevel == true && Options.plot == true
                 fig_E = figure;
-                results.En{iter,iter2,iter3} = eigenE(:,1:N_level);
-                figs_E(:, iter2, iter3) = plot(fields, eigenE(:,1:N_level),'Color',color{1},'linewidth',2);
+                figs_E(:, iter2, iter3) = plot(continu_var, eigenE(:,1:N_level), 'Color', color{1}, 'linewidth', 2);
+%                 figs_E(:, iter2, iter3) = plot(fields, eigenE(:,1:N_level), 'Color', 'b', 'linewidth', 2);
 %                 figs_E(:, iter2, iter3) = plot(fields, eigenE(:,1:N_level), 'Color', [35 107 142]/255, 'linewidth', 2);
                 hold on
                 set(gca,'fontsize',14);
 %                text(8,(j-1)*D+0.02,'0.1');
 %                set(fig1,'position',[100 100 600 300])
-                xlabel('Magnetic Field (T)','FontSize',15)
+                xlabel(xlab,'FontSize',14)
                 ylabel(ylab,'FontSize',14)
                 grid off
                 box on;
                 tit1='Energy levels';
                 title(tit1,'FontSize',14)
-                legend(num2str(temp(iter)*1000,'T = %u mK,  A = A_{th}'))
+                legend(num2str(dscrt_var(iter)*1000,'T = %u mK,  A = A_{th}'))
                 if Options.savegif == true
                     drawnow
                     frame = getframe(fig_E);
@@ -144,33 +188,33 @@ for iter = 1:numel(temp)
 
                 % Plot transitions between the nearest levels
 
-                if plotOpt == true
+                if Options.plot == true
 %                     figure;
                     hold on
-                    figs_dE(1, iter2, iter3) = plot(fields, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1),...
-                        'Color', 'b', 'LineWidth', 2);
+                    figs_dE(1, iter2, iter3) = plot(continu_var, Ediff(1,:), 'Marker', 'none', 'LineStyle', marker(1),...
+                        'Color', 'r', 'LineWidth', 2);
                     if N_level-1 > 1
 %                         figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle',...
 %                             marker(1), 'Color', color{iter3},'LineWidth', 2);
-                        figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle',marker(1),...
-                            'Color', 'b', 'LineWidth', 2);
+                        figs_dE(2:end, iter2, iter3) = plot(continu_var, Ediff(2:end,:), 'Marker', 'none', 'LineStyle',marker(1),...
+                            'Color', 'w', 'LineWidth', 2);
 %                         figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle',...
 %                             marker(1),'LineWidth', 1.5);
                     end
 
                     % Plot transitions between the next nearest levels
                     if Options.deltaI2
-                        figs_dE2(1, iter2, iter3) = plot(fields, Ediff2(1,:), 'Marker', 'none', 'LineStyle', marker(1),...
+                        figs_dE2(1, iter2, iter3) = plot(continu_var, Ediff2(1,:), 'Marker', 'none', 'LineStyle', marker(1),...
                             'Color', color{iter3},'LineWidth',2);
                         if N_level-1 > 2
-                            figs_dE2(2:end, iter2, iter3) = plot(fields, Ediff2(2:end,:), 'Marker', 'none', 'LineStyle', marker(1),...
+                            figs_dE2(2:end, iter2, iter3) = plot(continu_var, Ediff2(2:end,:), 'Marker', 'none', 'LineStyle', marker(1),...
                                 'Color', color{iter3},'LineWidth',2);
                         end
 
 %                         hpcfr1 = plot(fields, Ediff,'Color','blue','linewidth',2);
 % %                         hpcfr1 = plot(fields, Ediff(2:end,:),'Color','black','linewidth',2);
 % %                         hpcfr1 = plot(fields, Ediff,'Color',[35 107 142]/255,'linewidth',2,'LineStyle','-');
-%                         legend(num2str(temp(iter),'T = %.2f K, A = A_{th}'),num2str(temp(iter),'T = %.2f K, A = A_{th}'))
+%                         legend(num2str(dscrt_var(iter),'T = %.2f K, A = A_{th}'),num2str(dscrt_var(iter),'T = %.2f K, A = A_{th}'))
 
 %                         % Plot the resonant frequency of a bare cavity
 %                         plot([0 max(fields)],[f_cav f_cav],'-r','LineWidth',1.5);
@@ -178,21 +222,21 @@ for iter = 1:numel(temp)
 %                         xticks(linspace(0.1,max(fields),10))
 %                         text(8,(j-1)*D+0.02,'0.1');
                     end
-                    set(gca,'FontSize',14,'Xtick',0:1:max(fields));
+                    set(gca,'FontSize',14,'Xtick',0:1:max(continu_var));
                     set(gca,'XTickLabelRotation',0)
                     currYlim = get(gca,'ylim');
-                    xlabel('Magnetic Field (T)','FontSize',15);
+                    xlabel(xlab,'FontSize',15);
                     ylabel(ylab1,'FontSize',15);
                     grid off
                     box on;
-                    xlim([min(fields) max(fields)]);
+                    xlim([min(continu_var) max(continu_var)]);
                     xticks('auto')
                     ylim(currYlim);
 %                     ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
 %                     ylim([1 5]);
 %                     ylim([3.59 3.71]) % adjust y-axis range to fit experimental data
                     tit4 = 'Energy gaps at ';
-                    title([tit4 sprintf('T = %.3f K',temp(iter))],'FontSize',15)
+                    title([tit4 sprintf('T = %.3f K',dscrt_var(iter))],'FontSize',15)
                     if Options.savegif == true
                         drawnow
                         frame = getframe(fig_dE);
@@ -210,14 +254,14 @@ for iter = 1:numel(temp)
                     eRange(i) = (max(Ediff(:,i))-min(Ediff(:,i)));
                 end
                 yyaxis right;
-                plot(fields, eRange,'k-');
-                plot(fields(eRange == min(eRange)),min(eRange),'o','MarkerSize',4,'MarkerFaceColor','none');
+                plot(continu_var, eRange,'k-');
+                plot(continu_var(eRange == min(eRange)),min(eRange),'o','MarkerSize',4,'MarkerFaceColor','none');
                 set(gca,'fontsize',15);
-                xlabel('Magnetic Field (T)','FontSize',15)
+                xlabel(xlab,'FontSize',15)
                 ylabel(ylab2,'FontSize',15)
                 grid off
                 box on;
-                xlim([min(fields) max(fields)]);
+                xlim([min(continu_var) max(continu_var)]);
                 ylim([0.9*min(eRange) 1.2*max(eRange)]);
                 tit4='Frequency range the energy levels cover';
                 title(tit4,'FontSize',15)
@@ -234,10 +278,10 @@ for iter = 1:numel(temp)
                 Jnorm = cell(1,4);
                 
                 for ii = 1:4
-                    Jx{ii} = double.empty(length(fields),0);
-                    Jy{ii} = double.empty(length(fields),0);
-                    Jz{ii} = double.empty(length(fields),0);
-                    for jj = 1:length(fields)
+                    Jx{ii} = double.empty(length(continu_var),0);
+                    Jy{ii} = double.empty(length(continu_var),0);
+                    Jz{ii} = double.empty(length(continu_var),0);
+                    for jj = 1:length(continu_var)
                         Jx{ii}(jj,1) = ion.Js_hyp(ii,1,jj,elem_idx);
                         Jy{ii}(jj,1) = ion.Js_hyp(ii,2,jj,elem_idx);
                         Jz{ii}(jj,1) = ion.Js_hyp(ii,3,jj,elem_idx);
@@ -245,34 +289,41 @@ for iter = 1:numel(temp)
                     Jnorm{ii} = vecnorm([Jx{ii} Jy{ii} Jz{ii}], 2, 2);
                 end
                                 
-                Jmx = double.empty(4,length(fields),0);
-                Jmy = double.empty(4,length(fields),0);
-                Jmz = double.empty(4,length(fields),0);
+                Jmx = double.empty(4,length(continu_var),0);
+                Jmy = double.empty(4,length(continu_var),0);
+                Jmz = double.empty(4,length(continu_var),0);
                 for ii = 1:length(fff(1,:))
                     Jmx(:,ii,1) = ion.Jmom_hyp(1,ii,elem_idx);
                     Jmy(:,ii,1) = ion.Jmom_hyp(2,ii,elem_idx);
                     Jmz(:,ii,1) = ion.Jmom_hyp(3,ii,elem_idx);
                 end
                 results.Js{iter,iter2,iter3} = cat(3,Jmx,Jmy,Jmz);
+                
+                Jx_av = mean(Jmx); % average over the unit cell
+                Jy_av = mean(Jmy);
+                Jz_av = mean(Jmz);
 
-                if plotOpt == true
-                    figure;
+                if Options.plot == true
+%                     figure;
+%                     box on
+%                     hold on
+%                     plot(fields, mean(cell2mat(Jnorm), 2), 'LineStyle', '-', 'LineWidth', 2); % plot <J> averaged over the four ions in the unit cell
+%                     legend(strcat(Options.ion,'-1'),strcat(Options.ion,'-2'),strcat(Options.ion,'-3'),strcat(Options.ion,'-4'))
+%                     xlabel(xlab)
+%                     ylabel('<J>')
+
+
+%                     figure
                     box on
                     hold on
-                    plot(fields, mean(cell2mat(Jnorm), 2), 'LineStyle', '-', 'LineWidth', 2); % plot <J> averaged over the four ions in the unit cell
-                    legend(strcat(Options.ion,'-1'),strcat(Options.ion,'-2'),strcat(Options.ion,'-3'),strcat(Options.ion,'-4'))
-                    xlabel('Magnetic field (T)')
-                    ylabel('<J>')
-
-
-                    figure
-                    box on
-                    hold on
-                    plot(fields, mean(Jmx), 'LineStyle', '-', 'LineWidth', 2)
-                    plot(fields, mean(Jmy), 'LineStyle', '-', 'LineWidth', 2)
-                    plot(fields, mean(Jmz), 'LineStyle', '-', 'LineWidth', 2)
+                    plot(continu_var(1:30:end), Jx_av(1:30:end), '-o', 'LineWidth', 1, 'Color', 'b')
+                    plot(continu_var(1:30:end), Jy_av(1:30:end), '-s', 'LineWidth', 1, 'Color', 'b')
+                    plot(continu_var(1:15:end), Jz_av(1:15:end), '-^', 'LineWidth', 1, 'Color', 'b')
+%                     plot(fields, Jx_av, 'LineStyle', '-', 'LineWidth', 2)
+%                     plot(fields, Jy_av, 'LineStyle', '-', 'LineWidth', 2)
+%                     plot(fields, Jz_av, 'LineStyle', '-', 'LineWidth', 2)
                     legend('\langle J_x \rangle', '\langle J_y \rangle', '\langle J_z \rangle')
-                    xlabel('Magnetic field (T)')
+                    xlabel(xlab)
                     ylabel("$\langle J_\alpha \rangle$", 'Interpreter', 'latex')
                 end
             end
@@ -308,30 +359,33 @@ for iter = 1:numel(temp)
                 gw2 = gw0^2 * 2*pi * 1e-9; % [T^2/J. GHz]
 
                 % Initiate ionJ operators
-                Jz=diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
-                JhT.z=kron(Jz,eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
-                Jp=diag(sqrt((ionJ-((ionJ-1):-1:-ionJ) ).*(ionJ+1+( (ionJ-1):-1:-ionJ) )),1); % electronic spin ladder operator
-                Jm=Jp'; % electronic spin ladder operator
-                Jph=kron(Jp,eye(2*ionI+1)); % Expand to match the dimension of Hilbert space
-                Jmh=kron(Jm,eye(2*ionI+1));
-                JhT.x=(Jph+Jmh)/2;
-                JhT.y=(Jph-Jmh)/2i;
+                Jz = diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
+                JhT.z = kron(Jz,eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
+                Jp = diag(sqrt((ionJ-((ionJ-1):-1:-ionJ) ).*(ionJ+1+( (ionJ-1):-1:-ionJ) )),1); % electronic spin ladder operator
+                Jm = Jp'; % electronic spin ladder operator
+                Jph = kron(Jp,eye(2*ionI+1)); % Expand to match the dimension of Hilbert space
+                Jmh = kron(Jm,eye(2*ionI+1));
+                JhT.x = (Jph+Jmh)/2;
+                JhT.y  =(Jph-Jmh)/2i;
                 
                 % Initiate I operators
-                Iz=diag(ionI:-1:-ionI); %Iz = -I, -I+1,...,I-1,I
-                IhT.z=kron(eye(2*ionJ+1),Iz); % Expand Hilbert space
-                Ip=diag(sqrt((ionI-((ionI-1):-1:-ionI)).*(ionI+1+((ionI-1):-1:-ionI))),1); % Nuclear spin ladder operator
-                Im=Ip'; % Nuclear spin ladder operator
-                Iph=kron(eye(2*ionJ+1),Ip); % Expand to match the dimension of Hilbert space
-                Imh=kron(eye(2*ionJ+1),Im);
-                IhT.x=(Iph+Imh)/2;
-                IhT.y=(Iph-Imh)/2i;
+                Iz = diag(ionI:-1:-ionI); %Iz = -I, -I+1,...,I-1,I
+                IhT.z = kron(eye(2*ionJ+1),Iz); % Expand Hilbert space
+                Ip = diag(sqrt((ionI-((ionI-1):-1:-ionI)).*(ionI+1+((ionI-1):-1:-ionI))),1); % Nuclear spin ladder operator
+                Im = Ip'; % Nuclear spin ladder operator
+                Iph = kron(eye(2*ionJ+1),Ip); % Expand to match the dimension of Hilbert space
+                Imh = kron(eye(2*ionJ+1),Im);
+                IhT.x = (Iph+Imh)/2;
+                IhT.y = (Iph-Imh)/2i;
 
-                temperature = repmat(temp,length(fields),1);
-                tz = double.empty(size(eigenW,2),size(eigenW,2),size(fields,2),0); % Expectation value of J pseudo-spin
-                ttz = double.empty(size(eigenW,2),size(eigenW,2),size(fields,2),0); % Expectation value of J-I pseudo-spin
-                Gc2 = double.empty(size(eigenW,2),size(eigenW,2),size(fields,2),0); % Coupling strength
-                for kk = 1:size(fields,2) % calculate susceptibility for all fields
+                tx = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Expectation value of Jx pseudo-spin
+                ttx = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Expectation value of Jx-Ix pseudo-spin
+                ty = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Expectation value of Jy pseudo-spin
+                tty = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Expectation value of Jy-Iy pseudo-spin
+                tz = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Expectation value of Jz pseudo-spin
+                ttz = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Expectation value of Jz-Iz pseudo-spin
+                Gc2 = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Coupling strength
+                for kk = 1:size(continu_var,2) % calculate susceptibility for all fields
                     en = squeeze(eigenE(kk,:)); % Obtain the corresponding eigen energies [meV]
                     if temperature(kk) ~= 0
                         beta = 1/E2f / (kB*temperature(kk)); % [1/meV or 1/GHz]
@@ -347,24 +401,41 @@ for iter = 1:numel(temp)
                     end
 
                     v = squeeze(eigenW(kk,:,:)); % Obtain the corresponding eigen vectors
+                    JxhT = JhT.x * ELEf;
+                    IxhT = IhT.x * NUCf;
+                    tx(:,:,kk,1) = v' * JxhT * v;
+                    ttx(:,:,kk,1)  = v' * (JxhT+IxhT) * v;
+                    
+                    JyhT = JhT.y * ELEf;
+                    IyhT = IhT.y * NUCf;
+                    ty(:,:,kk,1) = v' * JyhT * v;
+                    tty(:,:,kk,1)  = v' * (JyhT+IyhT) * v;
+                    
                     JzhT = JhT.z * ELEf;
                     IzhT = IhT.z * NUCf;
                     tz(:,:,kk,1) = v' * JzhT * v;
                     ttz(:,:,kk,1)  = v' * (JzhT+IzhT) * v;
+                    
                     Gc2(:,:,kk,1) = gw2 * ttz(:,:,kk,1) .* ttz(:,:,kk,1).' .* NN * J2meV / Gh2mV;
                 end
-                results.Jmx{iter,iter2,iter3} = tz;
-                results.JImx{iter,iter2,iter3} = ttz;
+                results.Jmx{iter,iter2,iter3} = tx;
+                results.Jmy{iter,iter2,iter3} = ty;
+                results.Jmz{iter,iter2,iter3} = tz;
+                
+                results.JIx{iter,iter2,iter3} = ttx;
+                results.JIy{iter,iter2,iter3} = tty;
+                results.JIz{iter,iter2,iter3} = ttz;
+                
                 results.Gc2{iter,iter2,iter3} = Gc2;
 
-                if plotOpt == true
+                if Options.plot == true
                     figure;
                     hold on
                     for ii = 1:N_level-1
-                        plot(fields, sqrt(squeeze(abs(Gc2(ii,ii+1,:)))),'.');
+                        plot(continu_var, sqrt(squeeze(abs(Gc2(ii,ii+1,:)))),'.');
 %                         plot(fields, sqrt(abs(squeeze(Gc2(ii+1,ii,:)))),'o'); % symmetrical part of the matrix
                     end
-                    xlabel('Magnetic Field (T)')
+                    xlabel(xlab)
                     ylabel(ylab)
                     title('Nearest level excitation coupling strength')
                 end
@@ -372,48 +443,51 @@ for iter = 1:numel(temp)
 %% Plot the occupation number of each state
             if Options.popul == true
                 En = eee - min(eee,[],2);
-                beta = 11.6/temp(iter); % 1/(kB T) [meV]^-1
+                beta = 11.6/dscrt_var(iter); % 1/(kB T) [meV]^-1
                 Pop = cell(N_level,1); % thermal population
+                Z = double.empty(size(En,1),0);
+                for ii = 1:size(En,1)
+                    Z(ii,1) = sum(exp(-squeeze(En(ii,:))*beta)); % partition function at each field
+                end
                 for jj = 1:N_level
-                    for ii = 1:size(En,1)
-                        Pop{jj}(ii) = exp(-En(ii,jj)*beta)/sum(exp(-squeeze(En(ii,:))*beta));
-                    end
+                    Pop{jj} = exp(-En(:,jj)*beta) ./ Z; % Thermal population of each level
                 end
                 results.popul = Pop;
-                if plotOpt == true
-                pFig = figure;
-                hold on
-                box on
-                pRat = figure;
-                hold on
-                box on
-                if jj > 1
-                    for jj = 2:N_level
-                        figure(pFig)
-                        plot(fields, Pop{jj}(:)./Pop{1}(:),'-','LineWidth',2)
-                        figure(pRat)
-                        plot(fields, Pop{jj}(:)./Pop{jj-1}(:),'-','LineWidth',2);
+
+                if Options.plot == true
+                    pFig = figure;
+                    hold on
+                    box on
+                    pRat = figure;
+                    hold on
+                    box on
+                    if jj > 1
+                        for jj = 2:N_level
+                            figure(pFig)
+                            plot(continu_var, Pop{jj}(:)./Pop{1}(:),'-','LineWidth',2)
+                            figure(pRat)
+                            plot(continu_var, Pop{jj}(:)./Pop{jj-1}(:),'-','LineWidth',2);
+                        end
                     end
-                end
-                figure(pFig)
-                xlim([0 max(fields)])
-                xticks('auto')
-                set(gca,'FontSize', 14)
-                xlabel('Magnetic Field (T)');
-                ylabel('P_{|i\rangle}/P_{|0\rangle}')
-                legend(["P_{|1\rangle}/P_{|0\rangle}", "P_{|2\rangle}/P_{|0\rangle}", "P_{|3\rangle}/P_{|0\rangle}",...
-                	"P_{|4\rangle}/P_{|0\rangle}", "P_{|5\rangle}/P_{|0\rangle}", "P_{|6\rangle}/P_{|0\rangle}",...
-                	"P_{|7\rangle}/P_{|0\rangle}"]);
-                
-                figure(pRat)
-                xlim([0 max(fields)])
-                xticks('auto')
-                set(gca,'FontSize', 14)
-                xlabel('Magnetic Field (T)');
-                ylabel('P_{|i+1\rangle}/P_{|i\rangle}')
-                legend(["P_{|1\rangle}/P_{|0\rangle}", "P_{|2\rangle}/P_{|1\rangle}", "P_{|3\rangle}/P_{|2\rangle}",...
-                	"P_{|4\rangle}/P_{|3\rangle}", "P_{|5\rangle}/P_{|4\rangle}", "P_{|6\rangle}/P_{|5\rangle}",...
-                	"P_{|7\rangle}/P_{|6\rangle}"]);                    
+                    figure(pFig)
+                    xlim([0 max(continu_var)])
+                    xticks('auto')
+                    set(gca,'FontSize', 14)
+                    xlabel(xlab);
+                    ylabel('P_{|i\rangle}/P_{|0\rangle}')
+                    legend(["P_{|1\rangle}/P_{|0\rangle}", "P_{|2\rangle}/P_{|0\rangle}", "P_{|3\rangle}/P_{|0\rangle}",...
+                    	"P_{|4\rangle}/P_{|0\rangle}", "P_{|5\rangle}/P_{|0\rangle}", "P_{|6\rangle}/P_{|0\rangle}",...
+                    	"P_{|7\rangle}/P_{|0\rangle}"]);
+
+                    figure(pRat)
+                    xlim([0 max(continu_var)])
+                    xticks('auto')
+                    set(gca,'FontSize', 14)
+                    xlabel(xlab);
+                    ylabel('P_{|i+1\rangle}/P_{|i\rangle}')
+                    legend(["P_{|1\rangle}/P_{|0\rangle}", "P_{|2\rangle}/P_{|1\rangle}", "P_{|3\rangle}/P_{|2\rangle}",...
+                    	"P_{|4\rangle}/P_{|3\rangle}", "P_{|5\rangle}/P_{|4\rangle}", "P_{|6\rangle}/P_{|5\rangle}",...
+                    	"P_{|7\rangle}/P_{|6\rangle}"]);
                 end
             end
         end
@@ -421,13 +495,13 @@ for iter = 1:numel(temp)
 end
 
 if Options.savedata == true
-    filename = strcat('sim_',num2str(temp*1000,'%u'),'mK_trans.mat','-v7.3');
-    save(filename,'fields','Ediff');
+    lname = strcat('sim_',num2str(dscrt_var*1000,'%u'),'mK_trans.mat','-v7.3');
+    save(lname,'continu_var','Ediff');
 end
-if Options.savegif == true && plotOpt == true
+if Options.savegif == true && Options.plot == true
     if Options.Elevel == true
-        filename = strcat('sim_',num2str(min(temp)*1000,'%u'),'-',num2str(max(temp)*1000,'%u'),'mK_Elevel.gif');
-        fileobj = fullfile(Options.location,filename);
+        lname = strcat('sim_',num2str(min(dscrt_var)*1000,'%u'),'-',num2str(max(dscrt_var)*1000,'%u'),'mK_Elevel.gif');
+        fileobj = fullfile(Options.location,lname);
         for ii = 1:length(Elevel_frame)
             [img,cmp] = rgb2ind(Elevel_frame{ii},256);
             if ii == 1
@@ -438,8 +512,8 @@ if Options.savegif == true && plotOpt == true
         end
     end
     if Options.Ediff == true
-        filename = strcat('sim_',num2str(min(temp)*1000,'%u'),'-',num2str(max(temp)*1000,'%u'),'mK_Ediff.gif');
-        fileobj = fullfile(Options.location,filename);
+        lname = strcat('sim_',num2str(min(dscrt_var)*1000,'%u'),'-',num2str(max(dscrt_var)*1000,'%u'),'mK_Ediff.gif');
+        fileobj = fullfile(Options.location,lname);
         for ii = 1:length(Ediff_frame)
             [img,cmp] = rgb2ind(Ediff_frame{ii},256);
             if ii == 1
