@@ -42,10 +42,14 @@ opts.Weights = weight;
 if plt
     % Plot fit with data.
     figure( 'Name', sprintf('S11_inptopt_fit at B = %.3f T',field) );
-    h = plot( fitresult, xData, yData );
-    legend( h, 'Data', 'S11_fit', 'Location', 'NorthEast', 'Interpreter', 'none' );
+    plot( fitresult, xData, yData );
+    hold on
+    [~, loc] = min(abs(xData-fitresult.wc));
+    plot(fitresult.wc, yData(loc), 'or');
+    legend('Data', 'S11_fit', 'Location', 'NorthEast', 'Interpreter', 'none');
     % Label axes
     xlabel( 'Frequency (GHz)', 'Interpreter', 'none' );
     ylabel( '|S11|', 'Interpreter', 'none' );
+    box on
     grid on
 end

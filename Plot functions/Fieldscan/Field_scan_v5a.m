@@ -10,31 +10,37 @@
 format long;
 clearvars -except continu_var freq S11 analysis
 
-addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions\');
-addpath(genpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik\'));
+addpath('G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions\');
+addpath(genpath('G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik\'));
 
 % Process options:
 Options.analysis = 3; % Analysis options (1.simple plot, 2.on-resonance fit, 3.off-resonance fit, 4.temp scan)
-Options.save = 'n'; % Option to save the analysis
-Options.dType = 'proc'; % Input data type: 1. Experimental ('raw'), 2. Simulated ('sim'), 3. pre-processed exp. data ('proc')
+% Options.save = 'n'; % Option to save the analysis
+Options.dType = 'raw'; % Input data type: 1. Experimental ('raw'), 2. Simulated ('sim'), 3. pre-processed exp. data ('proc')
 Options.lnwd = 1.5; % plot linewidth
 Options.ftsz = 12; % plot font size
 Options.mksz = 2; % plot marker size
-Options.bgdmode = 0; % Background normalization (0: no normalization. 1: Stitch background. 2: Load background. 3: S11 fit)
+Options.bgdmode = 0; % Background normalization (0: none. 1: Stitch background. 2: Load background. 3: S11 fit. 4: Manual offset)
+Options.offset = 0.915; % background height (only for bgdmode 4)
 Options.nData = 1; % Number of dataset from VNA
 Options.phPlot = false; % Option to plot phase in color plots
 Options.fitfunc = 1; % Fitting function (only for analysis-3): (1) Input-output or (2) Lorentzian
 Options.fill = 0.01005*1.06; % Filling factor * scaling factor (1.06 for SC239, SC200, SC251)
+Options.cmap = unique([[0 0 0];[zeros(20,1),linspace(0,0.5,20)',linspace(0.4,1,20)'];...
+              [linspace(0,1,36)',0.5*ones(36,1),linspace(1,0,36)'];...
+              [ones(30,1),linspace(0.5,1,30)',linspace(0,1,30)']],'rows');
+Options.cmap = flip(Options.cmap,1);
+
+Options.fileloc = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\',...
+    'File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4',...
+    '\SC239\2022.09.01'];
+% Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
+%     'SC107 (4x5x2mm)\19.05.2019'];
+loadname = '2022_09_0002';
 
 % Determin file location base on data type
 switch Options.dType
     case 'raw'
-        Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
-            'SC239\2022.08.03'];
-        loadname = '2022_08_0005';
-%         Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
-%             'SC239\2021.07.17'];
-%         loadname = '2021_07_0016';
         LoadObj = fullfile(Options.fileloc,[loadname,'.dat']);
         SaveObj = fullfile(Options.fileloc,[loadname,'_interp', '.mat']);
     case 'sim'
@@ -45,9 +51,6 @@ switch Options.dType
         Options.save = 'n'; % Option to save the analysis
         Options.bgdmode = 0; % no background renormalization for simulated data
     case 'proc'
-        Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
-            'SC239\2022.08.03'];
-        loadname = '2022_08_0005';
         LoadObj = fullfile(Options.fileloc,[loadname,'_interp.mat']);
     otherwise
         fprintf(['Unknown data type: ',Options.dType,'\n'])
@@ -67,13 +70,13 @@ clearvars -except arguments LoadObj Options SaveObj
 
 switch Options.analysis
     case 1
-        % Simple color plot of S11 (& S21)
+        % Simple color plot of field sweep S11 (& S21)
         [continu_var,freq,S11,analysis] = option1(arguments{:});
     case 2
-        % On-resonance measurement processing (w/ plots)
+        % On-resonance field sweep measurement processing (w/ plots)
         [continu_var,freq,S11,analysis] = option2(arguments{:});
     case 3
-        % Off-resonance measurement processing (w/ plots)
+        % Off-resonance field sweep measurement processing (w/ plots)
         [continu_var,freq,S11,analysis] = option3(arguments{:});
     case 4
         % Temperature scan
@@ -100,16 +103,16 @@ switch lower(answer)
         else
             save(SaveObj,'analysis','continu_var','freq','S11','-v7.3')
         end
-        if Options.analysis == 4 % Add a point to the phase diagram from off-resonance measurement
-            fprintf('Updating phase diagram\n')
-            phase(1,1) = analysis.temp;
-            phase(1,2) = mean(B0(f0==min(f0)));
-            if Options.savefile == true && isfile(dataobj)
-                save(dataobj,'phase','-append');
-            elseif Options.savefile == true
-                save(dataobj,'phase','-v7.3');
-            end
-        end
+%         if Options.analysis == 4 % Add a point to the phase diagram from off-resonance measurement
+%             fprintf('Updating phase diagram\n')
+%             phase(1,1) = analysis.temp;
+%             phase(1,2) = mean(analysis.Hs(analysis.w0==min(analysis.w0)));
+%             if Options.savefile == true && isfile(dataobj)
+%                 save(dataobj,'phase','-append');
+%             elseif Options.savefile == true
+%                 save(dataobj,'phase','-v7.3');
+%             end
+%         end
     otherwise
         fprintf('Aborted saving analysis\n')
 end
@@ -303,6 +306,7 @@ if Options.nData > 1
                   [ones(30,1),linspace(0.5,1,30)',linspace(0,1,30)']],'rows');
     cmap = flip(cmap,1);
     colormap(cmap)
+    caxis([max([1.2*mag2db(min(mag2,[],'all')), -30]) max(mag2db(max(mag2,[],'all')),0)+1]);
     shading interp;
     colorbar
     set(gca,'fontsize',Options.ftsz)
@@ -321,6 +325,7 @@ cmap = unique([[0 0 0];[zeros(20,1),linspace(0,0.5,20)',linspace(0.4,1,20)'];...
               [ones(30,1),linspace(0.5,1,30)',linspace(0,1,30)']],'rows');
 cmap = flip(cmap,1);
 colormap(cmap)
+caxis([max([1.2*mag2db(min(mag,[],'all')), -30]) max(mag2db(max(mag,[],'all')),0)+1]);
 shading interp;
 caxis([-20 1])
 colorbar
@@ -336,7 +341,7 @@ if Options.phPlot == true
     colmap1 = pcolor(HH_temp,freq_temp,imag(S11_temp));
     set(colmap1, 'edgeColor','none')
     shading interp;
-    % caxis([-30 0])
+    caxis([max([1.2*mag2db(min(imag(S11_temp),[],1)), -30]) max(mag2db(max(imag(S11_temp),[],1)),0)+1]);
     colorbar
     set(gca,'fontsize',Options.ftsz)
     xlabel('Magnetic Field (T)');
@@ -390,16 +395,16 @@ end
 
 % set input-output fit parameters
 ioFit.mode = 1; % fitting function choice (1-6, "0" reserved for empty cavity fitting)
-ioFit.tarIdx = 2; % choice of spin resonance to fit (1-7)
+ioFit.tarIdx = 1; % choice of spin resonance to fit (1-7)
 init_guess = 0.24; % temperature index of the files for initial guesses
 ioFit.init = true; % perform an initial fit to obtain cavity parameters
 ioFit.total = 7; % total number of transitions
 
 % set desirable field range
-field_l = 5.5; % manually set the field limit
-field_h = 7.2;
+field_l = 0; % manually set the field limit
+field_h = 4.6;
 % mB0 = 6.27;
-strnth = 'weak'; % 'strong' or 'weak'
+strnth = 'strong'; % 'strong' or 'weak'
 
 if field_l >= max(HH(1,:)) || field_h <= min(HH(1,:))
     field_l = min(HH(1,:));
@@ -920,8 +925,8 @@ cmap0 = pcolor(HH,freq,mag2db(mag));
 set(cmap0, 'edgeColor','none')
 shading interp;
 colorbar
-caxis('auto')
-% caxis([max([mag2db(min(mag0)), -30]) max(mag2db(max(mag0)),0)+1]);
+% caxis('auto')
+caxis([max([1.2*mag2db(min(mag,[],'all')), -30]) max(mag2db(max(mag,[],'all')),0)+1]);
 clearvars init bound_l bound_h *_temp
 
 set(gca,'fontsize',Options.ftsz)
@@ -1182,7 +1187,7 @@ Temperature = analysis.temp;
 
 % field_l = 2.0; % Manually set field range
 % field_h = 5.0;
-mB0 = 4.786;
+% mB0 = 4.786;
 field_l = min(HH(1,:));
 field_h = max(HH(1,:));
 freq_l = min(freq(:,1));
@@ -1216,7 +1221,7 @@ mag0 = zeros(size(mag,2),1);
 mag0l = min(mag(:,HH(1,:)==min(HH(1,:)) )); % peak depth at the lowest field
 mag0h = min(mag(:,HH(1,:) == max(HH(1,:)) )); % peak depth at the highest field
 [~,hl] = min([mag0l mag0h]); % pick the finner peak as the first part of the background
-if hl == 1
+if hl == 2
     [~,bidx] = min( HH(1,:) );
 else
     [~,bidx] = max( HH(1,:) );
@@ -1321,7 +1326,7 @@ while true
 end
 
 % Renormailize the background
-if Options.bgdmode ~= 0
+if Options.bgdmode ==(1||2||3)
     figure(fig_norm)
     xlabel('Frequency (GHz)')
     ylabel('|S11|')
@@ -1336,9 +1341,9 @@ if Options.bgdmode ~= 0
     bgdM = repmat(bgd0,1,size(mag,2));
     fprintf('Extracting dissipation rates by fitting...\n')
     % starting value for param = {'kpe', 'kpi', 'omega', 'Gc', 'gma', 'wc', 'attn'}
-    param  =  [1e-3   1e-3   freq_h   0   1e-3   (freq_l+freq_h)/2  1/mean(bgd0)];
-    bound_l = [ 0     0    freq_h     0   1e-3    freq_l   0.8]; % lower bound of fitting parameters
-    bound_h = [Inf   Inf   freq_h     0   1e-3    freq_h   1.2]; % upper bound of fitting parameters
+    param  =  [1e-4   1e-4   freq_h    0   1e-3   (freq_l+freq_h)/2  1/mean(bgd0)];
+    bound_l = [ 0      0     freq_h    0   1e-3    freq_l   0.8]; % lower bound of fitting parameters
+    bound_h = [Inf    Inf    freq_h    0   1e-3    freq_h   1.2]; % upper bound of fitting parameters
     fit = iptopt0(freq(:,bidx), mag(:,bidx)./bgd0, B0(bidx), [param; bound_l; bound_h], mag(:,bidx)./bgd0, false);
 %     bgd0 = mag(:,bidx)./fit(freq(:,bidx));  % further normalization through fitting
     mag = mag./bgdM;
@@ -1349,6 +1354,8 @@ if Options.bgdmode ~= 0
         analysis.bgd0 = bgd0;
         analysis.bf0 = bf0;
     end
+elseif Options.bgdmode == 4
+    mag = mag./Options.offset;
 end
 clearvars mag0l mag0h idx ia trimIdx ii bgd0 bf0
 
@@ -1417,7 +1424,6 @@ clearvars c idx ia ii HM trunc1 trunc2 dupl nop trimIdx
 f_init = f0(B0 == min(B0)); % Initial guess of the cavity resonant frequency
 weight(:,:,1) = abs(1./mag(:,:));      % Weight function option 1
 % weight = 1./gradientweight(mag);       % Weight function option 2
-% weight(isinf(weight)) = 1e4;           % Remove infinities in weight function
 % weight = ones(size(mag));                % Weight function option 3 (uniform)
 % weight = double.empty(size(mag,1),size(mag,2),0); % Weight function option 4
 % for jj = 1:size(mag,2)
@@ -1426,6 +1432,7 @@ weight(:,:,1) = abs(1./mag(:,:));      % Weight function option 1
 %     end
 %     weight(:,jj) = weight(:,jj)./max(weight(:,jj));
 % end
+weight(isinf(weight)) = 1e4;           % Remove infinities in weight function
 
 switch Options.fitfunc % Pick fitting function from either (1) custom function of (2) spec1d
     case 1 %Option 1: Custom function by Input-output formalism
@@ -1441,7 +1448,7 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
         param  =  [1e-4    1e-4    0     0    f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
         bound_l = [ 0       0      0     0    freq_l]; % lower bound of fitting parameters
         bound_h = [Inf     Inf     0     0    freq_h]; % upper bound of fitting parameters
-        fit0 = iptoptx(freq(:,Hc0), mag(:,Hc0), B0(Hc0), param, bound_l, bound_h, weight(:,Hc0), false);
+        fit0 = iptoptx(freq(:,Hc0), mag(:,Hc0), B0(Hc0), param, bound_l, bound_h, weight(:,Hc0), true);
         kpe(Hc0) = fit0.kpe;
         kpi(Hc0) = fit0.kpi;
         w0(Hc0) = fit0.wc;
@@ -1452,6 +1459,7 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
         rho = 4 / (5.175e-10 * 5.175e-10 * 10.75e-10); % Holmium (magnetic moment) number density [m^-3]
         g = sqrt(mu0 * 2*pi * f_init*1e9 * rho/2) * Options.fill;  % susceptibility prefactor [T^2/J. rad/s]^1/2
         g2 = g^2  * 2*pi * 1e-9; % coupling prefactor [T^2/J. GHz]
+%         analysis.f_init = f_init; % for debugging
 
 %         for ii = 1:length(B0)
             plt = false;
@@ -1466,9 +1474,9 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
                 fprintf('Fitting, current field: %1$3.2f T. Core %2$u.\n', B0(ii), worker.ID);
             end
             % Fit using input-output formalism
-            param  =  [kpe0  kpi0     0      0    f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
-            bound_l = [kpe0  kpi0   -Inf   -Inf   f_init]; % lower bound of fitting parameters
-            bound_h = [kpe0  kpi0    Inf    Inf   f_init]; % upper bound of fitting parameters
+            param  =  [kpe0   kpi0     0      0    f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
+            bound_l = [kpe0   kpi0   -Inf   -Inf  f_init]; % lower bound of fitting parameters
+            bound_h = [kpe0   kpi0    Inf    Inf   f_init]; % upper bound of fitting parameters
             fit = iptoptx(freq(:,ii), mag(:,ii), B0(ii), param, bound_l, bound_h, weight(:,ii), plt);
                      
             [idx,~,~] = find(fit(freq(:,ii)) == min(fit(freq(:,ii)))); % Find the resonant frequency by (unique) minimum search
@@ -1509,11 +1517,8 @@ analysis.wc = wc;
 figure
 colmap = pcolor(HH,freq,mag2db(mag));
 set(colmap, 'edgeColor','none')
-cmap = unique([[0 0 0];[zeros(20,1),linspace(0,0.5,20)',linspace(0.4,1,20)'];...
-              [linspace(0,1,36)',0.5*ones(36,1),linspace(1,0,36)'];...
-              [ones(30,1),linspace(0.5,1,30)',linspace(0,1,30)']],'rows');
-cmap = flip(cmap,1);
-colormap(cmap)
+colormap(Options.cmap)
+caxis([max([1.2*mag2db(min(mag,[],'all')), -30]) max(mag2db(max(mag,[],'all')),0)+1]);
 shading interp;
 colorbar
 set(gca,'fontsize',Options.ftsz)
@@ -1528,7 +1533,7 @@ figure
 colmap1 = copyobj(colmap,gca);
 hold on
 plot(B0,f0,'.k','MarkerSize',Options.mksz);
-colormap(cmap)
+colormap(Options.cmap)
 set(colmap1, 'edgeColor','none')
 shading interp;
 colorbar
@@ -1546,7 +1551,7 @@ figure
 cmap2 = copyobj(colmap,gca);
 hold on
 plot(B0,w0,'.r','MarkerSize',Options.mksz);
-colormap(cmap)
+colormap(Options.cmap)
 set(cmap2, 'edgeColor','none')
 shading interp;
 colorbar
@@ -1764,6 +1769,8 @@ if Options.nData > 1
     figure
     colmap = pcolor(TT,freq,mag2db(mag2));
     set(colmap, 'edgeColor','none')
+    colormap(Options.cmap)
+    caxis([max([1.2*mag2db(min(mag2,[],'all')), -30]) max(mag2db(max(mag2,[],'all')),0)+1]);
     shading interp;
     colorbar
     set(gca,'fontsize',Options.ftsz)
@@ -1802,6 +1809,7 @@ f0 = medfilt1(f0); % apply median filter to remove some noise
 f0 = f0(f0 >= freq_l & f0 <= freq_h); % Discard nonsensical datapoints
 T0 = T0(f0 >= freq_l & f0 <= freq_h);
 Q0 = Q0(f0 >= freq_l & f0 <= freq_h);
+analysis.Q0 = Q0;
 
 weight = double.empty(size(mag,1),size(mag,2),0);
 for jj = 1:size(mag,2)
@@ -1893,9 +1901,11 @@ end
 % Plot the interpolated frequency response data in a field scan using color map
 figure
 colmap = pcolor(TT,freq,mag2db(mag));
+caxis([max([1.2*mag2db(min(mag,[],'all')), -30]) max(mag2db(max(mag,[],'all')),0)+1]);
 hold on
 plot(T0,f0,'.k','MarkerSize',Options.mksz);
 set(colmap, 'edgeColor','none')
+colormap(Options.cmap)
 shading interp;
 colorbar
 set(gca,'fontsize',Options.ftsz)
@@ -1911,6 +1921,7 @@ colmap1 = copyobj(colmap,gca);
 hold on
 plot(T0,wr,'.r','MarkerSize',Options.mksz);
 set(colmap1, 'edgeColor','none')
+colormap(Options.cmap)
 shading interp;
 colorbar
 set(gca,'fontsize',Options.ftsz)
@@ -2012,8 +2023,8 @@ else
                 % For data taken with ZVL/ZNL/ZNB 
                 % Clean up the raw data by removing incomplete scans (step 1) and duplicates(step 2)
                 % step 1: truncate the beginning and end part to keep only complete frequency scans and reshape the matrices into single column vectors
-                trunc1 = find(freq == min(freq),1,'first');
-                trunc2 = find(freq == min(freq),1,'last')-1;
+                trunc1 = find(freq == freq_l,1,'first');
+                trunc2 = find(freq == freq_h,1,'last');
                 freq_temp = freq(trunc1:trunc2);
                 HH_temp = HH(trunc1:trunc2);
                 S11_temp = S11(trunc1:trunc2);
