@@ -1,7 +1,8 @@
-clear
+clearvars
 format long g;
 
-Options.plot = 1; % 1. 3D scatter plot; 2. 2D color map.
+Options.plot = 2; % 1. 3D scatter plot; 2. 2D color map.
+Option.pProm = 1e-2; % minimum peak prominance for phase boundary search
 
 sigx = [0   1
         1   0];
@@ -21,15 +22,15 @@ Iz = 1/2.*sigz;
 % N = 100; % set interaction range
 D = 1; % setting dimensions
 k = 0.0862875; % Boltzmann coefficient
-J = 0.6; % coupling strength
+J = 0.585; % coupling strength
 
-minField = 0;
-maxField = 6;
-hT = linspace(minField, maxField, 300);
+minField = 0.00;
+maxField = 6.00;
+hT = linspace(minField, maxField, 600);
 
 minTemp = 0.01;
-maxTemp = 3;
-temp = linspace(minTemp, maxTemp, 150);
+maxTemp = 3.00;
+temp = linspace(minTemp, maxTemp, 800);
 
 vector = zeros(length(hT)*length(temp),3);
 map = zeros(length(hT), length(temp));
@@ -75,7 +76,7 @@ end
 Bc = zeros(length(temp),1); % critical fields (at fixed temperatre)
 for ii = 1:length(temp)
     dif = diff(map(:,ii)); % crude differentiation
-    [~,idx] = findpeaks(-dif, 'Npeaks', 1, 'MinPeakProminence', 2e-2);
+    [~,idx] = findpeaks(-dif, 'Npeaks', 1, 'MinPeakProminence', Option.pProm);
     if isempty(idx)
         Bc(ii) = 0;
     else
@@ -87,7 +88,7 @@ TT = temp(Bc~=0)'; % remove zeros and nonsensical values
 Tc = zeros(length(hT),1); % critical temperatures (at fixed field)
 for ii = 1:length(hT)
     dif = diff(map(ii,:)); % crude differentiation
-    [~,idx] = findpeaks(-dif, 'Npeaks', 1, 'MinPeakProminence', 2e-2);
+    [~,idx] = findpeaks(-dif, 'Npeaks', 1, 'MinPeakProminence', Option.pProm);
     if isempty(idx)
         Tc(ii) = 0;
     else
@@ -95,7 +96,7 @@ for ii = 1:length(hT)
     end
 end
 BB = hT(Tc~=0)'; % remove zeros and nonsensical values
-phB = [TT nonzeros(Bc); nonzeros(Tc) BB]; % Phase boundary
+phB = [TT nonzeros(Bc); nonzeros(Tc) BB]./J; % Phase boundary
 
 figure
 box on
@@ -105,12 +106,14 @@ switch Options.plot
         phase = scatter3(vector(:,1),vector(:,2),vector(:,3),15,vector(:,3),'filled');
         view([0 90]);
     case 2
-        temps = repmat(temp, length(hT), 1);
-        fields = repmat(hT', 1, length(temp));
+        temps = repmat(temp./J, length(hT), 1);
+        fields = repmat(hT'./J, 1, length(temp));
         phase = pcolor(temps, fields, map);
         phase.EdgeColor = 'none';
         plot(phB(:,1), phB(:,2), '.r');
 end
 set(gca, 'FontSize', 12)
-xlabel('Temperature (K)')
-ylabel('Magnetic Field (T)')
+xlim([0 maxTemp/J])
+ylim([0 maxField/J])
+xlabel('Temperature (in unit of J)')
+ylabel('Magnetic Field (in unit of J)')
