@@ -156,7 +156,7 @@ eee = double.empty(size(fff,1), length(ttt), size(Sz,2), 0);
 vvv = double.empty(size(fff,1), length(ttt), size(Sz,2), size(Sz,2), 0);
 for ii = 1:size(fff,1)
     for jj = 1:length(ttt)
-        S_mf = [0  0  1/2]; % initial guesses for spin operators
+        S_mf = [0  0  ion.J]; % initial guesses for spin operators
         beta = 1/(kB*ttt(jj));
         counter = 1; % while loop iterator
         En_old = 0;
@@ -229,7 +229,7 @@ for ii = 1:size(fff,1)
             end
         end
         Js(ii,jj,:) = S_mf;
-        Is(ii,jj,:) = newAvI;
+        if exist('newAvI','var'); Is(ii,jj,:) = newAvI; end
         vector(iterator,:) = [ttt(jj), Bx(ii), S_mf(3)]; % Phase diagram with Sz as the order parameter
         map(ii,jj) = S_mf(3); % use Sz as the order parameter
         iterator = iterator + 1;

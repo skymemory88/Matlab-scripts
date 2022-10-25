@@ -37,7 +37,7 @@ elseif nargin == 5
 
     [chi0] = MF_chi(ion, freq_total, fields, En, temp, wav, gama, Options);
     if Options.RPA == true
-        [chiq, RPA_deno] = RPA_chi(ion, freq_total, fields, [0 0 0], chi0); % calculate RPA susceptibility
+        [chiq, poles, RPA_deno] = RPA_chi(ion, freq_total, fields, [0 0 0], chi0); % calculate RPA susceptibility
     end
     varargout{1} = fields;
     varargout{2} = freq_total;
@@ -54,14 +54,15 @@ end
 
 if exist('chiq','var')
     varargout{4} = chiq;
-    varargout{5} = RPA_deno;
+    varargout{5} = poles;
+    varargout{6} = RPA_deno;
     if Options.saving == true % Save the susceptibilities
         file_part = sprintf('%1$3.3fK_%2$.2e_%3$.3f-%4$.3fGHz', temp,...
             gama, min(freq_total), max(freq_total));
         save_name = strcat('RPA_toy_', file_part, '.mat');
         savefile = fullfile(filepath, save_name);
         save(savefile, 'temp', 'fields', 'freq_total', 'chi0',...
-            'gama', 'chiq', 'RPA_deno', 'Options', '-v7.3');
+            'gama', 'chiq', 'poles', 'RPA_deno', 'Options', '-v7.3');
     end
 end
 end
@@ -119,106 +120,74 @@ chi0 = zeros(3,3,length(freq_total(1,:)),size(field,1));
 for ii = 1:size(freq_total,2) %calculate susceptibility for all frequencies
     freq = freq_total(ii);
     omega = freq*f2E; % define frequency sweep range (meV)
-    parfor jj = 1:size(field,1) % calculate susceptibility for all fields
-%     for jj = 1:size(field,1) % for debugging
+%     parfor jj = 1:size(field,1) % calculate susceptibility for all fields
+    for jj = 1:size(field,1) % for debugging
         wav = squeeze ( squeeze(V(jj,:,:,:)) ); % Obtain the corresponding eigen vectors
         ee = squeeze ( squeeze(E(jj,:,:)) ); % Obtain the corresponding eigen energies in meV
         beta = 1/(T*8.61733E-2); %[meV^-1]
         if T == 0
             zz = zeros(size(ee));
             zz(1) = 1;
-        else
+        elseif T > 0
             z = sum(exp(-beta*ee));
             zz = exp(-beta*ee)/z;
         end
         [pn, pm] = meshgrid(zz,zz);
         pmn = pn - pm; % population factor
+%         pmn = ones(size(pn)); % for debugging
         [en, em] = meshgrid(ee,ee);
         dE = em-en-omega;
         gamma = ones(size(dE))*gama;
-        deno_im = gamma ./ (dE.^2 + gamma.^2); 
-        deno_re = dE ./ (dE.^2 + gamma.^2);  
+        deno0 = 1 ./ (dE - 1i*gamma); % [meV^-1]
 
-        JxhT = JhT.x;
-        IxhT = IhT.x;
+        ttx1  = wav'  * (JhT.x + NUCf/ELEf * IhT.x) * wav;
+        tty1  = wav'  * (JhT.y + NUCf/ELEf * IhT.y) * wav;
+        ttz1  = wav'  * (JhT.z + NUCf/ELEf * IhT.z) * wav;
 
-        JyhT = JhT.y;
-        IyhT = IhT.y;
+        % Calculate susceptibilities along a-axis
+        chi_tx  = (ttx1) .* (ttx1.') .* pmn .* deno0;
+        xx = sum(sum(chi_tx));
 
-        JzhT = JhT.z;
-        IzhT = IhT.z;
+        % Calculate susceptibilities along b-axis
+        chi_ty  = (tty1) .* (tty1.') .* pmn .* deno0;
+        yy = sum(sum(chi_ty));
 
-        ttx  = wav'  * (JxhT + NUCf/ELEf * IxhT) * wav; 
-        tty  = wav'  * (JyhT + NUCf/ELEf * IyhT) * wav; 
-        ttz  = wav'  * (JzhT + NUCf/ELEf * IzhT) * wav;
+        % Calculate susceptibilities along c-axis
+        chi_tz  = (ttz1) .* (ttz1.') .* pmn .* deno0;
+        zz = sum(sum(chi_tz));
 
-% Calculate susceptibilities xx
-        chii  = (ttx) .* (ttx.') .* pmn .* deno_im;
-        chir = (ttx) .* (ttx.') .* pmn .* deno_re;
-        xxi =  real( sum(sum(chii)) );
-        xxr =  real( sum(sum(chir)) ); 
+        % Calculate susceptibilities along ab-axis
+        chi_txy  = (ttx1) .* (tty1.') .* pmn .* deno0;
+        xy = sum(sum(chi_txy));
 
-% Calculate susceptibilities xy
-        chii  = (ttx) .* (tty.') .* pmn .* deno_im;
-        chir = (ttx) .* (tty.') .* pmn .* deno_re;
-        xyi =  real( sum(sum(chii)) );
-        xyr =  real( sum(sum(chir)) );   
+        % Calculate susceptibilities along ac-axis
+        chi_txz  = (ttx1) .* (ttz1.') .* pmn .* deno0;
+        xz = sum(sum(chi_txz));
 
-% Calculate susceptibilities xz
-        chii  = (ttx) .* (ttz.') .* pmn .* deno_im;
-        chir = (ttx) .* (ttz.') .* pmn .* deno_re;
-        xzi =  real( sum(sum(chii)) );
-        xzr =  real( sum(sum(chir)) );
+        % Calculate susceptibilities along ba-axis
+        chi_tyx  = (tty1) .* (ttx1.') .* pmn .* deno0;
+        yx = sum(sum(chi_tyx));
 
-% Calculate susceptibilities yx
-        chii  = (tty) .* (ttx.') .* pmn .* deno_im;
-        chir = (tty) .* (ttx.') .* pmn .* deno_re;
-        yxi =  real( sum(sum(chii)) );
-        yxr =  real( sum(sum(chir)) ); 
+        % Calculate susceptibilities along bc-axis
+        chi_tyz  = (tty1) .* (ttz1.') .* pmn .* deno0;
+        yz = sum(sum(chi_tyz));
 
-% Calculate susceptibilities yy
-        chii  = (tty) .* (tty.') .* pmn .* deno_im;
-        chir = (tty) .* (tty.') .* pmn .* deno_re;
-        yyi =  real( sum(sum(chii)) );
-        yyr =  real( sum(sum(chir)) );   
+        % Calculate susceptibilities along ca-axis
+        chi_tzx  = (ttz1) .* (ttx1.') .* pmn .* deno0;
+        zx = sum(sum(chi_tzx));
 
-% Calculate susceptibilities yz
-        chii  = (tty) .* (ttz.') .* pmn .* deno_im;
-        chir = (tty) .* (ttz.') .* pmn .* deno_re;
-        yzi =  real( sum(sum(chii)) );
-        yzr =  real( sum(sum(chir)) );
+        % Calculate susceptibilities along cb-axis
+        chi_tzy  = (ttz1) .* (tty1.') .* pmn .* deno0;
+        zy = sum(sum(chi_tzy));
 
-% Calculate susceptibilities zx
-        chii  = (ttz) .* (ttx.') .* pmn .* deno_im;
-        chir = (ttz) .* (ttx.') .* pmn .* deno_re;
-        zxi =  real( sum(sum(chii)) );
-        zxr =  real( sum(sum(chir)) ); 
-
-% Calculate susceptibilities zy
-        chii  = (ttz) .* (tty.') .* pmn .* deno_im;
-        chir = (ttz) .* (tty.') .* pmn .* deno_re;
-        zyi =  real( sum(sum(chii)) );
-        zyr =  real( sum(sum(chir)) );   
-
-% Calculate susceptibilities zz
-        chii  = (ttz) .* (ttz.') .* pmn .* deno_im;
-        chir = (ttz) .* (ttz.') .* pmn .* deno_re;
-        zzi =  real( sum(sum(chii)) );
-        zzr =  real( sum(sum(chir)) );
-
-    xr = [xxr xyr xzr
-          yxr yyr yzr
-          zxr zyr zzr]; % Real part of susceptibility
-    xi = [xxi xyi xzi
-          yxi yyi yzi
-          zxi zyi zzi]; % Imaginary part of susceptibility
-
-    chi0(:,:,ii,jj) = xr + 1i.*xi;
+        chi0(:,:,ii,jj) = [xx xy xz
+                           yx yy yz
+                           zx zy zz];
     end
 end
 end
 
-function [chiq, RPA_deno] = RPA_chi(ion, freq_total, field, qvec, chi0)
+function [chiq, pole, RPA_deno] = RPA_chi(ion, freq_total, field, qvec, chi0)
 unitN = size(ion.tau,1); % Number of magnetic atoms in one unit cell
 muB = 9.274e-24; % [J/T]
 mu0 = 4e-7*pi; % [H/m]
@@ -272,6 +241,17 @@ end
 chiq = squeeze(chiq);
 RPA_deno = squeeze(deno);
 
+chizq = squeeze(mag2db(imag(chiq(3,3,:,:))));
+[~,p0] = findpeaks(chizq(:,1)); % determine the maximum number of poles
+pole = zeros(size(fields,1), length(p0));
+pole(1,:) = p0;
+for ii = 2:size(fields,1)
+    [~,loc] = findpeaks(chizq(:,ii));
+    for jj = 1:length(loc)
+        pole(ii,jj) = freq_total(loc(jj));
+    end
+end
+end
 
 % subs = ["xx", "yy", "zz"];
 % for ii = 1:3
@@ -303,4 +283,3 @@ RPA_deno = squeeze(deno);
 %         title(['Imaginary part of \chi_',char(subs(ii)),'^{RPA}'])
 %     end
 % end
-end

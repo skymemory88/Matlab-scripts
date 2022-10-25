@@ -1,7 +1,7 @@
-function Hcf = Crystal_field(J)
+function Hcf = CF_simple(J)
 % Crystal field parameter coefficients:
-% B = [-130 0.65 7.2 0 -0.055 -0.0084]/1e3; %[meV] converted from Romanova, Mag Res Sol 8, 1 (2006)
-B = [-57.9   0.309   3.51   0.000540   0.0532   0.0125]; % refined frmo Phys. Rev. B 92, 144422 (2015)
+B = [-60.0   0.350   3.60   0.00   0.000400   0.0655   0.0098]; % Ho
+% B = [-60.0   0.350   3.60   0.00   0.000400   0.0700   0.0098]; % Ho -- Phys. Rev. B 75, 054426 (2007)
 
 % Define operators:
 Jz=diag(J:-1:-J);
@@ -22,4 +22,4 @@ O60=231*Jz^6-(315*X-735)*Jz^4+(105*X^2-525*X+294)*Jz^2+(-5*X^3+40*X^2-60*X)*eye(
 O64c=0.25*((11*Jz^2-X*eye(n)-38*eye(n))*(Jp^4+Jm^4)+(Jp^4+Jm^4)*(11*Jz^2-X*eye(n)-38*eye(n)));
 O64s=-1i*0.25*((11*Jz^2-X*eye(n)-38*eye(n))*(Jp^4-Jm^4)+(Jp^4-Jm^4)*(11*Jz^2-X*eye(n)-38*eye(n)));
 
-Hcf=B(1)*O20+B(2)*O40+B(3)*O44+B(4)*O60+B(5)*O64c+B(6)*O64s;
+Hcf = B(1)*O20+B(2)*O40+B(3)*O44+B(4)*O60+B(5)*O64c+B(6)*O64s;
