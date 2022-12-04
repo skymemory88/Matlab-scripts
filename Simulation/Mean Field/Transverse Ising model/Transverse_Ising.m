@@ -11,49 +11,53 @@ sigy = [ 0   1i
 sigz = [1   0
         0  -1];
 
-Sx = 1/2.*sigx;
-Sy = 1/2.*sigy;
-Sz = 1/2.*sigz;
+J = 1/2; % electronic spin length
+Sx = J * sigx;
+Sy = J * sigy;
+Sz = J * sigz;
 
-Ix = 1/2.*sigx;
-Iy = 1/2.*sigy;
-Iz = 1/2.*sigz;
+I = 1/2; % nuclear spin length
+Ix = I * sigx;
+Iy = I * sigy;
+Iz = I * sigz;
 
 % N = 100; % set interaction range
-D = 1; % setting dimensions
-k = 0.0862875; % Boltzmann coefficient
-J = 0.585; % coupling strength
+D = 3; % setting dimensions
+kB = 0.0862875; % Boltzmann coefficient
+% Jij = -0.585; % coupling strength
+Jij = -1; % coupling strength
+eMeas = abs(Jij); % energy normalize agains coupling strength
 
 minField = 0.00;
-maxField = 6.00;
+maxField = 0.60;
 hT = linspace(minField, maxField, 600);
 
 minTemp = 0.01;
-maxTemp = 3.00;
+maxTemp = 3.0;
 temp = linspace(minTemp, maxTemp, 800);
 
 vector = zeros(length(hT)*length(temp),3);
 map = zeros(length(hT), length(temp));
 
 delta = 1e-5;
-iterator = 1;
 A = 0.0;
-Zee = 0.08;
+% Zee = 0.08; % scale the Zeeman interaction strength
+Zee = 1;
 newAvSz = 0;
 
 for ii = 1:length(hT)
-    for jj = 1:length(temp)
+    parfor jj = 1:length(temp)
         avSz = 0.1; %initial guess of average Sz
-        beta = 1/(k*temp(jj));
+        beta = 1/(kB*temp(jj));
         while true
             if A ~= 0 % Case: finite hyperfine interaction
-%                 Hamlt = -J*avSz*kron(eye(2),Sz) + hT*kron(eye(2),Sx) + A.*(kron(Ix,Sx)+kron(Iy,Sy)+kron(Iz,Sz));
-                Hamlt = -J*avSz*kron(eye(2),Sz) + Zee*hT(ii)*kron(eye(2),Sx) + A.*(kron(Ix,Sx)+kron(Iy,Sy)+kron(Iz,Sz));
+%                 Hamlt = Jij*avSz*kron(eye(2),Sz) - hT*kron(eye(2),Sx) + A.*(kron(Ix,Sx)+kron(Iy,Sy)+kron(Iz,Sz));
+                Hamlt = Jij*avSz*kron(eye(2),Sz) - Zee*hT(ii)*kron(eye(2),Sx) + A.*(kron(Ix,Sx)+kron(Iy,Sy)+kron(Iz,Sz));
                 [wav, En] = eig(Hamlt);
                 Z = trace(exp(-beta.*En)); % Calculate the partition function weight
                 newAvSz = diag(exp(-beta*En))'*diag(wav'*kron(eye(2),Sz)*wav)/Z; % Direct product by two because of the two neighbours
             else % Case: no hyperfine interaction
-                Hamlt = -J*avSz*Sz + Zee*hT(ii)*Sx;
+                Hamlt = Jij*avSz*Sz - Zee*hT(ii)*Sx;
                 [wav, En] = eig(Hamlt);
                 Z = trace(exp(-beta.*En)); % Calculate the partition function weight
                 newAvSz = diag(exp(-beta*En))'*diag(wav'*Sz*wav)/Z; % Calculate the expectation value of Jz
@@ -64,12 +68,8 @@ for ii = 1:length(hT)
                 avSz = newAvSz;
             end
         end
-        vector(iterator,:) = [temp(jj), hT(ii), avSz];
+        vector(jj,:) = [temp(jj), hT(ii), avSz];
         map(ii,jj) = avSz;
-        iterator = iterator + 1;
-        %if mod(iterater, 1000) == 0;
-        %    iterater, temp, hT
-        %end
     end
 end
 
@@ -96,7 +96,7 @@ for ii = 1:length(hT)
     end
 end
 BB = hT(Tc~=0)'; % remove zeros and nonsensical values
-phB = [TT nonzeros(Bc); nonzeros(Tc) BB]./J; % Phase boundary
+phB = [kB*TT nonzeros(Bc); kB*nonzeros(Tc) BB]./eMeas; % Phase boundary
 
 figure
 box on
@@ -105,15 +105,16 @@ switch Options.plot
     case 1
         phase = scatter3(vector(:,1),vector(:,2),vector(:,3),15,vector(:,3),'filled');
         view([0 90]);
+        plot(phB(:,1), phB(:,2), zeros(size(phB,1),1), '.r');
     case 2
-        temps = repmat(temp./J, length(hT), 1);
-        fields = repmat(hT'./J, 1, length(temp));
+        temps = repmat(kB*temp./eMeas, length(hT), 1);
+        fields = repmat(hT'./eMeas, 1, length(temp));
         phase = pcolor(temps, fields, map);
         phase.EdgeColor = 'none';
         plot(phB(:,1), phB(:,2), '.r');
 end
 set(gca, 'FontSize', 12)
-xlim([0 maxTemp/J])
-ylim([0 maxField/J])
-xlabel('Temperature (in unit of J)')
-ylabel('Magnetic Field (in unit of J)')
+xlim([0 maxTemp/eMeas])
+ylim([0 maxField/eMeas])
+xlabel('|T/J_{ij}|')
+ylabel('|B/J_{ij}|')

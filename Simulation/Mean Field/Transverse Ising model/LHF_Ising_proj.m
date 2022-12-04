@@ -2,7 +2,7 @@
 
 Options.damp = 0.2; % update damping
 Options.RPA = true; % RPA pole searching
-    omega = linspace(0,195,801); % [GHz] frequency range
+    omega = linspace(0,35,5001); % [GHz] frequency range
 Options.plot = true; % Option to plot the results
 Options.save = false; % Option to save results
 Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
@@ -20,15 +20,19 @@ f2E = hbar*2*pi*10^9*J2meV; % [meV/GHz]
 unitN = 4; % number of sites per unit cell
 
 % Crystal field parameter coefficients:
-% ion.B = [-60.0   0.350   3.60   0.00   0.000400   0.0655   0.0098]; % Ho
 ion.B = [-60.0   0.350   3.60   0.00   0.000400   0.0700   0.0098]; % Ho -- Phys. Rev. B 75, 054426 (2007)
+% ion.B = [-60.0   0.350   3.60   0.00   0.000400   0.0655   0.0098]; % Ho -- PRB 2007 mod
+% ion.B = [-57.9   0.309   3.60   0.00   0.000540   0.0570   0.0130]; % Ho -- PRB 2015 mod
 ion.B = ion.B ./ 1e3; % ueV to meV
+
 % ion.cfRot = 11; % CF rotation
 ion.cfRot = 0;
+
 ion.J = 8; % Ho eletronic spin
 ion.gLande = 1.25; % Lande factor
 ion.I = 7/2; % Ho nuclear spin
 ion.nLande = 1.192; % nuclear Lande factor
+
 ion.hyp = -3.36e-3 .* [1 1 1]; % [meV] hyperfine interaction strength
 % ion.hyp = [0 0 0]; % remove hyperfine interaction
 ion.ex = 0.0001; % [meV] exchange interaction strength
@@ -54,13 +58,13 @@ ion.tau = [ 0    0    0
            1/2  1/2  1/2
            1/2   0   3/4];
 
-Bx = linspace(0,9,601); % transverse field along x
-By = zeros(size(Bx));
-Bz = zeros(size(Bx));
+temp = 0; % temperature
 qvec = [0 0 0];
 omega = omega*f2E;
 
-temp = 0; % temperature
+Bx = linspace(0,17,801); % transverse field along x
+By = zeros(size(Bx));
+Bz = zeros(size(Bx));
 fields = [Bx' By' Bz'];
 
 % Pauli matrices
@@ -126,6 +130,7 @@ Bx = double.empty(size(fields,1), 0);
 if any(ion.hyp); Is = double.empty(size(fields,1), 3, 0); end
 deno = double.empty(size(fields,1), length(omega), 0);
 poles = zeros(size(fields,1), size(sigz,1)*Ispan-1);
+dE = zeros(size(fields,1), size(sigz,1)*Ispan-1);
 eigenE = double.empty(size(fields,1), size(sigz,1)*Ispan, 0);
 eigenW = double.empty(size(fields,1), size(sigz,1)*Ispan, size(sigz,1)*Ispan, 0);
 for nb = 1:size(fields,1)
@@ -161,7 +166,6 @@ for nb = 1:size(fields,1)
     
     % compute coefficients for the 2x2 spin operators
     Czz(nb) = mean(linsolve(sigz, diag(jz)));
-%     Jij = Czz(ii)^2 * Jij; % spin-spin interaction scaling
     on_coef = linsolve([1  1; 1 -1], diag(jx)); % decompose the diagonal elements
     Cx(nb) = on_coef(1);
     Cxz(nb) = on_coef(2);
@@ -177,7 +181,7 @@ for nb = 1:size(fields,1)
     Cyy(nb) = off_coef(2);    
     
     Ht = ket'*uni'*ham0*uni*ket; % (Hcf + Hx) hamiltonian
-    Bx(nb,1) = mean([abs(Ht(2,1)) abs(Ht(1,2))]);
+    Bx(nb,1) = 2*mean([abs(Ht(2,1)) abs(Ht(1,2))]); % factor '2' for Ising spin
     S_mf = [0 0 jz(1)]; % initial guesses for electronic spin operators
     beta = 1/(kB*temp); % Boltzman constant
     En_old = 0; % update mark between iteractions
@@ -264,18 +268,22 @@ for nb = 1:size(fields,1)
             end
         end
     end
-
-    jmn = wav' * jz * wav;
-    jmn = jmn(1, 2:end); % off diagonal elements between <0| and |n>
-    J0 = Jij(3,3); % Ising element of q=0 interaction tensor
-    dE0 = EnN(2:end); % MF excitation modes at 0 K
-    parfor nw = 1:length(omega) % search for RPA poles
-        dE2 = (dE0.^2 - omega(nw)^2);
-        deno(nb,nw,1) = prod(dE2)*(1 - J0 * (2*dE0') * (abs(jmn').^2 ./dE2));
+    if Options.RPA == true
+        jmn = wav' * jz * wav;
+        jmn = jmn(2:end,1); % off diagonal elements between <n| and |0>
+        J0 = Jij(3,3); % Ising element of q=0 interaction tensor
+        dE0 = EnN(2:end); % MF excitation modes at 0 K
+        parfor nw = 1:length(omega) % search for RPA poles
+            dE2 = (dE0.^2 - omega(nw)^2);
+            deno(nb,nw,1) = prod(dE2)*(1 - J0 * (2*dE0') * (abs(jmn).^2 ./dE2));
+        end
+        pks = squeeze(mag2db(1./abs(deno(nb,:,1)))); % search for poles
+        [~,loc] = findpeaks(pks, 'SortStr', 'none');
+        poles(nb,1:length(loc)) = flip(omega(loc));
+        for ii = 2:size(poles,2)
+            dE(:,ii-1) = poles(:,ii-1)-poles(:,ii);
+        end
     end
-    pks = squeeze(mag2db(1./abs(deno(nb,:,1)))); % search for poles
-    [~,loc] = findpeaks(pks, 'SortStr', 'none');
-    poles(nb,1:length(loc)) = flip(omega(loc));
 end
 
 if Options.plot == true
@@ -296,6 +304,15 @@ if Options.plot == true
     ylabel('\langle J_\alpha\rangle')
     legend('J_x','J_y','J_z')
     set(fig2.CurrentAxes, 'FontSize', 14);
+    xlim([0 max(vecnorm(fields,1,2))])
+
+    fig3 = figure;
+    plot(fields(:,1), Bx, '-', 'LineWidth', 1.5);
+    xlim([min(fields(:,1)) max(fields(:,1))])
+    xlabel('Transverse Field (T)')
+    ylabel('Energy (meV)')
+    legend('$\Delta(B_\perp)$','interpreter','latex')
+    set(fig3.CurrentAxes, 'FontSize', 14);
     xlim([0 max(vecnorm(fields,1,2))])
 
     if Options.RPA == true

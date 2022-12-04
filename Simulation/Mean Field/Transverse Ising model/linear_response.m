@@ -1,5 +1,6 @@
 function varargout = linear_response(varargin)
-Options.unit = 'GHz'; % frequency (NOT energy) unit
+Options.unit = 'meV'; % frequency (NOT energy) unit
+% Options.unit = 'GHz'; % frequency (NOT energy) unit
 Options.RPA = true;
 filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
         '\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities',...
@@ -28,10 +29,11 @@ elseif nargin == 5
     Options.saving = varargin{5};
 
     load_name = sprintf('%1$3.3fK_*T_hp=%2$.2f', temp, hyp);
-%     load_name = strcat('Hscan_toy_', load_name, '.mat');
-    load_name = strcat('Hscan_LHF-Ising_', load_name, '.mat');
+    load_name = strcat('Hscan_toy_', load_name, '.mat');
+%     load_name = strcat('Hscan_LHF-Ising_', load_name, '.mat');
     MF_file = dir( fullfile(filepath, load_name) );
-    load([filepath MF_file.name],'ion','-mat','eee','fff','vvv');
+    load([filepath MF_file(1).name],'ion','-mat','eee','fff','vvv');
+    eee = squeeze(eee);
     fields = fff;
     En = eee-min(eee,[],2); % normalize the eigen-energies
     wav = vvv;
@@ -46,7 +48,8 @@ elseif nargin == 5
     if Options.saving == true % Save the susceptibilities
         file_part = sprintf('%1$3.3fK_%2$.2e_%3$.3f-%4$.3fGHz', temp,...
             gama, min(freq_total), max(freq_total));
-        save_name = strcat('chi0_LHF-Ising_', file_part, '.mat');
+        save_name = strcat('chi0_toy_', file_part, '.mat');
+%         save_name = strcat('chi0_LHF-Ising_', file_part, '.mat');
         savefile = fullfile(filepath, save_name);
         save(savefile, 'ion', 'temp', 'fields', 'freq_total', 'chi0',...
             'gama', 'Options', '-v7.3');
@@ -59,7 +62,8 @@ if exist('chiq','var')
     if Options.saving == true % Save the susceptibilities
         file_part = sprintf('%1$3.3fK_%2$.2e_%3$.3f-%4$.3fGHz', temp,...
             gama, min(freq_total), max(freq_total));
-        save_name = strcat('RPA_LHF-Ising_', file_part, '.mat');
+        save_name = strcat('RPA_toy_', file_part, '.mat');
+%         save_name = strcat('RPA_LHF-Ising_', file_part, '.mat');
         savefile = fullfile(filepath, save_name);
         save(savefile, 'temp', 'fields', 'freq_total', 'chi0',...
             'gama', 'chiq', 'RPA_deno', 'Options', '-v7.3');
@@ -72,6 +76,7 @@ fprintf('Computing MF susceptibility at T = %.3f K\n', T);
 muB = 9.27401e-24; % Bohr magneton [J/T]
 muN = 5.05078e-27; % Nuclear magneton [J/T]
 J2meV = 6.24151e+21; % Joule to meV
+kB = 8.61733e-2; % Boltzmann constant [meV/K]
 switch Options.unit
     case 'GHz'
         hbar = 1.055E-34; % Reduced Planck constant [J.s]
@@ -135,7 +140,7 @@ for ii = 1:size(freq_total,2) %calculate susceptibility for all frequencies
     for jj = 1:size(field,1) % for debugging
         wav = squeeze ( squeeze(V(jj,:,:,:)) ); % Obtain the corresponding eigen vectors
         ee = squeeze ( squeeze(E(jj,:,:)) ); % Obtain the corresponding eigen energies in meV
-        beta = 1/(T*8.61733E-2); %[meV^-1]
+        beta = 1/(kB*T); %[meV^-1]
         if T == 0
             zz = zeros(size(ee));
             zz(1) = 1;
@@ -218,8 +223,8 @@ switch ion.int
         end
     case 'exchange'
         for jj = 1:size(qvec,1)
-%             Jij(:,:,:,:,jj) = MF_exchange(qvec(jj,:), ion.ex, ion.abc, ion.tau); % [meV] exchange only
-            Jij(:,:,:,:,jj) = exchange(qvec(jj,:), abs(ion.ex), ion.abc, ion.tau);
+            Jij(:,:,:,:,jj) = MF_exchange(qvec(jj,:), ion.ex, ion.abc, ion.tau); % [meV] exchange only
+%             Jij(:,:,:,:,jj) = exchange(qvec(jj,:), abs(ion.ex), ion.abc, ion.tau);
         end
     case 'both'
         for jj = 1:size(qvec,1)
@@ -230,6 +235,7 @@ switch ion.int
         end
 end
 J = sum(sum(Jij,4),3)/unitN; % average over the unit cell
+J = abs(J);
 
 for ii = 1:size(field,1)
     if ismember(ii, [1:round(size(field,1)/5):size(field,1)])

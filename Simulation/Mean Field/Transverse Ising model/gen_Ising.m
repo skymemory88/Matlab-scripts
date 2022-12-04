@@ -1,19 +1,18 @@
-function [ion, eee, dE, Js, Is, Jqs, fff, ttt, vvv] = gen_Ising(ttt, fff, theta, phi, plotopt, saveopt)
+function [ion, eee, dE, Js, Is, fff, ttt, vvv] = gen_Ising(ttt, fff, theta, phi, plotopt, saveopt)
 clearvars -except ttt fff theta phi plotopt saveopt
 format long g;
 
-Options.plot = 1; % 1. 3D scatter plot; 2. 2D color map.
 Options.pProm = 1e-2; % minimum peak prominance for phase boundary search
 Options.intType = 'exchange'; % interaction type: 1. 'exchange' (short range). 2. 'dipole' (long range)
     ion.ex = [-1]; % exchange interaction [meV]
     ion.dpRng = 100; % dipole summation range
 Options.damp = 0.0; % damping factor for the iterative update
-Options.hyperF = true; % Hyperfine interaction option
-    ion.hyp = -[0.1 0.1 1.0]; % Hyperfine interaction [meV]
-Options.RPA = true; % random phase approximation
+Options.hyperF = false; % Hyperfine interaction option
+    ion.hyp = -[0.2 0.2 1.0]; % Hyperfine interaction [meV]
+Options.RPA = false; % random phase approximation
     qz = linspace(0, 1, 200); % q-vector for RPA calculations (0: BZ center, 1: BZ boundary)
     qvec = [zeros(size(qz))' zeros(size(qz))' qz'];
-Options.plot = plotopt;
+Options.plot = plotopt; % 0, no plot; 1. 3D scatter plot; 2. 2D color map.
 Options.save = saveopt;
 Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
         '\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities',...
@@ -23,14 +22,6 @@ if size(fff,1) > length(ttt)
 else
     Options.scanMode = 'temp';
 end
-
-theta = theta*pi/180; % convert to radian, deviation angle from normal vector
-phi = phi*pi/180; % convert to radian, in-plane angle from a/b axis
-
-Bx = fff*cos(phi)*cos(theta);
-By = fff*sin(phi)*cos(theta);
-Bz = fff*sin(theta);
-fff = [Bx' By' Bz'];
 
 ion.prop = 1; % isotope proportion
 ion.J = 1/2;
@@ -62,16 +53,16 @@ if Options.hyperF == true
     Iy = kron(eye(size(sigy,1)), Iy);
     Iz = kron(eye(size(sigz,1)), Iz);
 else
+    ion.I = 0;
     Ix = 0;
     Iy = 0;
     Iz = 0;
-    ion.I = 0;
 end
 
 % lattice constants [Ang]
-ion.abc = [10  0   0;
-           0  10   0;
-           0   0  10];
+ion.abc = [1   0   0;
+           0   0   0;
+           0   0   0];
 % ion.abc = [5.175    0      0;
 %              0    5.175    0;
 %              0      0    10.75]; % LiHoF4 lattice
@@ -101,7 +92,6 @@ Jq = zeros(3,3,size(qvec,1));
 switch Options.intType
     case 'exchange'
         eMeas = abs(max(ion.ex)); % reference energy
-%         Jij = diag([0  0  ion.ex]); % Ising chain
         [Jij, ~] = MF_exchange([0 0 0], ion.ex, ion.abc, ion.tau); % exchange coupling sum
         Jij = Jij .* ion.mat; % truncate interaction matrix
         ion.int = 'exchange';
@@ -138,6 +128,13 @@ switch Options.intType
         end
 
 end
+theta = theta*pi/180; % convert to radian, deviation angle from normal vector
+phi = phi*pi/180; % convert to radian, in-plane angle from a/b axis
+
+Bx = fff*cos(phi)*cos(theta) * eMeas;
+By = fff*sin(phi)*cos(theta) * eMeas;
+Bz = fff*sin(theta) * eMeas;
+fff = [Bx' By' Bz'] ./ eMeas;
 
 if Options.hyperF == true
     A = eMeas * ion.hyp;
@@ -149,10 +146,10 @@ delta = 1e-7; % convergence criteria
 iterator = 1; % linear iterator
 Js = zeros(size(fff,1), length(ttt), 3);
 Is = zeros(size(fff,1), length(ttt), 3);
-Jqs = zeros(size(fff,1), length(ttt), 1);
 vector = zeros(size(fff,1)*length(ttt), 3);
 map = zeros(size(fff,1), length(ttt));
 eee = double.empty(size(fff,1), length(ttt), size(Sz,2), 0);
+dE = zeros(nchoosek(size(Sz,2),2),size(fff,1), length(ttt)); % excitation modes
 vvv = double.empty(size(fff,1), length(ttt), size(Sz,2), size(Sz,2), 0);
 for ii = 1:size(fff,1)
     for jj = 1:length(ttt)
@@ -161,7 +158,7 @@ for ii = 1:size(fff,1)
         counter = 1; % while loop iterator
         En_old = 0;
         while true
-            h_int = ion.gLande^2 * S_mf * Jij; % spin-spin interaction part 1
+            h_int = S_mf * Jij; % spin-spin interaction part 1
             if any(A) % Case: finite hyperfine interaction
                 Hint = h_int(1)*Sx + h_int(2)*Sy + h_int(3)*Sz; % spin-spin interaction
                 Hzee =  -ion.gLande * (Bx(ii)*Sx + By(ii)*Sy + Bz(ii)*Sz); % Zeeman interaction
@@ -169,7 +166,7 @@ for ii = 1:size(fff,1)
                 Hyp = A(1)*Sx*Ix + A(2)*Sy*Iy + A(3)*Sz*Iz; % hyperfine interaction
                 ham = Hint + Hzee + HzeeI + Hyp;
                 [wav, En] = eig(ham);
-                En = real(diag(En));
+                En = squeeze(real(diag(En)));
                 [En, n] = sort(En); % sort the energy in ascending order
                 wav = wav(:,n); % sort the eigen-vector accordingly
                 eee(ii,jj,:,1) = squeeze(En);
@@ -177,30 +174,31 @@ for ii = 1:size(fff,1)
                 En = En - min(En); % normalize the eigenenergy to the ground state
                 Z = exp(-En*beta)/sum(exp(-En*beta)); % Calculate the partition function weight
                 if ttt(jj) == 0
-                    newAvSx = real( wav(:,1)'*Sx*wav(:,1) ); % Calculate the expectation value of Jz
-                    newAvSy = real( wav(:,1)'*Sy*wav(:,1) ); % Calculate the expectation value of Jz
-                    newAvSz = real( wav(:,1)'*Sz*wav(:,1) ); % Calculate the expectation value of Jz
+                    newAvSx = real( wav(:,1)' *Sx* wav(:,1) ); % Calculate the expectation value of Jz
+                    newAvSy = real( wav(:,1)' *Sy* wav(:,1) ); % Calculate the expectation value of Jz
+                    newAvSz = real( wav(:,1)' *Sz* wav(:,1) ); % Calculate the expectation value of Jz
                 
-                    newAvIx = real(wav(:,1)'*Ix*wav(:,1))'; % Calculate the expectation value of Jz
-                    newAvIy = real(wav(:,1)'*Iy*wav(:,1))'; % Calculate the expectation value of Jz
-                    newAvIz = real(wav(:,1)'*Iz*wav(:,1))'; % Calculate the expectation value of Jz
+                    newAvIx = real(wav(:,1)' *Ix* wav(:,1))'; % Calculate the expectation value of Jz
+                    newAvIy = real(wav(:,1)' *Iy* wav(:,1))'; % Calculate the expectation value of Jz
+                    newAvIz = real(wav(:,1)' *Iz* wav(:,1))'; % Calculate the expectation value of Jz
                 else
-                    newAvSx = real( diag(wav'*Sx*wav) )'*Z; % Calculate the expectation value of Jz
-                    newAvSy = real( diag(wav'*Sy*wav) )'*Z; % Calculate the expectation value of Jz
-                    newAvSz = real( diag(wav'*Sz*wav) )'*Z; % Calculate the expectation value of Jz
+                    newAvSx = real( diag(wav' *Sx* wav) )'*Z; % Calculate the expectation value of Jz
+                    newAvSy = real( diag(wav' *Sy* wav) )'*Z; % Calculate the expectation value of Jz
+                    newAvSz = real( diag(wav' *Sz* wav) )'*Z; % Calculate the expectation value of Jz
                 
-                    newAvIx = real(wav(:,1)'*Ix*wav(:,1))'; % Calculate the expectation value of Jz
-                    newAvIy = real(wav(:,1)'*Iy*wav(:,1))'; % Calculate the expectation value of Jz
-                    newAvIz = real(wav(:,1)'*Iz*wav(:,1))'; % Calculate the expectation value of Jz
+                    newAvIx = real( diag(wav' *Ix* wav) )'*Z; % Calculate the expectation value of Jz
+                    newAvIy = real( diag(wav' *Iy* wav) )'*Z; % Calculate the expectation value of Jz
+                    newAvIz = real( diag(wav' *Iz* wav) )'*Z; % Calculate the expectation value of Jz
                 end
                 newAvI = [newAvIx  newAvIy  newAvIz];
             else % Case: no hyperfine interaction
 %                 H_ani = 5e-3*fff(ii)* Sz; % anisotropy term
-                Hzee = -ion.gLande * Bx(ii)*eMeas * Sx - ion.gLande * By(ii)*eMeas * Sy - ion.gLande * Bz(ii)*eMeas * Sz;
-                ham = ion.gLande * (h_int(1)*Sx + h_int(2)*Sy + h_int(3)*Sz) + Hzee;
+                Hint = h_int(1)*Sx + h_int(2)*Sy + h_int(3)*Sz; % spin-spin interaction
+                Hzee = -ion.gLande * (Bx(ii)*Sx + By(ii)*Sy + Bz(ii)*Sz);
+                ham = Hint + Hzee;
                 [wav, En] = eig(ham);
-                En = real(diag(En));
-                eee(ii,jj,:,1) = squeeze(En);
+                En = squeeze(real(diag(En)));
+                eee(ii,jj,:,1) = En;
                 vvv(ii,jj,:,:,1) = squeeze(wav);
                 En = En-min(En); % normalize the eigenenergy to the ground state
                 Z = exp(-En*beta)/sum(exp(-En*beta)); % Calculate the partition function weight
@@ -217,6 +215,10 @@ for ii = 1:size(fff,1)
             newAvS = [newAvSx  newAvSy  newAvSz];
                 
             if ~any( abs(En - En_old) >= delta ) && ~any( abs(newAvS(3) - S_mf(3)) >= delta )
+                [en, em] = meshgrid(squeeze(En), squeeze(En));
+                de = triu(en-em);
+                de = unique(de(de>0));
+                dE(:,ii,jj) = padarray(de, size(dE,1)-size(de,1), 'pre');
                 break
             elseif counter > 1e5
                 fprintf('Iteration exceeded limits, dE = %.2e \n', nonzeros(En - En_old));
@@ -226,18 +228,15 @@ for ii = 1:size(fff,1)
                 S_mf = Options.damp*S_mf + (1-Options.damp)*newAvS; % update the order parameter (internal field)
                 counter = counter + 1;
                 if mod(counter, 2e4) == 0
-                   fprintf('Iternation: %u, Magnetic field: %.2f, Temperature: %.2f\n', counter, Bx(ii), ttt(jj)) 
+                   fprintf('Iternation: %u, Magnetic field: %.2f, Temperature: %.2f\n', counter, Bx(ii)/eMeas, ttt(jj)) 
                 end
             end
         end
         Js(ii,jj,:) = S_mf;
         if exist('newAvI','var'); Is(ii,jj,:) = newAvI; end
-        vector(iterator,:) = [ttt(jj), Bx(ii), S_mf(3)]; % Phase diagram with Sz as the order parameter
+        vector(iterator,:) = [kB*ttt(jj)/eMeas, Bx(ii), S_mf(3)]; % Phase diagram with Sz as the order parameter
         map(ii,jj) = S_mf(3); % use Sz as the order parameter
         iterator = iterator + 1;
-        %if mod(iterater, 1000) == 0;
-        %    iterater, temp, hT
-        %end
     end
     if any(ismember(round(linspace(1,size(fff,1),20)),ii))
         fprintf('Calculating for |B/J| = %.2f, progress: %.1f%% \n', Bx(ii), ii/size(fff,1)*100);
@@ -245,19 +244,11 @@ for ii = 1:size(fff,1)
 end
 Js = squeeze(Js);
 Is = squeeze(Is);
-eee = squeeze(eee); % eigen-states
-ee = eee - min(eee,[],2); % normalize to the ground state energy
-dE = zeros(nchoosek(size(ee,2),2),size(fff,1)); % excitation modes
-for ii = 1:size(fff,2)
-    [en, em] = meshgrid(squeeze(ee(ii,:)),squeeze(ee(ii,:)));
-    delta = triu(en-em);
-    delta = delta(delta>0);
-    dE(:,ii) = padarray(delta, size(dE,1)-size(delta,1), 'pre');
-%     dE(:,ii) = delta(:);
-end
+dE = squeeze(dE);
 vvv = squeeze(vvv);
+ttt = kB*ttt/eMeas;
 
-if Options.plot == true
+if Options.plot ~= 0
     Bc = zeros(length(ttt),1); % critical fields (at fixed temperatre)
     for ii = 1:length(ttt)
         dif = real(diff(map(:,ii))); % crude differentiation
@@ -281,7 +272,7 @@ if Options.plot == true
         end
     end
     BB = Bx(Tc~=0)'; % remove zeros and nonsensical values
-    phB = [TT nonzeros(Bc); nonzeros(Tc) BB]./eMeas; % Phase boundary
+    phB = [kB*TT./eMeas nonzeros(Bc); kB*nonzeros(Tc)./eMeas BB]; % Phase boundary
 
     figure
     box on
@@ -290,9 +281,10 @@ if Options.plot == true
         case 1
             scatter3(vector(:,1),vector(:,2),vector(:,3),15,vector(:,3),'filled');
             view([0 90]);
+            scatter3(phB(:,1), phB(:,2), ones(size(phB,1),1), '.r');
         case 2
-            temps = repmat(ttt, size(fff,1), 1);
-            fields = repmat(Bx, 1, length(ttt));
+            temps = repmat(kB*ttt/eMeas, size(fff,1), 1);
+            fields = repmat(Bx', 1, length(ttt));
             phase = pcolor(temps, fields, map);
             phase.EdgeColor = 'none';
             plot(phB(:,1), phB(:,2), '.r');
@@ -306,6 +298,6 @@ if Options.save == true
     tit = strcat("Hscan_toy_", sprintf('%1$3.3fK_%2$.1fT_hp=%3$.2f.mat',...
         ttt, max(vecnorm(fff,2,2)), any(ion.hyp)));
     fileobj = fullfile(Options.filepath,char(tit));
-    save(fileobj,'ttt','fff','eee','vvv','ion','-v7.3')
+    save(fileobj,'ttt','fff','eee','vvv','ion','Js','Is','-v7.3')
 end
 end
