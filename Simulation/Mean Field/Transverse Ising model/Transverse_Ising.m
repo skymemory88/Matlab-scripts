@@ -54,11 +54,17 @@ for ii = 1:length(hT)
 %                 Hamlt = Jij*avSz*kron(eye(2),Sz) - hT*kron(eye(2),Sx) + A.*(kron(Ix,Sx)+kron(Iy,Sy)+kron(Iz,Sz));
                 Hamlt = Jij*avSz*kron(eye(2),Sz) - Zee*hT(ii)*kron(eye(2),Sx) + A.*(kron(Ix,Sx)+kron(Iy,Sy)+kron(Iz,Sz));
                 [wav, En] = eig(Hamlt);
+                En = squeeze(real(diag(En)));
+                [En, n] = sort(En); % sort the energy from lowest to the highest
+                wav = wav(:,n); % sort the eigen-vectors in its basis accordingly
                 Z = trace(exp(-beta.*En)); % Calculate the partition function weight
                 newAvSz = diag(exp(-beta*En))'*diag(wav'*kron(eye(2),Sz)*wav)/Z; % Direct product by two because of the two neighbours
             else % Case: no hyperfine interaction
                 Hamlt = Jij*avSz*Sz - Zee*hT(ii)*Sx;
                 [wav, En] = eig(Hamlt);
+                En = squeeze(real(diag(En)));
+                [En, n] = sort(En); % sort the energy from lowest to the highest
+                wav = wav(:,n); % sort the eigen-vectors in its basis accordingly
                 Z = trace(exp(-beta.*En)); % Calculate the partition function weight
                 newAvSz = diag(exp(-beta*En))'*diag(wav'*Sz*wav)/Z; % Calculate the expectation value of Jz
             end
