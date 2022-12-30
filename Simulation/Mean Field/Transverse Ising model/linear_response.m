@@ -1,62 +1,50 @@
 function varargout = linear_response(varargin)
+% input: temperature, linewidth, frequency (range), hyperfine, saving option
+% output: field (range), frequency (range), chi0, chiq, RPA denominator
+
 Options.unit = 'meV'; % frequency (NOT energy) unit
 % Options.unit = 'GHz'; % frequency (NOT energy) unit
 Options.RPA = true;
 filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
         '\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities',...
         '\toy_model\'];
+temp = varargin{1};
+gama = varargin{2};
+freq_total = varargin{3};
+hyp = varargin{4};
+Options.saving = varargin{5};
 
-if nargin == 4
-    temp = varargin{1};
-    gama = varargin{2};
-    qvec = varargin{3};
-    Options.saving = varargin{4};
-
-    load_name = sprintf('%1$3.3fK_%2$.2e_*GHz', temp, gama);
-    load_name = strcat('chi0_toy_', load_name, '.mat');
-    chi_file = dir( fullfile(filepath, load_name) );
-    load([filepath chi_file.name],'-mat','ion','fields','freq_total','chi0');
-
-    [chiq, RPA_deno] = RPA_chi(ion, freq_total, fields, qvec, chi0); % calculate RPA susceptibility
-    varargout{1} = fields;
-    varargout{2} = freq_total;
-    varargout{3} = chiq;
-elseif nargin == 5
-    temp = varargin{1};
-    freq_total = varargin{2};
-    gama = varargin{3};
-    hyp = varargin{4};
-    Options.saving = varargin{5};
-
-    load_name = sprintf('%1$3.3fK_*T_hp=%2$.2f', temp, hyp);
-    load_name = strcat('Hscan_toy_', load_name, '.mat');
+load_name = sprintf('%1$3.3fK_*T_hp=%2$.2f', temp, hyp);
+load_name = strcat('Hscan_toy_', load_name, '.mat');
 %     load_name = strcat('Hscan_LHF-Ising_', load_name, '.mat');
-    MF_file = dir( fullfile(filepath, load_name) );
-    load([filepath MF_file(1).name],'ion','-mat','eee','fff','vvv');
-    eee = squeeze(eee);
-    fields = fff;
-    En = eee-min(eee,[],2); % normalize the eigen-energies
-    wav = vvv;
+MF_file = dir( fullfile(filepath, load_name) );
+load([filepath MF_file(1).name],'ion','-mat','eee','fff','vvv');
+eee = squeeze(eee);
+fields = fff;
+En = eee-min(eee,[],2); % normalize the eigen-energies
+wav = vvv;
 
-    [chi0] = MF_chi(ion, freq_total, fields, En, temp, wav, gama, Options);
-    if Options.RPA == true
-        [chiq, RPA_deno] = RPA_chi(ion, freq_total, fields, [0 0 0], chi0); % calculate RPA susceptibility
-    end
-    varargout{1} = fields;
-    varargout{2} = freq_total;
-    varargout{3} = chi0;
-    if Options.saving == true % Save the susceptibilities
-        file_part = sprintf('%1$3.3fK_%2$.2e_%3$.3f-%4$.3fGHz', temp,...
-            gama, min(freq_total), max(freq_total));
-        save_name = strcat('chi0_toy_', file_part, '.mat');
-%         save_name = strcat('chi0_LHF-Ising_', file_part, '.mat');
-        savefile = fullfile(filepath, save_name);
-        save(savefile, 'ion', 'temp', 'fields', 'freq_total', 'chi0',...
-            'gama', 'Options', '-v7.3');
-    end
+[chi] = MF_chi(ion, freq_total, fields, En, temp, wav, gama, Options);
+if Options.RPA == true
+    [chiq, RPA_deno] = RPA_chi(ion, freq_total, fields, [0 0 0], chi); % calculate RPA susceptibility
+end
+varargout{1} = fields;
+varargout{2} = freq_total;
+varargout{3} = chi;
+if Options.saving == true % Save the susceptibilities
+    fields = fields';
+    file_part = sprintf('%1$3.3fK_%2$.2e_%3$.3f-%4$.3fGHz_hyp=%5$.2f', temp,...
+        gama, min(freq_total), max(freq_total), hyp);
+    save_name = strcat('chi0_toy_', file_part, '.mat');
+    %         save_name = strcat('chi0_LHF-Ising_', file_part, '.mat');
+    savefile = fullfile(filepath, save_name);
+    save(savefile, 'ion', 'temp', 'fields', 'freq_total', 'chi',...
+        'gama', 'Options', '-v7.3');
 end
 
 if exist('chiq','var')
+    chi0 = chi;
+    chi = chiq;
     varargout{4} = chiq;
     varargout{5} = RPA_deno;
     if Options.saving == true % Save the susceptibilities
@@ -66,7 +54,7 @@ if exist('chiq','var')
 %         save_name = strcat('RPA_LHF-Ising_', file_part, '.mat');
         savefile = fullfile(filepath, save_name);
         save(savefile, 'temp', 'fields', 'freq_total', 'chi0',...
-            'gama', 'chiq', 'RPA_deno', 'Options', '-v7.3');
+            'gama', 'chi', 'RPA_deno', 'Options', '-v7.3');
     end
 end
 end
@@ -133,32 +121,38 @@ else
 end
 
 chi0 = zeros(3,3,length(freq_total(1,:)),size(field,1));
-for ii = 1:size(freq_total,2) %calculate susceptibility for all frequencies
-    freq = freq_total(ii);
-    omega = freq*f2E; % define frequency sweep range (meV)
-%     parfor jj = 1:size(field,1) % calculate susceptibility for all fields
-    for jj = 1:size(field,1) % for debugging
-        wav = squeeze ( squeeze(V(jj,:,:,:)) ); % Obtain the corresponding eigen vectors
-        ee = squeeze ( squeeze(E(jj,:,:)) ); % Obtain the corresponding eigen energies in meV
-        beta = 1/(kB*T); %[meV^-1]
-        if T == 0
-            zz = zeros(size(ee));
-            zz(1) = 1;
-        elseif T > 0
-            z = sum(exp(-beta*ee));
-            zz = exp(-beta*ee)/z;
-        end
-        [pn, pm] = meshgrid(zz,zz);
-        pmn = pn - pm; % population factor
-%         pmn = ones(size(pn)); % for debugging
-        [en, em] = meshgrid(ee,ee);
-        dE = em-en-omega;
-        gamma = ones(size(dE))*gama;
+for ii = 1:size(field,1) % calculate susceptibility for all fields
+    wav = squeeze ( squeeze(V(ii,:,:,:)) ); % Obtain the corresponding eigen vectors
+    ee = squeeze ( squeeze(E(ii,:,:)) ); % Obtain the corresponding eigen energies in meV
+    beta = 1/(kB*T); %[meV^-1]
+    if T == 0
+        zz = zeros(size(ee));
+        zz(1) = 1;
+    elseif T > 0
+        z = sum(exp(-beta*ee));
+        zz = exp(-beta*ee)/z;
+    end
+    [pn, pm] = meshgrid(zz,zz);
+    pmn = pn - pm; % population factor
+%     pmn = ones(size(pn)); % for debugging
+    [en, em] = meshgrid(ee, ee);
+    parfor jj = 1:size(freq_total,2) %calculate susceptibility for all frequencies
+        freq = freq_total(jj);
+        dE = em - en - freq*f2E; % [meV]
+        gamma = ones(size(dE)) * gama;
         deno0 = 1 ./ (dE - 1i*gamma); % [meV^-1]
 
-        ttx1  = wav'  * (Cxx(jj) * JhT.x + NUCf/ELEf * IhT.x) * wav;
-        tty1  = wav'  * (Cyy(jj) * JhT.y + NUCf/ELEf * IhT.y) * wav;
-        ttz1  = wav'  * (Czz(jj) * JhT.z + NUCf/ELEf * IhT.z) * wav;
+        ttx1  = wav'  * (Cxx(ii) * JhT.x + NUCf/ELEf * IhT.x) * wav;
+        tty1  = wav'  * (Cyy(ii) * JhT.y + NUCf/ELEf * IhT.y) * wav;
+        ttz1  = wav'  * (Czz(ii) * JhT.z + NUCf/ELEf * IhT.z) * wav;
+
+%         ttx1  = wav'  * (Cxx(ii) * JhT.x) * wav;
+%         tty1  = wav'  * (Cyy(ii) * JhT.y) * wav;
+%         ttz1  = wav'  * (Czz(ii) * JhT.z) * wav;
+        
+%         ttx1  = wav'  * (IhT.x) * wav;
+%         tty1  = wav'  * (IhT.y) * wav;
+%         ttz1  = wav'  * (IhT.z) * wav;
 
         % Calculate susceptibilities along a-axis
         chi_tx  = (ttx1) .* (ttx1.') .* pmn .* deno0;
@@ -196,7 +190,7 @@ for ii = 1:size(freq_total,2) %calculate susceptibility for all frequencies
         chi_tzy  = (ttz1) .* (tty1.') .* pmn .* deno0;
         zy = sum(sum(chi_tzy));
 
-        chi0(:,:,ii,jj) = [xx xy xz
+        chi0(:,:,jj,ii) = [xx xy xz
                            yx yy yz
                            zx zy zz];
     end
@@ -218,20 +212,20 @@ chiq = zeros(3, 3, length(freq_total(1,:)), size(field,1), size(qvec,1));
 RPA_deno = zeros(3, 3, length(freq_total(1,:)), size(field,1), size(qvec,1));
 switch ion.int
     case 'dipole'
-        for jj = 1:size(qvec,1)
-            Jij(:,:,:,:,jj) = gfac * (MF_dipole(qvec(jj,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc); % [meV] dipole only
+        for ii = 1:size(qvec,1)
+            Jij(:,:,:,:,ii) = gfac * (MF_dipole(qvec(ii,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc); % [meV] dipole only
         end
     case 'exchange'
-        for jj = 1:size(qvec,1)
-            Jij(:,:,:,:,jj) = MF_exchange(qvec(jj,:), ion.ex, ion.abc, ion.tau); % [meV] exchange only
-%             Jij(:,:,:,:,jj) = exchange(qvec(jj,:), abs(ion.ex), ion.abc, ion.tau);
+        for ii = 1:size(qvec,1)
+            Jij(:,:,:,:,ii) = MF_exchange(qvec(ii,:), ion.ex, ion.abc, ion.tau); % [meV] exchange only
+%             Jij(:,:,:,:,ii) = exchange(qvec(ii,:), abs(ion.ex), ion.abc, ion.tau);
         end
     case 'both'
-        for jj = 1:size(qvec,1)
-%             Jij(:,:,:,:,jj) = gfac * (MF_dipole(qvec(jj,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc)...
-%                 - MF_exchange(qvec(jj,:), ion.ex, ion.abc, ion.tau); % [meV]
-            Jij(:,:,:,:,jj) = gfac * (MF_dipole(qvec(jj,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc)...
-                - exchange(qvec(jj,:), abs(ion.ex), ion.abc, ion.tau); % [meV]
+        for ii = 1:size(qvec,1)
+%             Jij(:,:,:,:,ii) = gfac * (MF_dipole(qvec(ii,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc)...
+%                 - MF_exchange(qvec(ii,:), ion.ex, ion.abc, ion.tau); % [meV]
+            Jij(:,:,:,:,ii) = gfac * (MF_dipole(qvec(ii,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc)...
+                - exchange(qvec(ii,:), abs(ion.ex), ion.abc, ion.tau); % [meV]
         end
 end
 J = sum(sum(Jij,4),3)/unitN; % average over the unit cell

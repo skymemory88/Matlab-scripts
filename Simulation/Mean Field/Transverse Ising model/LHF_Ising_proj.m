@@ -2,7 +2,7 @@
 
 Options.damp = 0.2; % update damping
 Options.RPA = true; % RPA pole searching
-    omega = linspace(0,35,5001); % [GHz] frequency range
+    omega = linspace(0,35,2001); % [GHz] frequency range
 Options.plot = true; % Option to plot the results
 Options.save = false; % Option to save results
 Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
@@ -180,7 +180,7 @@ for nb = 1:size(fields,1)
     Cyx(nb) = off_coef(1);
     Cyy(nb) = off_coef(2);    
     
-    Ht = ket'*uni'*ham0*uni*ket; % (Hcf + Hx) hamiltonian
+    Ht = ket'*uni'* ham0 *uni*ket; % (Hcf + Hx) hamiltonian
     Bx(nb,1) = 2*mean([abs(Ht(2,1)) abs(Ht(1,2))]); % factor '2' for Ising spin
     S_mf = [0 0 jz(1)]; % initial guesses for electronic spin operators
     beta = 1/(kB*temp); % Boltzman constant
@@ -295,7 +295,7 @@ if Options.plot == true
     set(fig1.CurrentAxes, 'FontSize', 14);
     xlim([0 max(vecnorm(fields,1,2))])
     xlabel('Transverse Field (T)')
-    ylabel('Energy(meV)')
+    ylabel('Energy (meV)')
 
     fig2 = figure;
     plot(fields(:,1), Js, '-', 'LineWidth', 1.5);
@@ -319,7 +319,7 @@ if Options.plot == true
         fig3 = figure;
         plot(fields(:,1), poles, '-', 'LineWidth', 1.5)
         xlabel('Transverse Field (T)')
-        ylabel('Energy(meV)')
+        ylabel('Energy (meV)')
         set(fig3.CurrentAxes, 'FontSize', 14);
         xlim([0 max(vecnorm(fields,1,2))])
     end
