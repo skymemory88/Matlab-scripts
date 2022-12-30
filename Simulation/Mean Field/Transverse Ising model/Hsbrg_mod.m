@@ -1,4 +1,4 @@
-function [ion, eee, dE, Js, Is, fff, ttt, vvv] = gen_Ising(ttt, fff, theta, phi, plotopt, saveopt)
+function [ion, eee, dE, Js, Is, fff, ttt, vvv, RPA] = Hsbrg_mod(ttt, fff, theta, phi, plotopt, saveopt)
 clearvars -except ttt fff theta phi plotopt saveopt
 
 Options.pProm = 1e-2; % minimum peak prominance for phase boundary search
@@ -6,11 +6,14 @@ Options.intType = 'exchange'; % interaction type: 1. 'exchange' (short range). 2
     ion.ex = [-1]; % exchange interaction [meV]
     ion.dpRng = 100; % dipole summation range
 Options.damp = 0.0; % damping factor for the iterative update
+% Options.IsingProj = true;
 Options.hyperF = false; % Hyperfine interaction option
     ion.hyp = -[0.8 0.8 0.8]; % Hyperfine interaction [meV]
-Options.RPA = false; % random phase approximation
-    qz = linspace(0, 1, 200); % q-vector for RPA calculations (0: BZ center, 1: BZ boundary)
-    qvec = [zeros(size(qz))' zeros(size(qz))' qz'];
+Options.RPA = true; % random phase approximation
+    omega = linspace(0,30,501);
+%     qz = linspace(0, 1, 200); % q-vector for RPA calculations (0: BZ center, 1: BZ boundary)
+%     qvec = [zeros(size(qz))' zeros(size(qz))' qz'];
+    qvec = [0 0 0];
 Options.plot = plotopt; % 0, no plot; 1. 3D scatter plot; 2. 2D color map.
 Options.save = saveopt;
 Options.filepath = ['/MATLAB Drive/Data/toy_model'];
@@ -33,7 +36,7 @@ Sp = diag(sqrt((ion.J-[ion.J-1:-1:-ion.J]).*(ion.J+1+[ion.J-1:-1:-ion.J])),1);
 Sm = Sp';
 Sx = (Sp+Sm)/2;
 Sy = (Sp-Sm)/2i;
-rnk = size(Sz,1);
+dim = size(Sz,1); % Hilbert space dimension
 
 if Options.hyperF == true   
     Iz = diag(ion.I:-1:-ion.I);
@@ -46,9 +49,9 @@ if Options.hyperF == true
     Sy = kron(Sy, eye(size(Iy,1)));
     Sz = kron(Sz, eye(size(Iz,1)));
 
-    Ix = kron(eye(rnk), Ix);
-    Iy = kron(eye(rnk), Iy);
-    Iz = kron(eye(rnk), Iz);
+    Ix = kron(eye(dim), Ix);
+    Iy = kron(eye(dim), Iy);
+    Iz = kron(eye(dim), Iz);
 else
     ion.I = 0;
     Ix = 0;
@@ -72,17 +75,6 @@ ion.tau = [0   0   0];
 %             0    1/2   1/4;
 %            1/2   1/2   1/2;
 %            1/2    0    3/4]; % LiHoF4 basis
-
-% Interaction dimension regulation (isotropic, diagonal, Ising)
-ion.mat = [1  1  1;
-           1  1  1;
-           1  1  1]; % isotropic
-% ion.mat = [1  0  0;
-%            0  1  0;
-%            0  0  1]; % diagonal
-% ion.mat = [0  0  0;
-%            0  0  0;
-%            0  0  1]; % Ising
        
 kB = 8.61733e-2; % Boltzmann constant [meV/K]
 Jq = zeros(3,3,size(qvec,1));
@@ -90,12 +82,10 @@ switch Options.intType
     case 'exchange'
         eMeas = abs(max(ion.ex)); % reference energy
         [Jij, ~] = MF_exchange([0 0 0], ion.ex, ion.abc, ion.tau); % exchange coupling sum
-        Jij = Jij .* ion.mat; % truncate interaction matrix
         ion.int = 'exchange';
         if Options.RPA == true
             for nq = 1:size(qvec,1)
                 [Jqt, ~] = MF_exchange(qvec(nq,:), ion.ex, ion.abc, ion.tau); % exchange coupling sum
-                Jqt = Jqt .* ion.mat; % truncate interaction matrix
                 for ionn = 1:size(ion.tau,1)
                     for ionm = 1:size(ion.tau,1)
                         Jq(:,:,nq) = Jq(:,:,nq) + Jqt(:,:,ionn,ionm);
@@ -109,13 +99,13 @@ switch Options.intType
         J2meV = 6.24151e+21; % [mev/J]
         gfac = muB^2 * mu0 * J2meV / (4*pi); % [meV*Ang^-3] (dipole_direct gives [Ang^3])
         [Jij, ~] = MF_dipole([0 0 0], ion.dpRng, ion.abc, ion.tau); % dipole coupling sum
-        Jij = gfac * 1e30 * Jij .* ion.mat; % truncate interaction matrix
+        Jij = gfac * 1e30 * Jij; % truncate interaction matrix
         eMeas = abs(Jij(3,3)); % reference energy
         ion.int = 'dipole';
         if Options.RPA == true
             for nq = 1:size(qvec,1)
                 [Jqt, ~] = MF_dipole(qvec(nq,:), ion.dpRng, ion.abc, ion.tau); % exchange coupling sum
-                Jqt = gfac * 1e30 * Jqt .* ion.mat; % truncate interaction matrix
+                Jqt = gfac * 1e30 * Jqt; % truncate interaction matrix
                 for ionn = 1:size(ion.tau,1)
                     for ionm = 1:size(ion.tau,1)
                         Jq(:,:,nq) = Jq(:,:,nq) + Jqt(:,:,ionn,ionm);
@@ -146,21 +136,24 @@ Is = zeros(size(fff,1), length(ttt), 3);
 vector = zeros(size(fff,1)*length(ttt), 3);
 map = zeros(size(fff,1), length(ttt));
 
-eee = double.empty(size(fff,1), length(ttt), size(Sz,2), 0);
-dE = zeros(nchoosek(size(Sz,2),2),size(fff,1), length(ttt)); % excitation modes
-vvv = double.empty(size(fff,1), length(ttt), size(Sz,2), size(Sz,2), 0);
-for ii = 1:size(fff,1)
-    for jj = 1:length(ttt)
+eee = double.empty(size(fff,1), length(ttt), size(Sz,2), 0); % eigen-energies
+vvv = double.empty(size(fff,1), length(ttt), size(Sz,2), size(Sz,2), 0); % eigen-functions
+dE = zeros(nchoosek(size(Sz,2),2),size(fff,1), length(ttt)); % 1st order excitation modes
+deno = double.empty(size(fff,1), length(omega), 0);
+poles = zeros(size(fff,1), size(Sz,2)-1);
+dE = zeros(size(fff,1), size(Sz,2)-1);
+for nb = 1:size(fff,1)
+    for nt = 1:length(ttt)
         S_mf = [0  0  ion.J]; % initial guesses for spin operators
-        beta = 1/(kB*ttt(jj));
+        beta = 1/(kB*ttt(nt));
         counter = 1; % while loop iterator
         En_old = 0;
         while true
             h_int = S_mf * Jij; % spin-spin interaction part 1
             if any(A) % Case: finite hyperfine interaction
                 Hint = h_int(1)*Sx + h_int(2)*Sy + h_int(3)*Sz; % spin-spin interaction
-                Hzee =  -ion.gLande * (Bx(ii)*Sx + By(ii)*Sy + Bz(ii)*Sz); % Zeeman interaction
-                HzeeI = -ion.nLande * (Bx(ii)*Ix + By(ii)*Iy + Bz(ii)*Iz); % nuclear Zeeman interaction
+                Hzee =  -ion.gLande * (Bx(nb)*Sx + By(nb)*Sy + Bz(nb)*Sz); % Zeeman interaction
+                HzeeI = -ion.nLande * (Bx(nb)*Ix + By(nb)*Iy + Bz(nb)*Iz); % nuclear Zeeman interaction
                 Hyp = A(1)*Sx*Ix + A(2)*Sy*Iy + A(3)*Sz*Iz; % hyperfine interaction
                 H_ani = Dz*Sz.^2; % anisotropy term
                 ham = Hint + Hzee + HzeeI + Hyp + H_ani; % full hamiltonian
@@ -169,11 +162,11 @@ for ii = 1:size(fff,1)
                 En = squeeze(real(diag(En)));
                 [En, n] = sort(En); % sort the energy in ascending order
                 wav = wav(:,n); % sort the eigen-vector accordingly
-                eee(ii,jj,:,1) = squeeze(En);
-                vvv(ii,jj,:,:,1) = squeeze(wav);
+                eee(nb,nt,:,1) = squeeze(En);
+                vvv(nb,nt,:,:,1) = squeeze(wav);
                 En = En - min(En); % normalize the eigenenergy to the ground state
                 Z = exp(-En*beta)/sum(exp(-En*beta)); % Calculate the partition function weight
-                if ttt(jj) == 0
+                if ttt(nt) == 0
                     newAvSx = real( wav(:,1)' *Sx* wav(:,1) ); % Calculate the expectation value of Jz
                     newAvSy = real( wav(:,1)' *Sy* wav(:,1) ); % Calculate the expectation value of Jz
                     newAvSz = real( wav(:,1)' *Sz* wav(:,1) ); % Calculate the expectation value of Jz
@@ -192,26 +185,27 @@ for ii = 1:size(fff,1)
                 end
                 newAvI = [newAvIx  newAvIy  newAvIz];
             else % Case: no hyperfine interaction
-%                 H_ani = 5e-3*fff(ii)* Sz; % anisotropy term
                 Hint = h_int(1)*Sx + h_int(2)*Sy + h_int(3)*Sz; % spin-spin interaction
-                Hzee = -ion.gLande * (Bx(ii)*Sx + By(ii)*Sy + Bz(ii)*Sz); % Zeeman term
+                Hzee = -ion.gLande * (Bx(nb)*Sx + By(nb)*Sy + Bz(nb)*Sz); % Zeeman term
                 H_ani = Dz*Sz.^2; % anisotropy term
-%                 ham = Hint + Hzee + H_ani; % full hamiltonian
-                ham = Hzee + H_ani; % no spin-spin interaction
+                ham = Hint + Hzee + H_ani; % full hamiltonian
+%                 ham = Hzee + H_ani; % no spin-spin interaction
                 [wav, En] = eig(ham);
                 En = squeeze(real(diag(En)));
-                eee(ii,jj,:,1) = En;
-                vvv(ii,jj,:,:,1) = squeeze(wav);
+                [En, n] = sort(En); % sort the energy from lowest to the highest
+                wav = wav(:,n); % sort the eigen-vectors in its basis accordingly
+                eee(nb,nt,:,1) = En;
+                vvv(nb,nt,:,:,1) = squeeze(wav);
                 En = En - min(En); % normalize the eigenenergy to the ground state
                 Z = exp(-En*beta)/sum(exp(-En*beta)); % Calculate the partition function weight
-                if ttt(jj) == 0
-                    newAvSx = real(wav(:,1)'*Sx*wav(:,1))'; % Calculate the expectation value of Jz
-                    newAvSy = real(wav(:,1)'*Sy*wav(:,1))'; % Calculate the expectation value of Jz
-                    newAvSz = real(wav(:,1)'*Sz*wav(:,1))'; % Calculate the expectation value of Jz
+                if ttt(nt) == 0
+                    newAvSx = real(wav(:,1)' *Sx* wav(:,1))'; % Calculate the expectation value of Jz
+                    newAvSy = real(wav(:,1)' *Sy* wav(:,1))'; % Calculate the expectation value of Jz
+                    newAvSz = real(wav(:,1)' *Sz* wav(:,1))'; % Calculate the expectation value of Jz
                 else
-                    newAvSx = real(diag(wav'*Sx*wav))'*Z; % Calculate the expectation value of Jz
-                    newAvSy = real(diag(wav'*Sy*wav))'*Z; % Calculate the expectation value of Jz
-                    newAvSz = real(diag(wav'*Sz*wav))'*Z; % Calculate the expectation value of Jz
+                    newAvSx = real(diag(wav' *Sx* wav))'*Z; % Calculate the expectation value of Jz
+                    newAvSy = real(diag(wav' *Sy* wav))'*Z; % Calculate the expectation value of Jz
+                    newAvSz = real(diag(wav' *Sz* wav))'*Z; % Calculate the expectation value of Jz
                 end
             end
             newAvS = [newAvSx  newAvSy  newAvSz];
@@ -220,13 +214,13 @@ for ii = 1:size(fff,1)
                 [en, em] = meshgrid(squeeze(En), squeeze(En));
                 de = triu(en-em);
                 de = unique(de(de>0));
-                dE(:,ii,jj) = padarray(de, size(dE,1)-size(de,1), 'pre');
+                dE(:,nb,nt) = padarray(de, size(dE,1)-size(de,1), 'pre');
                 break
             elseif counter > 1e5              
                 [en, em] = meshgrid(squeeze(En), squeeze(En));
                 de = triu(en-em);
                 de = unique(de(de>0));
-                dE(:,ii,jj) = padarray(de, size(dE,1)-size(de,1), 'pre');
+                dE(:,nb,nt) = padarray(de, size(dE,1)-size(de,1), 'pre');
                 fprintf('Iteration exceeded limits, dE = %.2e \n', nonzeros(En - En_old));
                 break
             else
@@ -234,51 +228,76 @@ for ii = 1:size(fff,1)
                 S_mf = Options.damp*S_mf + (1-Options.damp)*newAvS; % update the order parameter (internal field)
                 counter = counter + 1;
                 if mod(counter, 2e4) == 0
-                   fprintf('Iternation: %u, Magnetic field: %.2f, Temperature: %.2f\n', counter, Bx(ii)/eMeas, ttt(jj)) 
+                   fprintf('Iternation: %u, Magnetic field: %.2f, Temperature: %.2f\n', counter, Bx(nb)/eMeas, ttt(nt)) 
                 end
             end
         end
-        Js(ii,jj,:) = S_mf;
-        if exist('newAvI','var'); Is(ii,jj,:) = newAvI; end
-        vector(iterator,:) = [kB*ttt(jj)/eMeas, Bx(ii), S_mf(3)]; % Phase diagram with Sz as the order parameter
-        map(ii,jj) = S_mf(3); % use Sz as the order parameter
+        Js(nb,nt,:) = S_mf;
+        if exist('newAvI','var'); Is(nb,nt,:) = newAvI; end
+        vector(iterator,:) = [kB*ttt(nt)/eMeas, Bx(nb), S_mf(3)]; % Phase diagram with Sz as the order parameter
+        map(nb,nt) = S_mf(3); % use Sz as the order parameter
         iterator = iterator + 1;
     end
-    if any(ismember(round(linspace(1,size(fff,1),20)),ii))
-        fprintf('Calculating for |B/J| = %.2f, progress: %.1f%% \n', Bx(ii), ii/size(fff,1)*100);
-    end 
+    if any(ismember(round(linspace(1,size(fff,1),20)),nb))
+        fprintf('Calculating for |B/J| = %.2f, progress: %.1f%% \n', Bx(nb), nb/size(fff,1)*100);
+    end
+    if Options.RPA == true
+        for nq = 1:size(qvec,1)
+            Smn = wav' * Sz * wav;
+            Smn = Smn(2:end,1); % off diagonal elements between <n| and |0>
+            J0 = squeeze(Jq(3,3,nq)); % Ising element of q=0 interaction tensor
+            dE0 = En(2:end); % MF excitation modes at 0 K
+            for nw = 1:length(omega) % search for RPA poles
+                dE2 = (dE0.^2 - omega(nw)^2);
+                deno(nb,nw,1) = prod(dE2)*(1 - J0 * (2*dE0') * (abs(Smn).^2 ./dE2));
+            end
+            pks = squeeze(mag2db(1./abs(deno(nb,:,1)))); % search for poles
+            [~,loc] = findpeaks(pks, 'SortStr', 'none');
+            poles(nb,1:length(loc)) = flip(omega(loc));
+            for kk = 2:size(poles,2)
+                dE1(:,kk-1) = poles(:,kk-1)-poles(:,kk);
+            end
+        end
+    end
 end
 Js = squeeze(Js);
 Is = squeeze(Is);
 dE = squeeze(dE);
 vvv = squeeze(vvv);
 ttt = kB*ttt/eMeas;
+if Options.RPA ==true
+    RPA.modes = squeeze(poles);
+    RPA.deno = squeeze(deno);
+    RPA.dE = squeeze(dE1);
+else
+    RPA = {};
+end
 
 if Options.plot ~= 0
     Bc = zeros(length(ttt),1); % critical fields (at fixed temperatre)
-    for ii = 1:length(ttt)
-        dif = real(diff(map(:,ii))); % crude differentiation
+    for nb = 1:length(ttt)
+        dif = real(diff(map(:,nb))); % crude differentiation
         [~,idx] = findpeaks(-dif, 'Npeaks', 1, 'MinPeakProminence', Options.pProm);
         if isempty(idx)
-            Bc(ii) = 0;
+            Bc(nb) = 0;
         else
-            Bc(ii) = Bx(idx);
+            Bc(nb) = Bx(idx);
         end
     end
     TT = ttt(Bc~=0)'; % remove zeros and nonsensical values
 
     Tc = zeros(size(fff,1),1); % critical temperatures (at fixed field)
-    for ii = 1:size(fff,1)
-        dif = real(diff(map(ii,:))); % crude differentiation
+    for nb = 1:size(fff,1)
+        dif = real(diff(map(nb,:))); % crude differentiation
         [~,idx] = findpeaks(-dif, 'Npeaks', 1, 'MinPeakProminence', Options.pProm);
         if isempty(idx)
-            Tc(ii) = 0;
+            Tc(nb) = 0;
         else
-            Tc(ii) = ttt(idx);
+            Tc(nb) = ttt(idx);
         end
     end
-    BB = Bx(Tc~=0)'; % remove zeros and nonsensical values
-    phB = [kB*TT./eMeas nonzeros(Bc); kB*nonzeros(Tc)./eMeas BB]; % Phase boundary
+%     phB = [kB*TT./eMeas nonzeros(Bc); kB*nonzeros(Tc)./eMeas Bx(Tc~=0)']; % Phase boundary
+    phB = [TT nonzeros(Bc); nonzeros(Tc) Bx(Tc~=0)']; % Phase boundary
 
     figure
     box on
