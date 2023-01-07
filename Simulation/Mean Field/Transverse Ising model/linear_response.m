@@ -9,7 +9,7 @@ filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File s
         '\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities',...
         '\toy_model\'];
 temp = varargin{1};
-gama = varargin{2};
+const.gama = varargin{2};
 freq_total = varargin{3};
 hyp = varargin{4};
 Options.saving = varargin{5};
@@ -19,85 +19,95 @@ load_name = strcat('Hscan_toy_', load_name, '.mat');
 %     load_name = strcat('Hscan_LHF-Ising_', load_name, '.mat');
 MF_file = dir( fullfile(filepath, load_name) );
 load([filepath MF_file(1).name],'ion','-mat','eee','fff','vvv');
+% truncation of interaction dimension
+if ~isfield(ion, 'mat')
+    ion.mat = [1 1 1;
+               1 1 1;
+               1 1 1]; % default: Isotropic
+%     ion.mat = [1 0 0;
+%                0 1 0;
+%                0 0 1]; % Diagonal
+%     ion.mat = [0 0 0;
+%                0 0 0;
+%                0 0 1]; $ Ising
+end
 eee = squeeze(eee);
 fields = fff;
-En = eee-min(eee,[],2); % normalize the eigen-energies
+En = eee - min(eee,[],2); % normalize the eigen-energies
 wav = vvv;
 
-[chi] = MF_chi(ion, freq_total, fields, En, temp, wav, gama, Options);
+const.hbar = 1.055E-34; % Reduced Planck constant [J.s]
+const.mu0 = 4e-7*pi; % [H/m]
+const.muB = 9.27401e-24; % Bohr magneton [J/T]
+const.muN = 5.05078e-27; % Nuclear magneton [J/T]
+const.J2meV = 6.24151e+21; % Joule to meV
+const.kB = 8.61733e-2; % Boltzmann constant [meV/K]
+switch Options.unit
+    case 'GHz'
+        const.f2E = const.hbar * 2*pi*10^9 * const.J2meV; % [meV/GHz]
+    case 'meV'
+        const.f2E = 1;
+end
+
+[chi] = MF_chi(ion, freq_total, fields, En, temp, wav, const);
 if Options.RPA == true
-    [chiq, RPA_deno] = RPA_chi(ion, freq_total, fields, [0 0 0], chi); % calculate RPA susceptibility
+    [chiq, RPA_pol] = RPA_chi(ion, En, freq_total, fields, [0 0 0], chi, const); % calculate RPA susceptibility
 end
 varargout{1} = fields;
 varargout{2} = freq_total;
 varargout{3} = chi;
-if Options.saving == true % Save the susceptibilities
+if Options.saving == true && Options.RPA == false % Save the susceptibilities
     fields = fields';
     file_part = sprintf('%1$3.3fK_%2$.2e_%3$.3f-%4$.3fGHz_hyp=%5$.2f', temp,...
-        gama, min(freq_total), max(freq_total), hyp);
+        const.gama, min(freq_total), max(freq_total), hyp);
     save_name = strcat('chi0_toy_', file_part, '.mat');
     %         save_name = strcat('chi0_LHF-Ising_', file_part, '.mat');
     savefile = fullfile(filepath, save_name);
     save(savefile, 'ion', 'temp', 'fields', 'freq_total', 'chi',...
-        'gama', 'Options', '-v7.3');
+        'const', 'Options', '-v7.3');
 end
 
 if exist('chiq','var')
     chi0 = chi;
     chi = chiq;
     varargout{4} = chiq;
-    varargout{5} = RPA_deno;
+    varargout{5} = RPA_pol;
     if Options.saving == true % Save the susceptibilities
         file_part = sprintf('%1$3.3fK_%2$.2e_%3$.3f-%4$.3fGHz', temp,...
-            gama, min(freq_total), max(freq_total));
+            const.gama, min(freq_total), max(freq_total));
         save_name = strcat('RPA_toy_', file_part, '.mat');
 %         save_name = strcat('RPA_LHF-Ising_', file_part, '.mat');
         savefile = fullfile(filepath, save_name);
         save(savefile, 'temp', 'fields', 'freq_total', 'chi0',...
-            'gama', 'chi', 'RPA_deno', 'Options', '-v7.3');
+            'const', 'chi', 'RPA_pol', 'Options', '-v7.3');
     end
 end
 end
 
-function [chi0] = MF_chi(ion, freq_total, field, E, T, V, gama, Options)
+function [chi0] = MF_chi(ion, freq_total, field, E, T, V, const)
 fprintf('Computing MF susceptibility at T = %.3f K\n', T);
-muB = 9.27401e-24; % Bohr magneton [J/T]
-muN = 5.05078e-27; % Nuclear magneton [J/T]
-J2meV = 6.24151e+21; % Joule to meV
-kB = 8.61733e-2; % Boltzmann constant [meV/K]
-switch Options.unit
-    case 'GHz'
-        hbar = 1.055E-34; % Reduced Planck constant [J.s]
-        J2meV = 6.24151e+21; % [meV/J]
-        f2E = hbar*2*pi*10^9*J2meV; % [meV/GHz]
-    case 'meV'
-        f2E = 1;
-end
-ELEf = ion.gLande * muB * J2meV; % Lande factor * Bohr magneton (meV/T)
-NUCf = ion.nLande * muN * J2meV; % [meV/T]
-% NUCf = 0; % excluding nuclear contribution
+ELEf = ion.gLande * const.muB * const.J2meV; % Lande factor * Bohr magneton (meV/T)
+% NUCf = ion.nLande * muN * J2meV; % [meV/T]
+NUCf = 0; % excluding nuclear contribution
 
 %Initiate ionJ operators
-ionJ = ion.J;
-Jz = diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
-Jp = diag(sqrt((ionJ-((ionJ-1):-1:-ionJ) ).*(ionJ+1+( (ionJ-1):-1:-ionJ) )),1); % electronic spin ladder operator
+Jz = diag(ion.J:-1:-ion.J); % Jz = -J, -J+1,...,J-1,J
+Jp = diag(sqrt( (ion.J-((ion.J-1):-1:-ion.J) ).*(ion.J+1+( (ion.J-1):-1:-ion.J) )), 1); % electronic spin ladder operator
 Jm = Jp'; % electronic spin ladder operator
-
 if any(ion.hyp) % hyperfine interaction option
     %Initiate I operators
-    ionI = ion.I;
-    Iz = diag(ionI:-1:-ionI); %Iz = -I, -I+1,...,I-1,I
-    IhT.z = kron(eye(2*ionJ+1),Iz); % Expand Hilbert space
-    Ip = diag(sqrt((ionI-((ionI-1):-1:-ionI)).*(ionI+1+((ionI-1):-1:-ionI))),1); % Nuclear spin ladder operator
+    Iz = diag(ion.I:-1:-ion.I); %Iz = -I, -I+1,...,I-1,I
+    IhT.z = kron(eye(2*ion.J+1), Iz); % Expand Hilbert space
+    Ip = diag(sqrt( (ion.I-((ion.I-1):-1:-ion.I) ).*(ion.I+1+((ion.I-1):-1:-ion.I))), 1); % Nuclear spin ladder operator
     Im = Ip'; % Nuclear spin ladder operator
-    Iph = kron(eye(2*ionJ+1), Ip); % Expand to match the dimension of Hilbert space
-    Imh = kron(eye(2*ionJ+1), Im);
+    Iph = kron(eye(2*ion.J+1), Ip); % Expand to match the dimension of Hilbert space
+    Imh = kron(eye(2*ion.J+1), Im);
     IhT.x = (Iph+Imh)/2;
     IhT.y = (Iph-Imh)/2i;
 
-    JhT.z = kron(Jz, eye(2*ionI+1)); % Expand Jz space to include nuclear degree of freedom
-    Jph = kron(Jp, eye(2*ionI+1)); % Expand to match the dimension of Hilbert space
-    Jmh = kron(Jm, eye(2*ionI+1));
+    JhT.z = kron(Jz, eye(2*ion.I+1)); % Expand Jz space to include nuclear degree of freedom
+    Jph = kron(Jp, eye(2*ion.I+1)); % Expand to match the dimension of Hilbert space
+    Jmh = kron(Jm, eye(2*ion.I+1));
     JhT.x = (Jph + Jmh)/2;
     JhT.y = (Jph - Jmh)/2i;
 else
@@ -122,9 +132,9 @@ end
 
 chi0 = zeros(3,3,length(freq_total(1,:)),size(field,1));
 for ii = 1:size(field,1) % calculate susceptibility for all fields
-    wav = squeeze ( squeeze(V(ii,:,:,:)) ); % Obtain the corresponding eigen vectors
-    ee = squeeze ( squeeze(E(ii,:,:)) ); % Obtain the corresponding eigen energies in meV
-    beta = 1/(kB*T); %[meV^-1]
+    wav = squeeze(V(ii,:,:,:)); % Obtain the corresponding eigen vectors
+    ee = squeeze(E(ii,:,:)); % Obtain the corresponding eigen energies in meV
+    beta = 1/(const.kB*T); %[meV^-1]
     if T == 0
         zz = zeros(size(ee));
         zz(1) = 1;
@@ -138,8 +148,8 @@ for ii = 1:size(field,1) % calculate susceptibility for all fields
     [en, em] = meshgrid(ee, ee);
     parfor jj = 1:size(freq_total,2) %calculate susceptibility for all frequencies
         freq = freq_total(jj);
-        dE = em - en - freq*f2E; % [meV]
-        gamma = ones(size(dE)) * gama;
+        dE = em - en - freq * const.f2E; % [meV]
+        gamma = ones(size(dE)) * const.gama;
         deno0 = 1 ./ (dE - 1i*gamma); % [meV^-1]
 
         ttx1  = wav'  * (Cxx(ii) * JhT.x + NUCf/ELEf * IhT.x) * wav;
@@ -197,19 +207,16 @@ for ii = 1:size(field,1) % calculate susceptibility for all fields
 end
 end
 
-function [chiq, RPA_deno] = RPA_chi(ion, freq_total, field, qvec, chi0)
+function [chiq, RPA_pol] = RPA_chi(ion, En, freq_total, field, qvec, chi0, const)
 unitN = size(ion.tau,1); % Number of magnetic atoms in one unit cell
-muB = 9.274e-24; % [J/T]
-mu0 = 4e-7*pi; % [H/m]
-J2meV = 6.24151e+21; % [mev/J]
 Vc = sum( ion.abc(1,:) .* cross(ion.abc(2,:), ion.abc(3,:)) ); % Volume of unit cell [Ang^-3]
-gfac = mu0/4/pi * (ion.gLande * muB)^2 * J2meV * 1e30; % [meV*A^3]
+gfac = const.mu0/4/pi * (ion.gLande * const.muB)^2 * const.J2meV * 1e30; % [meV*A^3]
 
 eins = zeros(3,3,4,4);
 eins(1,1,:,:) = 1; eins(2,2,:,:) = 1; eins(3,3,:,:) = 1;
 Jij = zeros(3, 3, unitN, unitN, size(qvec,1));
 chiq = zeros(3, 3, length(freq_total(1,:)), size(field,1), size(qvec,1));
-RPA_deno = zeros(3, 3, length(freq_total(1,:)), size(field,1), size(qvec,1));
+RPA_pol = zeros(3, 3, length(freq_total(1,:)), size(field,1), size(qvec,1));
 switch ion.int
     case 'dipole'
         for ii = 1:size(qvec,1)
@@ -232,23 +239,28 @@ J = sum(sum(Jij,4),3)/unitN; % average over the unit cell
 J = abs(J);
 
 for ii = 1:size(field,1)
-    if ismember(ii, [1:round(size(field,1)/5):size(field,1)])
+    if ismember(ii, 1:round(size(field,1)/5):size(field,1))
         fprintf('Computing RPA susceptibility at B = (%.1f %.1f %.1f) T\n',...
             field(ii,1), field(ii,2), field(ii,3));
     end
+    ee = squeeze(En(ii,:,:)); % Obtain the corresponding eigen energies in meV
+    [en, em] = meshgrid(ee, ee);
+    dE = (em - en - 1i*const.gama)./const.f2E; % [GHz]
     for nq = 1:size(qvec,1)
         Jq = squeeze(J(:,:,nq)) .* ion.mat;
         parfor kk = 1:length(freq_total(1,:))
 %         for kk = 1:length(freq_total(1,:))
             chi_mf = squeeze(chi0(:,:,kk,ii));
-            MM = chi_mf * Jq; % [meV*meV^-1]
-            RPA_deno(:,:,kk,ii,nq) = squeeze(eye(size(MM)) - MM); % Suppress parfor warning for this line
-            chiq(:,:,kk,ii,nq) = chi_mf/squeeze(RPA_deno(:,:,kk,ii,nq));
+            MM = chi_mf * Jq; % [meV * meV^-1]
+            deno = squeeze(eye(size(MM)) - MM);
+            chiq(:,:,kk,ii,nq) = chi_mf/deno;
+            fct = prod(dE - freq_total(kk), 'all');
+            RPA_pol(:,:,kk,ii,nq) = inv((eye(size(MM)) - MM)*fct);
         end
     end
 end
 chiq = squeeze(chiq);
-RPA_deno = squeeze(RPA_deno);
+RPA_pol = squeeze(RPA_pol);
 end
 
 % subs = ["xx", "yy", "zz"];
