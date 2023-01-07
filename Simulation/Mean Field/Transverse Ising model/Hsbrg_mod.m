@@ -1,4 +1,4 @@
-function [ion, eee, dE, Js, Is, fff, ttt, vvv, RPA] = Hsbrg_mod(ttt, fff, theta, phi, plotopt, saveopt)
+function [ion, eee, dE, Js, Is, fff, ttt, vvv, addon] = Hsbrg_mod(ttt, fff, theta, phi, plotopt, saveopt)
 clearvars -except ttt fff theta phi plotopt saveopt
 
 Options.pProm = 1e-2; % minimum peak prominance for phase boundary search
@@ -6,17 +6,18 @@ Options.intType = 'exchange'; % interaction type: 1. 'exchange' (short range). 2
     ion.ex = [-1]; % exchange interaction [meV]
     ion.dpRng = 100; % dipole summation range
 Options.damp = 0.0; % damping factor for the iterative update
-% Options.IsingProj = true;
-Options.hyperF = false; % Hyperfine interaction option
+Options.IsingProj = true; % Project to Ising space
+Options.hyperF = true; % Hyperfine interaction option
     ion.hyp = -[0.8 0.8 0.8]; % Hyperfine interaction [meV]
 Options.RPA = true; % random phase approximation
-    omega = linspace(0,30,501);
+    omega = linspace(0,30,801);
 %     qz = linspace(0, 1, 200); % q-vector for RPA calculations (0: BZ center, 1: BZ boundary)
 %     qvec = [zeros(size(qz))' zeros(size(qz))' qz'];
     qvec = [0 0 0];
 Options.plot = plotopt; % 0, no plot; 1. 3D scatter plot; 2. 2D color map.
 Options.save = saveopt;
-Options.filepath = ['/MATLAB Drive/Data/toy_model'];
+Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing\PhD program',...
+    '\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\toy_model'];
 if size(fff,1) > length(ttt)
     Options.scanMode = 'field';
 else
@@ -32,26 +33,25 @@ ion.nLande = 0; % nuclear Lande factor
 
 % Define operators:
 Sz = diag(ion.J:-1:-ion.J);
-Sp = diag(sqrt((ion.J-[ion.J-1:-1:-ion.J]).*(ion.J+1+[ion.J-1:-1:-ion.J])),1);
+Sp = diag(sqrt((ion.J-(ion.J-1:-1:-ion.J)).*(ion.J+1+(ion.J-1:-1:-ion.J))),1);
 Sm = Sp';
-Sx = (Sp+Sm)/2;
-Sy = (Sp-Sm)/2i;
-dim = size(Sz,1); % Hilbert space dimension
+Sx = (Sp + Sm)/2;
+Sy = (Sp - Sm)/2i;
 
 if Options.hyperF == true   
     Iz = diag(ion.I:-1:-ion.I);
-    Ip = diag(sqrt((ion.I-[ion.I-1:-1:-ion.I]).*(ion.I+1+[ion.I-1:-1:-ion.I])),1);
+    Ip = diag(sqrt((ion.I-(ion.I-1:-1:-ion.I)).*(ion.I+1+(ion.I-1:-1:-ion.I))),1);
     Im = Ip';
-    Ix = (Ip+Im)/2;
-    Iy = (Ip-Im)/2i;
+    Ix = (Ip + Im)/2;
+    Iy = (Ip - Im)/2i;
 
-    Sx = kron(Sx, eye(size(Ix,1)));
-    Sy = kron(Sy, eye(size(Iy,1)));
-    Sz = kron(Sz, eye(size(Iz,1)));
+    Sx = kron(Sx, eye(2*ion.I+1));
+    Sy = kron(Sy, eye(2*ion.I+1));
+    Sz = kron(Sz, eye(2*ion.I+1));
 
-    Ix = kron(eye(dim), Ix);
-    Iy = kron(eye(dim), Iy);
-    Iz = kron(eye(dim), Iz);
+    Ix = kron(eye(2*ion.J+1), Ix);
+    Iy = kron(eye(2*ion.J+1), Iy);
+    Iz = kron(eye(2*ion.J+1), Iz);
 else
     ion.I = 0;
     Ix = 0;
@@ -75,7 +75,7 @@ ion.tau = [0   0   0];
 %             0    1/2   1/4;
 %            1/2   1/2   1/2;
 %            1/2    0    3/4]; % LiHoF4 basis
-       
+
 kB = 8.61733e-2; % Boltzmann constant [meV/K]
 Jq = zeros(3,3,size(qvec,1));
 switch Options.intType
@@ -138,10 +138,11 @@ map = zeros(size(fff,1), length(ttt));
 
 eee = double.empty(size(fff,1), length(ttt), size(Sz,2), 0); % eigen-energies
 vvv = double.empty(size(fff,1), length(ttt), size(Sz,2), size(Sz,2), 0); % eigen-functions
+BxI = double.empty(size(fff,1), length(ttt), 0); % effective transverse field from Ising projection
 dE = zeros(nchoosek(size(Sz,2),2),size(fff,1), length(ttt)); % 1st order excitation modes
 deno = double.empty(size(fff,1), length(omega), 0);
 poles = zeros(size(fff,1), size(Sz,2)-1);
-dE = zeros(size(fff,1), size(Sz,2)-1);
+modes = zeros(size(fff,1), size(Sz,2)-1);
 for nb = 1:size(fff,1)
     for nt = 1:length(ttt)
         S_mf = [0  0  ion.J]; % initial guesses for spin operators
@@ -232,6 +233,13 @@ for nb = 1:size(fff,1)
                 end
             end
         end
+        if Options.IsingProj == true
+            wvI = wav(:,1:2);
+            SzI = wvI' * Sz * wvI;
+            [uni, ~] = eig(SzI);
+            hamI = uni'*wvI' * ham * wvI * uni;
+            BxI(nb,nt,1) = 2*mean([abs(hamI(2,1)) abs(hamI(1,2))]);
+        end
         Js(nb,nt,:) = S_mf;
         if exist('newAvI','var'); Is(nb,nt,:) = newAvI; end
         vector(iterator,:) = [kB*ttt(nt)/eMeas, Bx(nb), S_mf(3)]; % Phase diagram with Sz as the order parameter
@@ -243,19 +251,26 @@ for nb = 1:size(fff,1)
     end
     if Options.RPA == true
         for nq = 1:size(qvec,1)
-            Smn = wav' * Sz * wav;
-            Smn = Smn(2:end,1); % off diagonal elements between <n| and |0>
-            J0 = squeeze(Jq(3,3,nq)); % Ising element of q=0 interaction tensor
+            Smnx = wav' * Sx * wav; % <Sx>_mn
+            Smnx = Smnx(2:end,1); % off diagonal elements between <n| and |0>
+            Smny = wav' * Sy * wav; % <Sy>_mn
+            Smny = Smny(2:end,1);
+            Smnz = wav' * Sz * wav; % <Sz>_mn
+            Smnz = Smnz(2:end,1);
+%             Jzz = abs(squeeze(Jq(3,3,nq))); % Ising element of q=0 interaction tensor
+            Jab = abs(squeeze(Jq(:,:,nq))); % Ising element of q=0 interaction tensor
             dE0 = En(2:end); % MF excitation modes at 0 K
             for nw = 1:length(omega) % search for RPA poles
                 dE2 = (dE0.^2 - omega(nw)^2);
-                deno(nb,nw,1) = prod(dE2)*(1 - J0 * (2*dE0') * (abs(Smn).^2 ./dE2));
+%                 deno(nb,nw,1) = prod(dE2)*(1 - (2*dE0') * (abs(Smnz).^2 ./dE2) * Jzz); % Ising interaction
+                deno(nb,nw,1) = prod(dE2) * (1 - 2*dE0' * ((Smnz.^2.*Jab(3,3)...
+                    + Smnx.*Smnz.*Jab(1,3) + Smny.*Smnz.*Jab(2,3))./dE2)); % Heisenberg interaction
             end
             pks = squeeze(mag2db(1./abs(deno(nb,:,1)))); % search for poles
             [~,loc] = findpeaks(pks, 'SortStr', 'none');
             poles(nb,1:length(loc)) = flip(omega(loc));
             for kk = 2:size(poles,2)
-                dE1(:,kk-1) = poles(:,kk-1)-poles(:,kk);
+                modes(:,kk-1) = poles(:,kk-1)-poles(:,kk);
             end
         end
     end
@@ -265,12 +280,13 @@ Is = squeeze(Is);
 dE = squeeze(dE);
 vvv = squeeze(vvv);
 ttt = kB*ttt/eMeas;
+if Options.IsingProj == true; addon.Bx = squeeze(BxI);
 if Options.RPA ==true
-    RPA.modes = squeeze(poles);
-    RPA.deno = squeeze(deno);
-    RPA.dE = squeeze(dE1);
+    addon.modes = squeeze(poles);
+    addon.deno = squeeze(deno);
+    addon.dE = squeeze(modes);
 else
-    RPA = {};
+    addon = {};
 end
 
 if Options.plot ~= 0
