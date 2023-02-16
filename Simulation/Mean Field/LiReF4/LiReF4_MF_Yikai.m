@@ -1,4 +1,4 @@
-function [vvv, eee, fff, ttt] = LiReF4_MF_Yikai(mion,temp,Bfield,theta,phi)
+function [vvv, eee, fff, ttt] = LiReF4_MF_Yikai(mion,temp,Bfield,theta,phi,hyp)
 % Argument: mion, temp, field, theta, phi
 % mion: Magnetic ion type
 % Temp(s): can be a single value or an array 
@@ -6,7 +6,7 @@ function [vvv, eee, fff, ttt] = LiReF4_MF_Yikai(mion,temp,Bfield,theta,phi)
 % theta(in degrees): angle between the field and a-axis in ac-plane, 0 means a perfect transverse magnetic field, 
 % phi(in degrees): ab-plane rotation, phi(in radian) = 0 means H along x
 
-clearvars -except temp Bfield theta phi mion
+clearvars -except temp Bfield theta phi mion hyp
 %% Setup parameters.
 global rundipole muB mu0 muN J2meV
     rundipole = true;
@@ -16,9 +16,9 @@ global rundipole muB mu0 muN J2meV
     J2meV = 6.24151e+21; % [mev/J]
 
 global Options;
-    Options.hyperfine = false; % Including/excluding hyperfine calculations
-    Options.nZee = false; % Nuclear Zeeman interaction term switch
-    Options.demag = true; % Demagnetization factor included if TRUE
+    Options.hyperfine = hyp; % hyperfine interaction option
+    Options.nZee = hyp; % Nuclear Zeeman interaction option
+    Options.demag = false; % Demagnetization factor option
         alpha = 0; % shape in calculating demagnetization factor is a needle (0), sphere (1), disc (inf)
     Options.plotting = false; % Choose whether or not to plot the figures at the end
     
@@ -33,14 +33,12 @@ global strategies; % global convergence strategies switches
 
 if Options.nZee == true
     Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
-        '\PhD program\Research projects\Li', mion, 'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
-%     Options.filepath = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
-%         'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
+            '\PhD program\Research projects\Li', mion, 'F4 project\Data\Simulations\Matlab\Susceptibilities',...
+            '\with Hz_I'];
 else
     Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
-            '\PhD program\Research projects\Li', mion, 'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\test'];
-%     Options.filepath = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
-%         'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\test'];
+            '\PhD program\Research projects\Li', mion, 'F4 project\Data\Simulations\Matlab\Susceptibilities',...
+            '\without Hz_I\test'];
 end
 
 if length(Bfield) > length(temp)
@@ -48,6 +46,9 @@ if length(Bfield) > length(temp)
 else
     Options.scanMode = 'temp';
 end
+
+Options.theta = theta;
+Options.phi = phi;
 
 theta = theta*pi/180; % convert to radian, deviation angle from normal vector
 phi = phi*pi/180; % convert to radian, in-plane angle from a/b axis
@@ -79,10 +80,10 @@ switch mion
         strategies.symmetry = false; % override symmetry reflection for Ising magnet
     case 'Ho'
         ion.prop(2) = 1; % LiHoF4
-        strategies.symmetry = true; % override symmetry reflection for Ising magnet
+        strategies.symmetry = true;
     case 'Yb'
         ion.prop(3) = 1; % LiTbF4
-        strategies.symmetry = true; % override symmetry reflection for Ising magnet
+        strategies.symmetry = true;
     case 'Tm'
         ion.prop(4) = 1; % LiTmF4
     case 'Gd'
@@ -104,39 +105,40 @@ ion.nLande = [-0.1611; 1.192; -0.2592; -0.462; -0.2265; 0]; % https://easyspin.o
 ion.gLande = gLande(ion.L, ion.S);
 
 % Hyperfine coupling strength
-A_Ho = 0.003361; % Ho hyperfine coupling (meV) -- Phys. Rev. B 75, 054426 (2007)
+A_Ho = 3.361e-3; % Ho hyperfine coupling (meV) -- Phys. Rev. B 75, 054426 (2007)
 % A_Ho = 1.6*1e9*6.62606957e-34/(1.602176565e-19)*1000; % 1985 paper
 A_Er = 0.00043412; % Er hyperfine coupling (meV) -- Phys. Rev. B 2, 2298 - 2301 (1970)
 A_Gd = A_Ho;
 ion.A = [A_Er; A_Ho; 0; 0; A_Gd; 0];
+ion.dpRng = 100; % dipole summation range (in unit of unit cells)
 
-%Ions' lattice parameters
+% Ions' lattice parameters
 ion.abc = [{[5.162 0 0; 0 5.162 0; 0 0 10.70]}      % Er
            {[5.175 0 0; 0 5.175 0; 0 0 10.75]}      % Ho
-%            {[5.175 0 0; 0 5.175 0; 0 0 5.175]}      % Ho test
            {[5.132 0 0; 0 5.132 0; 0 0 10.59]}      % Yb
            {[5.150 0 0; 0 5.150 0; 0 0 10.64]}      % Tm
            {[5.162 0 0; 0 5.162 0; 0 0 10.70]}      % Gd
 %            {[5.132 0 0; 0 5.132 0; 0 0 10.59]}     % Gd
            {[5.132 0 0; 0 5.132 0; 0 0 10.59]}];    % Y
-
+% basis vector
+ion.tau = [ 0    0    0
+            0   1/2  1/4
+           1/2  1/2  1/2
+           1/2   0   3/4];
+       
 % Ions' cf parameters (ueV)
 ion.B = [[60.2258   -0.1164   -4.3280   0.00   -0.0019   -0.0850   -0.0227]   % Er
-         [-57.9   0.309   3.60   0.00   0.000540   0.0570   0.0130]          % Ho -- test
-%          [-57.9   0.309   3.60   0.00   0.000540   0.0570   0.0130]          % Ho -- SC239 (Jz/1.3) {phi=2.3, nZ=0, demag=1}
-%          [-57.9   0.309   3.51   0.00   0.000540   0.0560   0.0148]          % Ho -- SC239 (Jz/1) {phi=0.5, nZ=0, demag=0}
-%          [-57.9   0.309   3.60   0.00   0.000540   0.0565   0.0165]          % Ho -- SC239 (Jz/1) {phi=0, nZ=0, demag=1}
-%          [-57.9   0.309   3.51   0.00   0.000540   0.0541   0.0158]          % Ho -- SC239 (Jz/1) {phi=0, nZ=0, demag=1}
-%          [-57.9   0.309   3.51   0.00   0.000540   0.0631   0.0171]          % Ho -- Phys. Rev. B 92, 144422 (2015)
-%          [-54.7   0.262   2.91   0.00   0.000400   0.0511   0.0138]          % Ho -- PRB 2015 low limit {phi=0.7, nZ=0} & {phi=4, nZ=1} 
-%          [-61.1   0.356   4.11   0.00   0.000680   0.0751   0.0204]          % Ho -- PRB 2015 high limit
 %          [-60.0   0.350   3.60   0.00   0.000400   0.0700   0.0098]          % Ho -- Phys. Rev. B 75, 054426 (2007)
+         [-60.0   0.350   3.60   0.00   0.000400   0.0655   0.0098]          % Ho -- SC239 (Jz/1.3004) {phi=12, nZ=1, demag=0}
+%          [-60.0   0.350   3.60   0.00   0.000400   0.0655   0.0098]          % Ho -- SC239 (Jz/1.3004) {phi=7, nZ=0, demag=0}
+%          [-57.9   0.309   3.51   0.00   0.000540   0.0631   0.0171]          % Ho -- Phys. Rev. B 92, 144422 (2015)
+%          [-57.9   0.309   3.60   0.00   0.000540   0.0570   0.0130]          % Ho -- PRB 2015 mod(Jz*0.89)
 %          [-56.2   0.325   3.61   0.00   0.000181   0.0758   0.0000]          % Ho -- Handbook phys. & chem. Rare-Earths V.23 (1996)
 %          [-73.6   0.478   4.69   0.00   0.000100   0.0861   0.0118]          % Ho -- J. Magn. Magn. Magn. 15, 31 (1980)
 %          [-52.2   0.323   3.59   0.00   0.000522   0.0685   0.0000]          % Ho -- Phys. Rev. B 19, 6564 (1979)
 %          [-52.0   0.281   3.70   0.00   0.000700   0.0704   0.0000]          % Ho -- Opt. Spec-trosc. 44, 68 (1978)
 %          [-65.0   0.426   4.53   0.00   0.000100   0.0855   0.0169]          % Ho -- Phys. Rev. B 12, 5315 (1975)
-%          [-60.0   0.350    3.60   0.00   0.000400   0.0700   0.0060]          % Ho -- original code
+%          [-60.0   0.350   3.60   0.00   0.000400   0.0700   0.0060]          % Ho -- original code
          [646.2016   15.3409  116.4854   0.00   -0.0686  -15.1817    0.0000]  % Yb    
 %         [663.0000   12.5000   102.0000   0.00   -0.6200   -16.0000   0.0000] % Yb
          [224.3   -1.85   -11.7   0.00   0.002   0.2645   0.1377]             % Tm
@@ -148,20 +150,18 @@ ion.B = ion.B/1000.0; % ueV to meV
 % ion.h4 = [0.11e-3; 0; 0; 0; 0; 0]; % Crystal field anisotropy, Neda's thesis
 ion.h4 = [5.26e-3; 0; 0; 0; 0; 0]; % Order-by-disorder anisotropy, Neda's thesis
 
-%Ions' renorm
-ion.renorm=[[1,1,1]         % Er
-            [1,1,1/1.3]     % Ho -- Phys. Rev. B 75, 054426 (2007), Phys. Rev. B 49, 11833 (1994)
-%             [1,1,0.785]       % Ho
-            [1,1,1]         % Yb
-            [1,1,1]        % Tm
-            [1,1,1]         % Gd
-            [1,1,1]];       % Y
+%Ions' renormalization factor
+ion.renorm = [[1, 1, 1]         % Er
+             [1, 1, 1/1.3004]     % Ho -- Phys. Rev. B 75, 054426 (2007), Phys. Rev. B 49, 11833 (1994)
+%              [1, 1, 0.89]        % Ho -- For PRB 2015 mod
+             [1, 1, 1]         % Yb
+             [1, 1, 1]        % Tm
+             [1, 1, 1]         % Gd
+             [1, 1, 1]];       % Y
 
-% magnetic exchange interaction in J*S_i*S_j
+% Heisenberg exchange interaction
 ex.Er = 0;
-ex.Ho = -0.0001; % Phys. Rev. B 75, 054426 (2007)
-% exHo = -0.000542; % from Bitko et al.
-% exHo = -0.000436; % from Conradin
+ex.Ho = -0.0001; % [meV] AFM exchange [notation convention: PRB 75, 054426 (2007)]
 ex.Yb = 0;
 ex.Tm = 0;
 ion.ex = [ex.Er; ex.Ho; ex.Yb; ex.Tm; 0; 0];
@@ -180,8 +180,9 @@ ion.mom(:,:,4) = [1 0 0; -1 0 0; -1 0 0; 1 0 0];        % Tm
 ion.mom(:,:,5) = [1 0 0; 1 0 0; -1 0 0; -1 0 0];        % Gd
 ion.mom(:,:,6) = [0 0 0; 0 0 0; 0 0 0; 0 0 0];          % Y
 for ii = 1:length(ion.name)
-    ion.mom(:,:,ii) = ion.mom(:,:,ii) .* ion.J(ii); % put in real spin moment length
-%     ion.mom(:,:,ii) = ion.mom(:,:,ii) .* 5.5;
+%     ion.mom(:,:,ii) = ion.mom(:,:,ii) .* ion.J(ii); % put in real spin moment length
+%     ion.mom(:,:,ii) = ion.mom(:,:,ii) .* ion.J(ii) .* repmat(ion.renorm(ii,:)',1,size(ion.mom,1))'; % put in real spin moment length
+    ion.mom(:,:,ii) = ion.mom(:,:,ii) .* 5.51;
 end
 %% Calculate and save results inside the LiIonsF4 function
 [ion,~,E,V] = LiIonsF4(ion,temp,fields,phi,theta,alpha);
@@ -265,5 +266,5 @@ if length(temp) == 1 || size(Bfield,2) == 1 % for single external paramter sweep
                 Bfield, theta*180/pi, phi*180/pi,ion.hyp(n)));
     end
     fileobj = fullfile(Options.filepath,char(tit));
-    save(fileobj,'ttt','fff','eee','vvv','ion','-v7.3')
+    save(fileobj,'ttt','fff','eee','vvv','ion','Options','-v7.3')
 end

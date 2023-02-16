@@ -1,5 +1,5 @@
 function [qvec, fields, freq_total, chi, deno] = RPA(varargin)
-Options.saving = false; % saving option
+Options.saving = true; % saving option
 Options.plot = false; % plot option
 
 const.muB = 9.27401e-24; % Bohr magneton [J/T]
@@ -8,7 +8,7 @@ const.mu0 = 4*pi*1e-7; % [H/m]
 const.hbar = 1.05457E-34; % Reduced Planck constant [J.s]
 const.J2meV = 6.24151e+21; % Joule to meV
 const.Gh2mV = const.hbar * 2*pi * 1e9 * const.J2meV; % convert GHz to meV
-const.dpRng = 100; % dipole summation range (number of unit cell)
+const.kB = 8.61733e-2; % Boltzmann constant [meV/K];
 
 mion = varargin{1};
 temp = varargin{2};
@@ -38,6 +38,7 @@ chi_file = dir( fullfile(location, chi_name) ); % susceptibility data to load
 load([location chi_file.name],'-mat','fields','freq_total','chi','unit');
 
 [~, elem] = ismember(mion, ion.name); % find appropriate element index
+if temp > 0; beta = 1/const.kB/temp; else; beta = 1; end % [meV^-1]
 lattice = ion.abc{elem}; % retrieve lattice constants
 Vc = sum( lattice(1,:) .* cross(lattice(2,:), lattice(3,:)) ); % Volume of unit cell [Ang^-3]
 gfac = const.mu0/4/pi * (ion.gLande(elem) * const.muB)^2 * const.J2meV * 10^30; % mu0/(4pi).(gL.muB)^2 [meV.Ang^3]
@@ -63,26 +64,26 @@ eins = zeros(3,3,4,4);
 eins(1,1,:,:) = 1; eins(2,2,:,:) = 1; eins(3,3,:,:) = 1;
 D = zeros(3, 3, unitN, unitN, size(qvec,1)); % dipole interaction container
 J = zeros(3, 3, unitN, unitN, size(qvec,1)); % dipole interaction container
-% Jex = zeros(3, 3, size(qvec,1)); % exchange interaction container
 parfor jj = 1:size(qvec,1)
 % for jj = 1:size(qvec,1) % for debugging
-%     D(:,:,:,:,jj) = gfac * MF_dipole(qvec(jj,:), const.dpRng, lattice, ion.tau); % [meV] dipole interaction summation
-    D(:,:,:,:,jj) = gfac * (MF_dipole(qvec(jj,:), const.dpRng, lattice, ion.tau) + 4*pi*eins/3/Vc); % dipole + Lorenz term
+%     D(:,:,:,:,jj) = gfac * MF_dipole(qvec(jj,:), ion.dpRng, lattice, ion.tau); % [meV] dipole interaction summation
+    D(:,:,:,:,jj) = gfac * (MF_dipole(qvec(jj,:), ion.dpRng, lattice, ion.tau) + 4*pi*eins/3/Vc); % dipole + Lorenz term
     J(:,:,:,:,jj) = exchange(qvec(jj,:), abs(ion.ex(2)), lattice, ion.tau); % [meV] AFM exchange interaction
 end
 % Jq = zeros(3,3,unitN,unitN,size(qvec,1));
-% Jq(3,3,:,:,:) = D(3,3,:,:,:) - J(3,3,:,:,:); % truncate to Ising interaction
+% Jq(3,3,:,:,:) = repmat(diag(ion.renorm(elem,:)),1,1,4,4) .*...
+%                   (D(3,3,:,:,:) - J(3,3,:,:,:)); % truncate to Ising interaction
 Jq = repmat(diag(ion.renorm(elem,:)),1,1,4,4) .* (D - J);
 
 counter = 1;
 chii = zeros(3,3,4); % susceptibility for individual site within the unit cell
-screw = rotz(90); % rotate from site to site in the unit cell
+screw = rotz(0); % rotate from site to site in the unit cell
 for nb = bidx % field iterator
     for nf = 1:size(freq_total,2) 
-        chii(:,:,1) = squeeze(chi0(:,:,nf,nb));
-        chii(:,:,2) = screw*squeeze(chii(:,:,1));
-        chii(:,:,3) = screw*squeeze(chii(:,:,2));
-        chii(:,:,4) = screw*squeeze(chii(:,:,3));
+        chii(:,:,1) = beta*squeeze(chi0(:,:,nf,nb));
+        chii(:,:,2) = beta*screw*squeeze(chii(:,:,1));
+        chii(:,:,3) = beta*screw*squeeze(chii(:,:,2));
+        chii(:,:,4) = beta*screw*squeeze(chii(:,:,3));
         parfor nq = 1:size(qvec,1)
 %         for nq = 1:size(qvec,1)
           M = zeros(3*unitN); % Block matrix: 3 x 3 for each ion in the unit cell  
@@ -95,8 +96,6 @@ for nb = bidx % field iterator
           end
           chiq(:,:,nf,counter,nq) = 1/4*[eye(3) eye(3) eye(3) eye(3)]*...
             ((eye(size(M))-M)\([chii(:,:,1);chii(:,:,2);chii(:,:,3);chii(:,:,4)]));
-%           chi(:,:,nf,counter,nq) = 1/4*[eye(3) eye(3) eye(3) eye(3)]*...
-%             ((eye(size(M))-M)\([chi0(:,:,1,nf,nb);chi0(:,:,2,nf,nb);chi0(:,:,3,nf,nb);chi0(:,:,4,nf,nb)]));
         end
     end
     counter = counter + 1;

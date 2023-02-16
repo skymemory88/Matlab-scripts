@@ -4,18 +4,20 @@ clearvars -except varargin
 % default options
 Options.ion = 'Ho'; % support 'Er' and 'Ho'
 Options.hyp = 1.00; % Hyperfine isotope proportion
-Options.nZee = false; % nuclear Zeeman interaction
-% Options.RPA = false; % not implemented yet
-Options.Enorm = false; % Normalize the energy states to the ground state
+Options.nZee = true; % nuclear Zeeman interaction
+Options.Enorm = true; % Normalize the energy states to the ground state
 Options.Elevel = false; % eigen-energies
 Options.Ediff = true; % excitation spectrum
 Options.deltaI2 = false; % Transitions between the next nearest neightbouring levels
 Options.Js = false; % spin expectation values
 Options.Mx = false; % off diagonal element of spin matrix
+Options.RPA = false; % not implemented yet
+    omega = linspace(0,35,5001); % frequency range for RPA calculation
 Options.popul = false; % thermal populations of each states
 Options.Espan = false; % energy span of magnon modes
-f_cav = 3.645; % Resonant frequency of the cavity (GHz)
-filFctr = 0.01005*1.06; % filling factor
+    f_cav = 3.645; % Resonant frequency of the cavity (GHz)
+%     filFctr = 0.01005; % filling factor
+    filFctr = 0.01005*1.04; % filling factor
 Options.eUnit = 'GHz'; % unit choice: 'J', 'meV', 'GHz'
 Options.plot = true; % plot option
 Options.ScanMode = 'field'; % temperature/field scan option
@@ -34,6 +36,7 @@ if nargin == 5
         Options.(change{ii}) = opt.(change{ii});
 %         Options = setfield(Options, change{ii}, opt.change(ii));
     end
+    Options.plot = false;
 elseif nargin == 6
     Options.ion = varargin{1};
     dscrt_var = varargin{2};
@@ -43,20 +46,25 @@ elseif nargin == 6
     Options.plot = varargin{6};
 end
 
-kB = 8.617333e-2; % [meV/K]
-hbar = 1.055E-34; % Reduced Planck constant [J.s]
+muB = 9.27401e-24; %[J/T]
+muN = 5.05078e-27; % Nuclear magneton [J/T]
+mu0 = 4*pi*1e-7; % [H/m]
+kB = 8.61733e-2; % [meV/K]
+hbar = 1.05457E-34; % Reduced Planck constant [J.s]
 J2meV = 6.24151e+21; % [meV/J]
 Gh2mV = hbar*2*pi*10^9*J2meV; % [meV/GHz]
 elem_idx = find(strcmp(Options.ion,[{'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}]));
 
 if Options.nZee == true
     Options.location = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
-        '\PhD program\Research projects\Li', Options.ion, 'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
+        '\PhD program\Research projects\Li', Options.ion, 'F4 project\Data\Simulations\Matlab\Susceptibilities\',...
+        'with Hz_I'];
 %     Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',Options.ion,...
 %         'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
 else
     Options.location = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
-            '\PhD program\Research projects\Li', Options.ion, 'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\test'];
+            '\PhD program\Research projects\Li', Options.ion, 'F4 project\Data\Simulations\Matlab\Susceptibilities\',...
+            'without Hz_I\test'];
 %     Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',Options.ion,...
 %         'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\test'];
 end
@@ -67,11 +75,19 @@ color = {[0, 0.4470, 0.7410]; [0.8500, 0.3250, 0.0980]; [0.9290, 0.6940, 0.1250]
     [0.4940, 0.1840, 0.5560]; [0.4660, 0.6740, 0.1880];[0.3010, 0.7450, 0.9330]};
 if strcmp(Options.eUnit,'meV')
     E2f = 1; % use default meV unit
+    f2E = Gh2mV; % GHz to meV conversion
     ylab = 'Energy (meV)';
     ylab1 = 'Energy gap (meV)';
     ylab2 = 'Freqeuency range (meV)';
+elseif strcmp(Options.eUnit, 'eV')
+    E2f = 1e-3; % meV to eV conversion
+    f2E = Gh2mV*1e-3; % GHz to eV conversion
+    ylab = 'Energy (eV)';
+    ylab1 = 'Energy gap (eV)';
+    ylab2 = 'Freqeuency range (eV)';
 elseif strcmp(Options.eUnit,'GHz')
     E2f = 1/Gh2mV; % meV to GHz conversion
+    f2E = 1;
     ylab = 'Energy (GHz)';
     ylab1 = 'Energy gap (GHz)';
     ylab2 = 'Freqeuency range (GHz)';
@@ -99,7 +115,7 @@ results.JImx = {};
 for iter = 1:numel(dscrt_var)
     for iter2 = 1:numel(theta)
         for iter3 = 1:numel(phi)
-            switch Options.ScanMode % 1. Field plot with RPA. 2. wavevector plot with RPA
+            switch Options.ScanMode % 1. Field plot. 2. Temperature plot
                 case 'field'
                     lname = strcat(['Hscan_Li', Options.ion, 'F4_'], sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f',...
                         dscrt_var(iter), theta(iter2), phi(iter3), Options.hyp),'.mat');
@@ -118,42 +134,22 @@ for iter = 1:numel(dscrt_var)
                     xlab = 'Temperature (K)';
             end
 
-            if Options.Enorm == true; eee = eee - min(eee,[],2); end% Normalize the energy amplitude to the lowest eigen-energy
+            if Options.Enorm == true; eee = eee - min(eee,[],2); end % Normalize the energy amplitude to the lowest eigen-energy
 %             if Options.Enorm == true
 %                 for ii = 1:N_level
 %                     eee(:,ii) = eee(:,ii) - E0/E2f; % Normalize the energy amplitude to reference point E0 (manual)
 %                 end
 %             end
-            eigenE = squeeze(eee) * E2f;
+            eigenE = squeeze(eee);
             eigenW = vvv;
             results.En{iter,iter2,iter3} = eigenE(:,1:N_level); % Energy eigenstate
             results.wav = vvv; % needs to implementing truncation by N_level
             Ediff = double.empty(0,size(eigenE,1));
             if Options.deltaI2; Ediff2 = double.empty(0,size(eigenE,1)); end
-%% Deviation of the energy from the mean value
-%             aver = double.empty(size(E,1),0);
-%             E8=E(:,1:8);
-%             for j=1:size(E,1)
-%                 aver(j)=mean(E8(j,:));
-%             end
-%             for j=1:8
-%                 E8(:,j)=E8(:,j)-aver(:);
-%             end
-%             clearvars aver
-%
-%             figure
-%             hold on
-%             plot(fields,E8(:,1:8),'Color',[35 107 142]/255,'linewidth',2);
-%             xlabel(xlab,'FontSize',15)
-%             ylabel(ylab,'FontSize',15)
-%             xlim([0 9]);
-%             tit0='Energy spread from the mean value';
-%             title(tit0,'FontSize',15)
-%             legend(num2str(dscrt_var(iter)*1000,'T = %u mK,  A = A_{th}'))
 %% Plot eigen-energies
             if Options.Elevel == true && Options.plot == true
                 fig_E = figure;
-                figs_E(:, iter2, iter3) = plot(continu_var, eigenE(:,1:N_level), 'Color', color{1}, 'linewidth', 2);
+                figs_E(:, iter2, iter3) = plot(continu_var, eigenE(:,1:N_level) .* E2f, 'Color', color{1}, 'linewidth', 2);
 %                 figs_E(:, iter2, iter3) = plot(fields, eigenE(:,1:N_level), 'Color', 'b', 'linewidth', 2);
 %                 figs_E(:, iter2, iter3) = plot(fields, eigenE(:,1:N_level), 'Color', [35 107 142]/255, 'linewidth', 2);
                 hold on
@@ -182,8 +178,12 @@ for iter = 1:numel(dscrt_var)
                     end
                 end
                 Ediff(N_level-1,:) = eigenE(:,N_level)-eigenE(:,N_level-1); % Transition between the top two levels
+                Ediff = Ediff * E2f; % convert to set energy unit
                 results.Ediff{iter,iter2,iter3} = Ediff;
-                
+                if exist('Ediff2','var')
+                    Ediff2 = Ediff2 * E2f; % convert to set energy unit
+                    results.Ediff2{iter,iter2,iter3} = Ediff2;
+                end
                 % frequency = { '1.682 GHz', '3.436 GHz', '3.924 GHz', '4.449 GHz', '5.604 GHz' }; % frequency reference lines
 
                 % Plot transitions between the nearest levels
@@ -197,7 +197,7 @@ for iter = 1:numel(dscrt_var)
 %                         figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle',...
 %                             marker(1), 'Color', color{iter3},'LineWidth', 2);
                         figs_dE(2:end, iter2, iter3) = plot(continu_var, Ediff(2:end,:), 'Marker', 'none', 'LineStyle',marker(1),...
-                            'Color', 'w', 'LineWidth', 2);
+                            'Color', 'k', 'LineWidth', 2);
 %                         figs_dE(2:end, iter2, iter3) = plot(fields, Ediff(2:end,:), 'Marker', 'none', 'LineStyle',...
 %                             marker(1),'LineWidth', 1.5);
                     end
@@ -313,12 +313,12 @@ for iter = 1:numel(dscrt_var)
 %                     ylabel('<J>')
 
 
-%                     figure
+                    figure
                     box on
                     hold on
                     plot(continu_var(1:30:end), Jx_av(1:30:end), '-o', 'LineWidth', 1, 'Color', 'b')
                     plot(continu_var(1:30:end), Jy_av(1:30:end), '-s', 'LineWidth', 1, 'Color', 'b')
-                    plot(continu_var(1:15:end), Jz_av(1:15:end), '-^', 'LineWidth', 1, 'Color', 'b')
+                    plot(continu_var(1:15:end), Jz_av(1:15:end), '-^', 'LineWidth', 1, 'Color', 'k')
 %                     plot(fields, Jx_av, 'LineStyle', '-', 'LineWidth', 2)
 %                     plot(fields, Jy_av, 'LineStyle', '-', 'LineWidth', 2)
 %                     plot(fields, Jz_av, 'LineStyle', '-', 'LineWidth', 2)
@@ -349,9 +349,6 @@ for iter = 1:numel(dscrt_var)
                 ionJ = J_tab(elem_idx); % Electronic moment for Ho3+
                 ionI = I_tab(elem_idx); % Nuclear moment for Ho3+
 
-                muB = 9.274e-24; %[J/T]
-                muN = 5.05078e-27; % Nuclear magneton [J/T]
-                mu0 = 4*pi*1e-7; % [H/m]
                 ELEf = gLande(L_tab(elem_idx),S_tab(elem_idx)) * muB; % Lande factor * Bohr magneton (J/T)
                 NUCf = nLande(elem_idx) * muN; % (J/T)
                 rho = 4e30 / det(lattice); % magnetic ion number density [m^-3]
@@ -385,10 +382,11 @@ for iter = 1:numel(dscrt_var)
                 tz = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Expectation value of Jz pseudo-spin
                 ttz = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Expectation value of Jz-Iz pseudo-spin
                 Gc2 = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Coupling strength
+                dP = double.empty(size(eigenW,2),size(eigenW,2),size(continu_var,2),0); % Coupling strength
                 for kk = 1:size(continu_var,2) % calculate susceptibility for all fields
                     en = squeeze(eigenE(kk,:)); % Obtain the corresponding eigen energies [meV]
                     if temperature(kk) ~= 0
-                        beta = 1/E2f / (kB*temperature(kk)); % [1/meV or 1/GHz]
+                        beta = 1/(kB*temperature(kk)); % [1/meV]
                         Z = sum(exp(-beta*en));
                         zn = exp(-beta*en)/Z;
                         [n,np] = meshgrid(zn,zn);
@@ -416,7 +414,8 @@ for iter = 1:numel(dscrt_var)
                     tz(:,:,kk,1) = v' * JzhT * v;
                     ttz(:,:,kk,1)  = v' * (JzhT+IzhT) * v;
                     
-                    Gc2(:,:,kk,1) = gw2 * ttz(:,:,kk,1) .* ttz(:,:,kk,1).' .* NN * J2meV / Gh2mV;
+                    Gc2(:,:,kk,1) = gw2 * ttz(:,:,kk,1) .* ttz(:,:,kk,1).' .* NN * J2meV / Gh2mV; % [meV^2]
+                    dP(:,:,kk,1) = NN;
                 end
                 results.Jmx{iter,iter2,iter3} = tx;
                 results.Jmy{iter,iter2,iter3} = ty;
@@ -426,6 +425,7 @@ for iter = 1:numel(dscrt_var)
                 results.JIy{iter,iter2,iter3} = tty;
                 results.JIz{iter,iter2,iter3} = ttz;
                 
+                results.pop{iter,iter2,iter3} = dP;
                 results.Gc2{iter,iter2,iter3} = Gc2;
 
                 if Options.plot == true
@@ -438,6 +438,77 @@ for iter = 1:numel(dscrt_var)
                     xlabel(xlab)
                     ylabel(ylab)
                     title('Nearest level excitation coupling strength')
+                end
+            end
+%% Plot the RPA excitation modes at T=0 (only works for the case of exchange anisotropy)
+            if Options.RPA == true
+                ionJ = ion.J(elem_idx); % Electronic moment for Ho3+
+                ionI = ion.I(elem_idx);
+                Jz = diag(ionJ:-1:-ionJ); % Jz = -J, -J+1,...,J-1,J
+                if ionI ~= 0
+                    Iz = diag(ionI:-1:-ionI); % Iz = -I, -I+1,...,I-1,I
+                    Jz = kron(Jz, eye(2*ionI+1));
+                    Iz = kron(eye(2*ionJ+1), Iz); % Expand Hilbert space
+                end
+                
+                ELEf = ion.gLande(elem_idx) * muB * J2meV; % Lande factor * Bohr magneton [meV/T]
+                NUCf = ion.nLande(elem_idx) * muN * J2meV; % nuclear Lande * magneton [meV/T]
+                gfac = mu0/4/pi * (ion.gLande(elem_idx) * muB)^2 * J2meV * 10^30; % mu0/(4pi).(gL.muB)^2 [meV.Ang^3]
+                
+                lattice = ion.abc{elem_idx}; % retrieve lattice constants
+                Vc = sum( lattice(1,:) .* cross(lattice(2,:), lattice(3,:)) ); % Volume of unit cell [Ang^-3]
+                eins = zeros(3,3,4,4);
+                eins(1,1,:,:) = 1; eins(2,2,:,:) = 1; eins(3,3,:,:) = 1;
+                Dip = gfac * (MF_dipole([0 0 0], ion.dpRng, lattice, ion.tau) + 4*pi*eins/3/Vc); % [meV] dipole + Lorenz term
+                Jex = exchange([0 0 0], abs(ion.ex(elem_idx)), lattice, ion.tau); % [meV] AFM exchange interaction
+                
+                Dip = sum(sum(Dip,4),3)/size(ion.tau,1); % average over the unit cell
+                Jex = sum(sum(Jex,4),3)/size(ion.tau,1);
+                Jij = diag(ion.renorm(elem_idx,:)) .* (Dip - Jex) .* E2f;
+
+                dE = double.empty(length(continu_var), N_level-1, 0);
+                deno = double.empty(length(continu_var), length(omega), 0);
+                poles = zeros(length(continu_var), N_level-1);
+                for kk = 1:length(continu_var)
+                    en = squeeze(eigenE(kk,:));
+%                     if temperature(kk) > 0            
+%                         beta = 1/(kB*temperature(kk)); % [meV^-1]
+%                         Z = sum(exp(-beta*en));
+%                         zn = exp(-beta*en)/Z;
+%                     else
+%                         zn = ones(1,N_level);
+%                         zn(1) = 0;
+%                     end
+                    vv = squeeze(eigenW(kk,:,:));
+                    jzz = vv' * (Jz + NUCf/ELEf .* Iz) * vv;
+                    jmn = jzz(2:N_level,1); % off diagonal elements between <n| and |0>
+%                     jmn = (zn(2:N_level)-zn(1))' .* jzz(2:N_level,1); % off diagonal elements between <n| and |0>
+                    J0 = [0 0 1] * Jij * [0 0 1]'; % Ising element of q=0 interaction tensor
+
+                    dE0 = en - min(en,[],2); % MF excitation modes at 0 K
+                    dE0 = dE0(2:N_level)' .* E2f;
+                    omega = omega .* f2E;
+                    parfor nw = 1:length(omega) % search for RPA poles
+                        dE2 = (dE0.^2 - omega(nw)^2);
+                        deno(kk,nw,1) = prod(dE2)*(1 - J0 * (2*dE0') * (abs(jmn).^2 ./ dE2));
+                    end
+                    pks = squeeze(mag2db(1./abs(deno(kk,:,1)))); % search for poles
+                    [~,loc] = findpeaks(pks, 'SortStr', 'none');
+                    poles(kk,1:length(loc)) = flip(omega(loc));
+                    for ii = 2:size(poles,2)
+                        dE(:,ii-1,1) = poles(:,ii-1)-poles(:,ii);
+                    end
+                    results.freq = omega;
+                    results.poles = poles;
+                    results.deno = squeeze(deno);
+                    results.dE = dE;
+                end
+
+                if Options.plot == true
+                    figure;
+                    plot(continu_var, poles);
+                    xlabel('Magnetic Field (T)')
+                    ylabel('Energy (GHz)')
                 end
             end
 %% Plot the occupation number of each state

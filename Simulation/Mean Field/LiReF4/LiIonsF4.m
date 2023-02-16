@@ -15,6 +15,7 @@ alt = [1  1  1
        1 -1  1];  
 
 ion_mom_init = ion.mom;
+ion.demag = Options.demag;
 history = cell([length(temp),size(field,2)]);
 
 idx = find(ion.prop);
@@ -58,9 +59,9 @@ for ii = 1:length(discrt_var)
     for jj = 1:length(continu_var)
         switch Options.scanMode % determine x-variable and data slicing direction
             case 'field'
-                [ion,evolution,energy,v,~] = remf(ion,field(:,jj)',temp(ii),Options.demag,alpha);
+                [ion, evolution, energy, v, ~] = remf(ion, field(:,jj)', temp(ii), alpha);
             case 'temp'
-                [ion,evolution,energy,v,~] = remf(ion,field(:,ii)',temp(jj),Options.demag,alpha);
+                [ion, evolution, energy, v, ~] = remf(ion, field(:,ii)', temp(jj), alpha);
         end    
         for kk = 1:size(ion.name,1)
             ion.altJmom(:,jj,kk) = mean(alt.*ion.mom(:,:,kk));

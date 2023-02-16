@@ -1,87 +1,140 @@
 function sim = S11_simulation(mion, scanMode, dscrt_var, theta, phi, gama, plotOpt)
 clearvars -except dscrt_var scanMode theta phi gama RPA_opt dE mion plotOpt
 
+muB = 9.27401e-24; % Bohr magneton [J/T]
+muN = 5.05078e-27; % Nuclear magneton [J/T]
 mu0 = 4*pi*1e-7; % Vacuum permeability ([H/m])
 hbar = 1.05457E-34; % Reduced Planck constant [J.s/rad]
 meV2J = 1.60218e-22; % [J/meV]
-Gh2mV = hbar * 2*pi / meV2J * 10^9; % [meV/GHz]
+Gh2mV = hbar * 2*pi * 10^9 / meV2J; % [meV/GHz]
 mV2Gh = 1/Gh2mV; % [GHz/meV]
 kB = 8.61733e-2; % [meV/K]
-rho = 4/(5.175e-10 * 5.175e-10 * 10.75e-10); % magnetic moment number density in LiReF4 [m^-3]
+rho = 4/(5.175e-10 * 5.175e-10 * 10.750e-10); % magnetic moment number density in LiReF4 [m^-3]
+fil_scl = 1.0; % filling factor correction
 
-% frequency parameter setup
-dE = -0.0;
-% fc = 4.7353 +dE; % Fundamental mode of the cavity [Ghz]
-fc = 3.642 + dE; % cavity resonance frequency [GHz]
-% fc = 3.3 + dE;
-% fc2 = 4.2; % Second mode of the cavity
-% freq_l = 4.710; % frequency range lower limit [GHz]
-% freq_h = 4.745; % frequency range upper limit [GHz]
-freq_l = 3.52; % frequency range lower limit [GHz]
-freq_h = 3.76; % frequency range upper limit [GHz]
-% freq_l = fc-0.1;
-% freq_h = fc+0.1;
-freq_pts = 2001; % number of points along frequency axis
-freq = linspace(freq_l,freq_h,freq_pts); % Only applies when calculating from scratch
+% Filling factor:  SC108 = 0.112, SC200/SC239 = 0.0127
+% filFctr = 0.25; % toy models
+% filFctr = 0.0112; % SC239 (int |By| dv/int |B| dv)
+% filFctr = 0.01005; % SC239 (int |By| dv/int |B| dv)
+% filFctr = 0.008633; % SC239 (volume ratio)
+% filFctr = 0.112; % SC108
+filFctr = 0.004; % SC127
+% filFctr = 0.01005*1.96; % SC107
+% filFctr = 0.01005*1.5; % SC140
+% filFctr = 0.033; % Caltech: Phys. Rev. Lett. 127, 207202 (2021)
 
-Options.scanMode = scanMode; % continuous variable choice: 1. Field, 2. Temperature
-    cVar_l = 0.0; % continuous variable setup
-    cVar_h = 17.0;
-    cVar_np = 801; % number of points along field axis
-    cVar = linspace(cVar_l,cVar_h,cVar_np); % Only applies when calculating from scratch
-    
+% filFctr_2 = 0.15; % Filling factor for the second mode
+% filFctrs = [0.005 0.01 0.015 0.02 0.025 0.03 0.035 0.04];
+
 Options.simType = 2; % Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation
-Options.nZee = false;
-Options.RPA = true; % Use RPA susceptibilities
+Options.nZee = true; % nuclear Zeeman interaction option
+        hyp = 1.0; % hyperfine isotope proportionality
+Options.RPA = false; % Use RPA susceptibilities
 Options.noise = false; % Add white noises to the backgroud
     sig2n = 30; % signal-to-noise level (dB)
 Options.plot = plotOpt; % Option to plot data
-    Options.x1x2 = false; % Plot the matrix elements of the susceptibilities
-    Options.trace = true; % Calculate the trace of resonant frequency along field axis
+    Options.x1x2 =  false; % Plot the matrix elements of the susceptibilities
+    Options.trace = false; % Calculate the trace of resonant frequency along field axis
     Options.Q_1 = false; % Calculate 1/Q plot along the field axis
     Options.Elevel = false; % Plot energy eigenstates
     Options.Ediff = false; % Plot energy levels on top
         nLevel = 7; % number of excitation spectrum (max 135);
         ndiff = 1; % order of excitations (min 1)
         nMax = nLevel + ndiff; % Hilbert space dimension
-        hyp = 1.0; % hyperfine isotope proportionality
+        cmap = unique([[0 0 0];[zeros(200,1),linspace(0,0.5,200)',linspace(0.4,1,200)'];...
+            [linspace(0,1,200)',0.5*ones(200,1),linspace(1,0,200)'];...
+            [ones(200,1),linspace(0.5,1,200)',linspace(0,1,200)']],'rows');
+        cmap = flip(cmap,1); % custom definition of color scale
 Options.savedata = false; % Save results to a file
 Options.savegif = false; % Save a series of color plots as a gif
 
-if Options.nZee == true
-    nZeePath = 'with Hz_I\';
-else
-    nZeePath = 'without Hz_I\CEF_2015_mod_R=0.785_phi=2.3';
-end
-location = ['G:\My Drive\File sharing\PhD program\Research projects\Li',mion,...
-    'F4 project\Data\Simulations\Matlab\Susceptibilities\'];
-saveloc = [location,'\S11 parameters\', nZeePath];
+% frequency parameter setup
+dE = -0.0;
 
-switch Options.scanMode
-    case 'field'
-        file_part = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',dscrt_var, theta, phi, hyp);
-        file_part2 = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e_%5$.3f-%6$.3fGHz.mat'...
-            , dscrt_var, theta, phi, gama, freq_l, freq_h);
-        filename = ['Hscan_LiHoF4_',file_part];
-    case 'temp'
-        file_part = sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',dscrt_var, theta, phi, hyp);
-        file_part2 = sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_%4$.2e_%5$.3f-%6$.3fGHz.mat'...
-            , dscrt_var, theta, phi, gama, freq_l, freq_h);
-        filename = ['Tscan_LiHoF4_',file_part];
-end
-MF_file = fullfile([location, nZeePath],filename); % Mean field data to load
+% fc = 0.3 + dE;
+% freq_l = 0; % frequency range lower limit [GHz]
+% freq_h = 1; % frequency range upper limit [GHz]
 
-if Options.RPA ==true
-    
-    filename = strcat('RPA_LiHoF4_',file_part2);
-else
-    filename = strcat('chi0_LiHoF4_',file_part2);
-end
-chi_file = fullfile([location, nZeePath], filename); % susceptibility data to load
+% fc = 2.1964 + dE;
+% freq_l = 2.02; % frequency range lower limit [GHz]
+% freq_h = 2.22; % frequency range upper limit [GHz]
+
+% fc = 2.537 + dE;
+% freq_l = 2.44; % frequency range lower limit [GHz]
+% freq_h = 2.56; % frequency range upper limit [GHz]
+
+% fc = 2.855 + dE;
+% freq_l = 2.75; % frequency range lower limit [GHz]
+% freq_h = 2.87; % frequency range upper limit [GHz]
+
+% fc = 3.643 + dE;
+% freq_l = 3.52; % frequency range lower limit [GHz]
+% freq_h = 3.76; % frequency range upper limit [GHz]
+
+fc = 4.075 + dE;
+freq_l = 4.06; % frequency range lower limit [GHz]
+freq_h = 4.09; % frequency range upper limit [GHz]
+
+% fc = 4.7353 + dE; % [Ghz]
+% freq_l = 4.710; % frequency range lower limit [GHz]
+% freq_h = 4.745; % frequency range upper limit [GHz]
+
+% fc = 4.9164 + dE; % [GHz]
+% freq_l = 4.800; % frequency range lower limit [GHz]
+% freq_h = 4.940; % frequency range upper limit [GHz]
+
+% freq_l = fc-0.1;
+% freq_h = fc+0.1;
+freq_pts = 2001; % number of points along frequency axis
+freq = linspace(freq_l,freq_h,freq_pts); % Only applies when calculating from scratch
 
 alpha = 0.0; % Phase angle (in radians)
 % alpha = [0 pi/6 pi/4 pi/2 pi/3 pi]; % Phase angle (in radians) between coherent and dissipative couplings (can be an array)
 % alpha = linspace(0,pi,20);
+
+Options.scanMode = scanMode; % continuous variable choice: 1. Field, 2. Temperature
+    cVar_l = 0.0; % continuous variable setup
+    cVar_h = 17.0;
+    cVar_np = 801; % number of points along field axis
+    cVar = linspace(cVar_l,cVar_h,cVar_np); % Only applies when calculating from scratch
+
+if Options.nZee == true
+    nZeePath = 'with Hz_I\';
+else
+    nZeePath = 'without Hz_I\test';
+end
+
+switch Options.scanMode
+    case 'field'
+        file_part = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',dscrt_var, theta, phi, hyp);
+        file_part2 = sprintf('LiHoF4_%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e_%5$.3f-%6$.3fGHz.mat'...
+            , dscrt_var, theta, phi, gama, freq_l, freq_h);
+        filename = ['Hscan_LiHoF4_',file_part];
+    case 'temp'
+        file_part = sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',dscrt_var, theta, phi, hyp);
+        file_part2 = sprintf('LiHoF4_%1$3.3fT_%2$.2fDg_%3$.1fDg_%4$.2e_%5$.3f-%6$.3fGHz.mat'...
+            , dscrt_var, theta, phi, gama, freq_l, freq_h);
+        filename = ['Tscan_LiHoF4_',file_part];
+end
+
+switch mion
+    case 'Ho'
+        location = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing\PhD program\'...
+            'Research projects\Li', mion ,'F4 project\Data\Simulations\Matlab\Susceptibilities\'];
+        saveloc = [location,'\S11 parameters\', nZeePath];
+    case 'toy'
+        unit = 'meV';
+        location = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
+            '\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities',...
+            '\toy_model'];
+        nZeePath = '';
+        file_part = sprintf('Hscan_toy_%1$3.3fK_*T_hp=%2$.2f.mat', dscrt_var, hyp);
+        MF_name = dir( fullfile(location, file_part) );
+        filename = MF_name(1).name;
+        file_part2 = sprintf('toy_%1$3.3fK_%2$.2e_%3$.3f-%4$.3fGHz.mat', dscrt_var, gama, freq_l, freq_h);
+end
+MF_file = fullfile([location, nZeePath], filename); % Mean field data to load
+chi_file = fullfile([location, nZeePath], strcat('chi_',file_part2)); % susceptibility data to load
 
 chi_labl = ["\chi_{xx}","\chi_{xy}","\chi_{xz}"
             "\chi_{yz}","\chi_{yy}","\chi_{yz}"
@@ -91,25 +144,10 @@ chi_elem = [0 0 0
             0 0 1]; % tensorial element of susceptibility to use
 chi_idx = find(chi_elem); % index of chi element choice.
 
-if Options.RPA == true
-    scale = 1.06;
-%     scale = 1.00;
-else
-    scale = 1.10;
-end
-% Filling factor:  %SC108: 0.112, SC200: 0.0127
-filFctr = 0.01005*scale; % SC229 (int |By| dv/int |B| dv)
-% filFctr = 0.008633*scale; % SC229 (volume ratio)
-% filFctr = 0.112*scale; % SC108
-% filFctr = 0.095967;
-% filFctr_2 = 0.15; % Filling factor for the second mode
-% filFctr = [0.005 0.01 0.015 0.02 0.025 0.03 0.035 0.04];
-
 % coupling strength
+filFctr = filFctr * fil_scl;
 gw0 = sqrt(mu0 * 2*pi * fc*1e9 * rho/2) * filFctr; % susceptibility prefactor [T^2/J. rad/s]^1/2
 gw2 = gw0^2 * 2*pi * 1e-9; % [T^2/J. GHz]
-
-% gw0 = filFctr^2*wc^2; % Phys.Rev.Appl. 2, 054002 (2014)
 
 % Cavity loss rates (GHz)
 % kappa_i = 7.69e-4; % SC200: 2020_10_0009.dat
@@ -124,12 +162,12 @@ gw2 = gw0^2 * 2*pi * 1e-9; % [T^2/J. GHz]
 % kappa_i = 3.81e-4; % SC239: 2021_07_0003.dat
 % kappa_e = 5.56e-4; % SC239: 2021_07_0003.dat
 
-% kappa_i = 1.77e-4; % SC127_1
-% kappa_e = 6.92e-4; % SC127_1
+kappa_i = 1.77e-4; % SC127_1
+kappa_e = 6.92e-4; % SC127_1
 % kappa_i = 1.15e-4; % SC108
 % kappa_e = 8.18e-4; % SC108
-kappa_i = 8.43e-4;
-kappa_e = 4.02e-4;
+% kappa_i = 8.43e-4;
+% kappa_e = 3.02e-3;
 
 if Options.savegif == true
 %     im_t = numel(alpha); % a series with varying phase angle
@@ -211,13 +249,18 @@ while true
             xlim([cVar_l cVar_h])
             ylim([freq_l freq_h])
             break;
-        case 2 % Option 2 Load existing susceptibilities and interpolate
+        case 2 % Option 2: Load existing susceptibilities and interpolate
             if isfile(MF_file) && isfile(chi_file)
                 load(MF_file,'-mat','eee'); % loads eigenEnergy
                 En = squeeze(eee - min(eee,[],2)); % normalize to the ground state energy [meV]
                 switch Options.scanMode
                     case 'field'
-                        load(chi_file,'-mat','fields','freq_total','chi','unit');
+                        if Options.RPA == true
+                            load(chi_file,'-mat','fields','freq_total','chiq','unit');
+                            chi = chiq;
+                        else
+                            load(chi_file,'-mat','fields','freq_total','chi','unit');
+                        end
                         continu_var = fields;                
                         [cVar,freq] = meshgrid(continu_var(1,:),freq_total);
                         sim.freq = freq;
@@ -225,7 +268,12 @@ while true
                         xlab = 'Magnetic Field (T)';
                         titl = num2str(dscrt_var*1000, '%u mK');
                     case 'temp'
-                        load(chi_file,'-mat','temp','freq_total','chi','unit');
+                        if Options.RPA == true
+                            load(chi_file,'-mat','temp','freq_total','chiq','unit');
+                            chi = chiq;
+                        else
+                            load(chi_file,'-mat','temp','freq_total','chi','unit');
+                        end
                         continu_var = temp;                
                         [cVar,freq] = meshgrid(continu_var(1,:),freq_total);
                         sim.freq = freq;
@@ -260,8 +308,8 @@ while true
                 answer = input(prompt,'s');
                 switch lower(answer)
                     case {'y','yes'}
-                        LiReF4_MF_Yikai('Ho',dscrt_var,cVar,theta,phi);
-                        load(MF_file,'-mat','vvv','ttt','fff','eee'); % loads "eigenfunction" "temperatures", "field", "Energy"
+                        LiReF4_MF_Yikai('Ho', dscrt_var, cVar, theta, phi);
+                        load(MF_file,'-mat','vvv','ttt','fff','eee','ion'); % loads "eigenfunction" "temperatures", "field", "Energy"
                     case {'n','no'}
                         return
                     otherwise
@@ -269,7 +317,7 @@ while true
                         return
                 end
             else
-                load(MF_file,'-mat','vvv','ttt','fff', 'eee'); % loads "eigenfunction" "temperatures", "field", "Energy"
+                load(MF_file,'-mat','vvv','ttt','fff','eee','ion'); % loads "eigenfunction" "temperatures", "field", "Energy"
             end
             eee = eee - min(eee,[],2); % normalize the energy levels to the ground state [meV]
             Ediff = diff(eee,1,2); % [meV]
@@ -289,22 +337,12 @@ while true
                     titl = num2str(dscrt_var, '%.3f T');
             end
             sim.freq = freq;
-                       
-            %Initiate J operators            
-            %        Er       Ho      Yb      Tm      Gd      Y
-            J_tab = [15/2;    8;      7/2;    6;      7/2;    1];
-            L_tab = [6;       6;       3;     5;      0;      1];
-            S_tab = [3/2;     2;      1/2;    1;      7/2;    1];
-            I_tab = [3;      3.5;      0;     0;      1.50;   0];
-            nLande = [-0.1611; 1.192; -0.2592; -0.462; -0.2265; 0]; % https://easyspin.org/documentation/isotopetable.html
-                        
-            elem_idx = 2; % LiReF4, Re = Ho
-            J = J_tab(elem_idx); % Electronic moment for Ho3+
-            I = I_tab(elem_idx); % Nuclear moment for Ho3+
-            muB = 9.27401e-24; % Bohr magneton [J/T]
-            muN = 5.05078e-27; % Nuclear magneton [J/T]
-            ELEf = gLande(L_tab(elem_idx),S_tab(elem_idx)) * muB; % Lande factor * Bohr magneton [J/T]
-            NUCf = nLande(elem_idx) * muN; % [J/T]
+
+            elem_idx = find(ion.prop); % LiReF4, Re = Ho
+            J = ion.J(elem_idx); % Electronic moment for Ho3+
+            I = ion.I(elem_idx); % Nuclear moment for Ho3+
+            ELEf = ion.gLande(elem_idx) * muB; % Lande factor * Bohr magneton [J/T]
+            NUCf = ion.nLande(elem_idx) * muN; % [J/T]
             Jz=diag(J:-1:-J); % Jz = -J, -J+1,...,J-1,J
             Jzh=kron(Jz,eye(2*I+1)); % Expand Jz space to include nuclear degree of freedom
             Iz=diag(I:-1:-I); % Iz = -I, -I+1,...,I-1,I
@@ -417,45 +455,36 @@ switch Options.simType
 %                 S11 = S11 + randn(size(S11))*0.01;
             end
             if Options.plot == true
-                s_para = figure;
-                map = pcolor(cVar,freq,mag2db(abs(S11))); % color plot of the S11 response
-%                 map = pcolor(field,freq,mag2db(real(S11))); % color plot of the S11 response
-%                 map = pcolor(field,freq,mag2db(S21)); % color plot of the S21 response
-                map.EdgeColor = 'none';
-                cmap = unique([[0 0 0];[zeros(200,1),linspace(0,0.5,200)',linspace(0.4,1,200)'];...
-                    [linspace(0,1,200)',0.5*ones(200,1),linspace(1,0,200)'];...
-                    [ones(200,1),linspace(0.5,1,200)',linspace(0,1,200)']],'rows');
-                cmap = flip(cmap,1);
-                colormap(cmap)
-                colorbar
-                xlim([cVar_l cVar_h])
-                ylim([freq_l freq_h])
-                xlabel(xlab);
-                ylabel('Frequency (GHz)');
-                if Options.RPA == true
-                    title(['MF-RPA simulation of S11 at ', titl])
-                else
-                    title(['MF simulation of S11 at ', titl])
-                end
-%                 caxis('auto')
-                caxis([-10 1])
-                if Options.Ediff == true
-                    hold on
-                    plot(cVar(1,:), Ediff(:,:)*mV2Gh, ':w', 'linewidth', 1.3); % plot the transition levels on top of the S11 color map
-                end
-                xlim([cVar_l cVar_h])
-                ylim([freq_l freq_h])
-                        
+%                 s_para = figure;
+%                 map = pcolor(cVar,freq,mag2db(abs(S11))); % color plot of the S11 response
+% %                 map = pcolor(field,freq,mag2db(real(S11))); % color plot of the S11 response
+% %                 map = pcolor(field,freq,mag2db(S21)); % color plot of the S21 response
+%                 map.EdgeColor = 'none';
+%                 colormap(cmap)
+%                 colorbar
+%                 xlim([cVar_l cVar_h])
+%                 ylim([freq_l freq_h])
+%                 xlabel(xlab);
+%                 ylabel('Frequency (GHz)');
+%                 if Options.RPA == true
+%                     title(['MF-RPA simulation of S11 at ', titl])
+%                 else
+%                     title(['MF simulation of S11 at ', titl])
+%                 end
+% %                 caxis('auto')
+%                 caxis([-10 1])
+%                 if Options.Ediff == true
+%                     hold on
+%                     plot(cVar(1,:), Ediff(:,:)*mV2Gh, ':w', 'linewidth', 1.3); % plot the transition levels on top of the S11 color map
+%                 end
+%                 xlim([cVar_l cVar_h])
+%                 ylim([freq_l freq_h])                     
                 if Options.x1x2 == true
                     x1 = real(chi/meV2J); % [meV/T^2]
                     x2 = imag(chi/meV2J); % [meV/T^2]
                     figure;
                     hp1 = pcolor(continu_var(1,:), freq, x1);
                     set(hp1, 'edgeColor','none')
-                    cmap = unique([[0 0 0];[zeros(200,1),linspace(0,0.5,200)',linspace(0.4,1,200)'];...
-                        [linspace(0,1,200)',0.5*ones(200,1),linspace(1,0,200)'];...
-                        [ones(200,1),linspace(0.5,1,200)',linspace(0,1,200)']],'rows');
-                    cmap = flip(cmap,1);
                     colormap(cmap)
 %                     caxis([-23 2]);
                     colorbar
@@ -469,10 +498,6 @@ switch Options.simType
                     
                     figure
                     hp2 = pcolor(continu_var(1,:), freq, x2);
-                    cmap = unique([[0 0 0];[zeros(200,1),linspace(0,0.5,200)',linspace(0.4,1,200)'];...
-                            [linspace(0,1,200)',0.5*ones(200,1),linspace(1,0,200)'];...
-                            [ones(200,1),linspace(0.5,1,200)',linspace(0,1,200)']],'rows');
-                    cmap = flip(cmap,1);
                     colormap(cmap)
                     set(hp2, 'edgeColor','none')
                     colorbar
@@ -578,34 +603,30 @@ end
 
 % Optional: plot the simulated |S11| data
 if Options.plot == true
-    s_para = figure;
-    map = pcolor(cVar,freq,mag2db(abs(S11))); % color plot of the S11 response
-    map.EdgeColor = 'none';
-    cmap = unique([[0 0 0];[zeros(200,1),linspace(0,0.5,200)',linspace(0.4,1,200)'];...
-        [linspace(0,1,200)',0.5*ones(200,1),linspace(1,0,200)'];...
-        [ones(200,1),linspace(0.5,1,200)',linspace(0,1,200)']],'rows');
-    cmap = flip(cmap,1);
-    colormap(cmap)
-    colorbar('northoutside')
-    xlim([cVar_l cVar_h])
-    ylim([freq_l freq_h])
-    xlabel(xlab);
-    ylabel('Frequency (GHz)');
-    if Options.RPA == true
-        title(['MF-RPA simulation of S11 at ', titl])
-    else
-        title(['MF simulation of S11 at ', titl])
+    if Options.simType > 1
+        s_para = figure;
+        map = pcolor(cVar,freq,mag2db(abs(S11))); % color plot of the S11 response
+        map.EdgeColor = 'none';
+        colormap(cmap)
+        colorbar('northoutside')
+        xlim([cVar_l cVar_h])
+        ylim([freq_l freq_h])
+        xlabel(xlab);
+        ylabel('Frequency (GHz)');
+        if Options.RPA == true
+            title(['MF-RPA simulation of S11 at ', titl])
+        else
+            title(['MF simulation of S11 at ', titl])
+        end
+        caxis('auto')
+        %     caxis([-30 2])
+        if Options.Ediff == true
+            hold on
+            plot(cVar(1,:), Ediff(:,1:nLevel)*mV2Gh, ':w', 'linewidth', 1.3); % plot the transition levels on top of the S11 color map
+        end
+        xlim([cVar_l cVar_h])
+        ylim([freq_l freq_h])
     end
-    caxis('auto')
-%     caxis([-30 2])
-    if Options.Ediff == true
-        hold on
-        plot(cVar(1,:), Ediff(:,1:nLevel)*mV2Gh, ':k', 'linewidth', 1.3); % plot the transition levels on top of the S11 color map
-    end
-    xlim([cVar_l cVar_h])
-    ylim([freq_l freq_h])
-end
-
 % Optional: Plot the lowest eight energy levels
 if Options.Elevel == true
 %     color = ["black","red","blue","magenta","green","yellow","cyan"];
@@ -643,6 +664,7 @@ if Options.Ediff == true
 %     xlim([min(continu_var) max(continu_var)]);
 %     ylim([0.9*min(Ediff,[],'All') 1.1*max(Ediff,[],'All')]);
     title('Difference between energy levels','FontSize',10);
+end
 end
 
 if Options.savegif == true
