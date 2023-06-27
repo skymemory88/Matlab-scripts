@@ -53,10 +53,10 @@ switch dType
             if strlength(aux_files(ii)) ~= 0
                 load_Obj = fullfile(location,strcat(aux_files(ii),".mat"));
                 load(load_Obj,'H0','w0','w0_ci','gc','gc_ci','gma','gma_ci');
-                B0(ii) = mean(H0);
-                gc_err(ii) = mae(abs(gc_ci(:,1)-gc_ci(:,2)));
+                B0(ii) = mean(H0); % take the mean value
                 gcs(ii) = mean(gc);
                 gama(ii) = mean(gma);
+                gc_err(ii) = mae(abs(gc_ci(:,1)-gc_ci(:,2)));
                 gama_err(ii) = mae(abs(gma_ci(:,1)-gma_ci(:,2)));
 %                 % save the raw data in an ascii file (.txt)
 %                 g_fit = [reshape(H0,length(H0),1) reshape(gc,length(gc),1) reshape(gma,length(gma),1)];
@@ -136,14 +136,14 @@ switch dType
                             figure(colmap);
                             plot(H0,w0,'.r');
                         end
-%                         cmap = unique([[0 0 0];[zeros(20,1),linspace(0,0.5,20)',linspace(0.4,1,20)'];...
-%                             [linspace(0,1,36)',0.5*ones(36,1),linspace(1,0,36)'];...
-%                             [ones(30,1),linspace(0.5,1,30)',linspace(0,1,30)']],'rows');
-%                         cmap = flip(cmap,1);
-%                         colormap(cmap)
+                        cmap = unique([[0 0 0];[zeros(200,1),linspace(0,0.5,200)',linspace(0.4,1,200)'];...
+                            [linspace(0,1,200)',0.5*ones(200,1),linspace(1,0,200)'];...
+                            [ones(200,1),linspace(0.5,1,200)',linspace(0,1,200)']],'rows');
+                        cmap = flip(cmap,1);
+                        colormap(cmap)
 %                         colormap('bone')
-                        colormap('jet')
-%                         if Options.ebar == true; plot(H0,w0_ci(:,1),'-r',H0,w0_ci(:,2),'-r'); end
+%                         colormap('jet')
+                        if Options.ebar == true; plot(H0,w0_ci(:,1),'-r',H0,w0_ci(:,2),'-r'); end
                     end
                 end
             else

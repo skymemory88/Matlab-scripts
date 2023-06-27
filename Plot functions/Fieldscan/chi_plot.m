@@ -1,14 +1,14 @@
 % susceptibility plots
 clearvars freq_total fields chir chii chi idx
 
-temp = 0.18; % temperature
-theta = 0.25; % field angle in ac-plane
-phi = 0.0; % field angle in ab-plane
+temp = 0.150; % temperature
+theta = 0.0; % field angle in ac-plane
+phi = 2.3; % field angle in ab-plane
 gama = 9e-5; % spin line width
 
 Option.hyp = true; % hyperfine interaction option
-Option.RPA = true; % RPA option
-Option.nZee = false; % nuclear Zeeman interaction option
+Option.RPA = false; % RPA option
+Option.nZee = true; % nuclear Zeeman interaction option
 Option.sPlot = true; % isolated plots of freqeuency slice
     part = 'both'; % Plot the 'real', 'imaginary', or 'both' parts of susceptibility
     pFormat = 'condensed'; % 1.'condensed': on one plot; 2. 'separate': individual plots; 3. 'none'
@@ -33,8 +33,6 @@ tsr = ["{xx}"  "{xy}"  "{xz}"
 
 file_loc = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing\PhD program\',...
     'Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities'];
-% file_loc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\',...
-%     'Matlab\Susceptibilities\'];
 file_part = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e_*GHz', temp, theta, phi, gama);
 
 if Option.nZee == true
@@ -104,14 +102,14 @@ for ii = 1:length(chip(:))
             
 %             colorbar off
 %             title ''
-            title(strcat("\chi_", tsr(row,col)))
-            cb = colorbar('Location','Northoutside');
-            sz = get(cb, 'Position');
-            set(cb,'Position',[sz(1) sz(2) sz(3)-0.15 sz(4)]);
+            title(strcat("Re[\chi_", tsr(row,col),']'))
+            cbr = colorbar('Location','Northoutside');
+            sz = get(cbr, 'Position');
+            set(cbr,'Position',[sz(1) sz(2) sz(3)-0.15 sz(4)]);
             set(gca, 'Position', [fsz(1) fsz(2) fsz(3) fsz(4)-0.15]);
             
-            cb.Label.String = 'Amp.';
-            lsz = cb.Label.Position;
+            cbr.Label.String = 'Amp.';
+            lsz = cbr.Label.Position;
 %             cb.Label.Position = [lsz(1)*2.2 lsz(2)-2.25 0];
             
             for jj = 1:length(B0)
@@ -150,14 +148,14 @@ for ii = 1:length(chip(:))
             
 %             colorbar off
 %             title ''
-            title(strcat("\chi_", tsr(row,col)))
-            cb = colorbar('Location','Northoutside');
-            sz = get(cb, 'Position');
-            set(cb,'Position',[sz(1) sz(2) sz(3)-0.15 sz(4)]);
+            title(strcat("Im[\chi_", tsr(row,col),']'))
+            cbi = colorbar('Location','Northoutside');
+            sz = get(cbi, 'Position');
+            set(cbi,'Position',[sz(1) sz(2) sz(3)-0.15 sz(4)]);
             set(gca, 'Position', [fsz(1) fsz(2) fsz(3) fsz(4)-0.15]);
             
-            cb.Label.String = 'Amp.';
-            lsz = cb.Label.Position;
+            cbi.Label.String = 'Amp.';
+            lsz = cbi.Label.Position;
 %             cb.Label.Position = [lsz(1)*2.2 lsz(2)-2.25 0];
             
             for jj = 1:length(B0)
