@@ -20,8 +20,8 @@ switch platform
         addpath(genpath('G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik\'));
         Options.fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\',...
             'LiHoF4 project\Data\Experiment\LiHoF4',...
-            '\SC239\2021.07.23'];
-        loadname = '2021_07_0025';
+            '\SC239\2021.07.19'];
+        loadname = '2021_07_0021';
         % Options.fileloc = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\',...
         %     'File sharing\PhD program\Research projects\',...
         %     'YIG spheres\Data\2022.12.13'];
@@ -32,18 +32,18 @@ switch platform
         addpath(genpath('/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik/'));
         Options.fileloc = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/',...
             'My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/',...
-            'SC239/2021.07.23'];
-        loadname = '2021_07_0025';
+            'SC239/2021.07.24'];
+        loadname = '2021_07_0026';
 end
 
 % Process options:
 Options.analysis = 3; % Analysis options (1.simple plot, 2.on-resonance fit, 3.off-resonance fit, 4.temp scan)
-Options.save = 'n'; % Option to save the analysis
+% Options.save = 'n'; % Option to save the analysis
 Options.dType = 'raw'; % Input data type: 1. Experimental ('raw'), 2. Simulated ('sim'), 3. pre-processed exp. data ('proc')
 Options.lnwd = 1.5; % plot linewidth
 Options.ftsz = 12; % plot font size
 Options.mksz = 2; % plot marker size
-Options.bgdmode = 2; % Background normalization (0: none. 1: Stitch background. 2: Load background. 3: S11 fit. 4: Manual offset)
+Options.bgdmode = 3; % Background normalization (0: none. 1: Stitch background. 2: Load background. 3: S11 fit. 4: Manual offset)
     Options.offset = 1; % background height (only for bgdmode 4)
 Options.nData = 1; % Number of dataset from VNA
 Options.phPlot = false; % Option to plot phase in color plots
@@ -1046,7 +1046,7 @@ plt = zeros(1,length(B0)); % fit inspection option
 parfor ii = 1:length(B0)
     if mod(ii,20) == 0
         worker = getCurrentTask();
-        fprintf('Core %2$u: Fitting, current field: %1$3.2f T. \n', B0(ii), worker.ID);
+        fprintf('Core %2$u: Fitting, Magnetic field: %1$3.2f T, \n', B0(ii), worker.ID);
     end
     param  =  [omg(ii)  gc0(ii)   gma0     0       0    gc0(ii)   gc0(ii)]; % {'omega', 'Gc', 'gma', 'xr', 'xi', 'Gc1', 'Gc2'}
     bound_l = [ -Inf       0       0     -Inf      0       0        0  ]; % lower bound of fitting parameters
@@ -1250,8 +1250,8 @@ mag0 = zeros(size(mag,2),1);
 % else
 %     [~,bidx] = max( HH(1,:) );
 % end
-
 [~,bidx] = min( HH(1,:) ); % method 2: always use the zero field data for background normalization
+
 for ii = 1:size(mag,2) %Searching column minima (fixed field)
     [~,idx] = min( mag(:,ii) );
     if(length(idx)>1)
@@ -1324,11 +1324,11 @@ while true
         % starting value for param = {'kpe', 'kpi', 'omega', 'Gc', 'gma', 'wc', 'attn'}
         param  =  [1e-3   1e-3   freq_h    0   1e-3    freq(fidx,bidx)   mean(mag(:,bidx))];
         bound_l = [ 0      0     freq_h    0   1e-3    freq_l   0.5]; % lower bound of fitting parameters
-        bound_h = [Inf    Inf    freq_h    0   1e-3    freq_h   1.5]; % upper bound of fitting parameters
-        fit = iptopt0(freq(:,bidx), mag(:,bidx), HH(1,bidx), [param; bound_l; bound_h], 1./mag(:,bidx), false);
+        bound_u = [Inf    Inf    freq_h    0   1e-3    freq_h   1.5]; % upper bound of fitting parameters
+        fit = iptopt0(freq(:,bidx), mag(:,bidx), HH(1,bidx), [param; bound_l; bound_u], 1./mag(:,bidx), false);
         bf0 = freq(:,bidx);
-%         bgd0 = medfilt1(mag(:,bidx)-fit(freq(:,bidx))+1)*fit.attn;
-        bgd0 = medfilt1(fit(freq(:,bidx))./mag(:,bidx))*fit.attn;
+        bgd0 = medfilt1(mag(:,bidx)-fit(freq(:,bidx))+1)*fit.attn;
+        % bgd0 = medfilt1(fit(freq(:,bidx))./mag(:,bidx))*fit.attn;
         figure;        
         plot(freq(:,bidx),mag(:,bidx));
         hold on
@@ -1439,20 +1439,20 @@ mag = mag(:,f0 >= freq_l & f0 <= freq_h);
 analysis.Q0 = Q0;
 clearvars c idx ia ii HM trunc1 trunc2 dupl nop trimIdx
 
-% weight(:,:,1) = abs(1./mag(:,:));      % Weight function option 1
+weight(:,:,1) = abs(1./mag(:,:));      % Weight function option 1
 % weight = 1./gradientweight(mag);       % Weight function option 2
 % weight = ones(size(mag));                % Weight function option 3 (uniform)
 
-weight = double.empty(size(mag,1),size(mag,2),0); % Weight function option 4
-for ii = 1:size(mag,2)
-    refm = max(mag(:,ii));
-    weight(:,ii,1) = abs( (mag(:,ii) - refm)./mag(:,ii) ); % asign more weights to the peak positions
-    weight(:,ii,1) = weight(:,ii,1)./max(weight(:,ii,1));
-%     weight(:,jj,1) = ( weight(:,jj,1)./max(weight(:,jj,1)) ).^3; % amplify the weight distribution
-end
-for ii = 1:size(mag,2)
-    weight(fidx(ii), ii) = 1500; % extra weight for the peak centers from minimum search
-end
+% weight = double.empty(size(mag,1),size(mag,2),0); % Weight function option 4
+% for ii = 1:size(mag,2)
+%     refm = max(mag(:,ii));
+%     weight(:,ii,1) = abs( (mag(:,ii) - refm)./mag(:,ii) ); % asign more weights to the peak positions
+%     weight(:,ii,1) = weight(:,ii,1)./max(weight(:,ii,1));
+% %     weight(:,jj,1) = ( weight(:,jj,1)./max(weight(:,jj,1)) ).^3; % amplify the weight distribution
+% end
+% % for ii = 1:size(mag,2)
+% %     weight(fidx(ii), ii) = 1500; % extra weight for the peak centers from minimum search
+% % end
 % weight(isinf(weight)) = 1;           % Remove infinities in weight function
 
 switch Options.fitfunc % Pick fitting function from either (1) custom function of (2) spec1d
@@ -1471,8 +1471,8 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
         % Fit the zero-field data for cavity properties
         param  =  [1e-4    1e-4    0     0    f0(Hc0)]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
         bound_l = [ 0       0      0     0    freq_l]; % lower bound of fitting parameters
-        bound_h = [Inf     Inf     0     0    freq_h]; % upper bound of fitting parameters
-        fit0 = iptoptx(freq(:,Hc0), mag(:,Hc0), B0(Hc0), param, bound_l, bound_h, weight(:,Hc0), true);
+        bound_u = [Inf     Inf     0     0    freq_h]; % upper bound of fitting parameters
+        fit0 = iptoptx(freq(:,Hc0), mag(:,Hc0), B0(Hc0), param, bound_l, bound_u, weight(:,Hc0), true);
         kpe(Hc0) = fit0.kpe;
         kpi(Hc0) = fit0.kpi;
         w0(Hc0) = fit0.wc;
@@ -1490,13 +1490,13 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
         parfor ii = 1:length(B0)
             if mod(ii,20) == 0
                 worker = getCurrentTask();
-                fprintf('Fitting, current field: %1$3.2f T. Core %2$u.\n', B0(ii), worker.ID);
+                fprintf('Fitting, Magnetic field: %1$3.2f T, Core %2$u.\n', B0(ii), worker.ID);
             end
             % Fit using input-output formalism
             param  =  [kpe0   kpi0     0      0     f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
             bound_l = [kpe0   kpi0     0      0     f_init]; % lower bound of fitting parameters
-            bound_h = [kpe0   kpi0    Inf    Inf    f_init]; % upper bound of fitting parameters
-            fit = iptoptx(freq(:,ii), mag(:,ii), B0(ii), param, bound_l, bound_h, weight(:,ii), plt);
+            bound_u = [kpe0   kpi0    Inf    Inf    f_init]; % upper bound of fitting parameters
+            fit = iptoptx(freq(:,ii), mag(:,ii), B0(ii), param, bound_l, bound_u, weight(:,ii), plt);
                      
             [idx,~,~] = find(fit(freq(:,ii)) == min(fit(freq(:,ii)))); % Find the resonant frequency by (unique) minimum search
             w0(ii) = freq(idx(1)); 
@@ -1512,7 +1512,7 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
         analysis.w0 = w0;
         analysis.xr = xr; % includes prefactor g(w)^2;
         analysis.xi = xi; % includes prefactor g(w)^2;        
-    case 2 %Option 2: use spec1d package to fit the data using Lorentzian form.
+    case 2 % Option 2: use spec1d package to fit the data using Lorentzian form.
         parfor ii = 1:length(B0)
             s = spec1d(freq(:,ii), -mag(:,ii), max(-mag(:,ii)))*0.001; % create spec1d object
             %starting point for the (Lorentzian) fitting parameters
