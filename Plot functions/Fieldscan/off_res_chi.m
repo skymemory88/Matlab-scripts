@@ -1,14 +1,14 @@
-Options.RPA  = false;
-Options.filfctr = 0.0127*0.86; % filling factor correction
+Options.RPA  = true;
+Options.filfctr = 0.0114; % filling factor correction
 % Options.filfctr = 0.112; % filling factor correction
-% Options.Bcorrt = 4.224/4.466; % field correction (default = 1)
-Options.nZee = false; % Nuclear Zeeman interaction
+Options.Bcorrt = 4.4/4.6; % field correction (default = 1)
+Options.nZee = true; % Nuclear Zeeman interaction
 Options.search = 'automatic'; % 1. 'Automatic' search and match or, 2. 'manual' appointment of files 
     sample = 239; % Sample to use (SC###)
     sim_temps = [0.15 0.3 0.5 0.8]; % temperatures
     % sim_temps = 0.15;
     theta = 0.0; % c-axis deviation
-    phi = 0.0; % in-plane (a-b) rotation
+    phi = 15.0; % in-plane (a-b) rotation
     freq_l = 4.69; % frequency range lower limit [GHz]
     freq_h = 4.745; % frequency range upper limit [GHz]
     gama = 9e-5; % default spin linewidth
@@ -122,22 +122,23 @@ for ii = 1:length(sim_temps)
     else
         sim_file = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e_*GHz', sim_temps(ii), theta, phi, gama);
     end
-    if Options.RPA == true
-        sim_load = strcat("RPA_LiHoF4_", sim_file, ".mat");
-        xlabr = 'Re[\chi^{zz}_{RPA}] (meV)';
-        xlabi = 'Im[\chi^{zz}_{RPA}] (meV)';
-    else
-        sim_load = strcat("chi_LiHoF4_", sim_file, ".mat");
-        xlabr = 'Re[\chi^{zz}_{MF}] (meV)';
-        xlabi = 'Im[\chi^{zz}_{MF}] (meV)';
-    end
+    sim_load = strcat("chi_LiHoF4_", sim_file, ".mat");
     chi_file = dir(fullfile(sim_loc, sim_load)); % search for the specified file
     if isempty(chi_file)
         disp(strcat("Cannot match the file: ", sim_load, ", check the name and the directory!"))
         break
     end
-    load([sim_loc chi_file.name],'-mat','freq_total','fields','chi','unit'); % load calculated suscpetibilities
-    chiz = squeeze(chi(3,3,:,:)); % add real unit (meV)
+    if Options.RPA == true
+        xlabr = 'Re[\chi^{zz}_{RPA}] (meV)';
+        xlabi = 'Im[\chi^{zz}_{RPA}] (meV)';
+        load([sim_loc chi_file.name],'-mat','freq_total','fields','chiq','unit'); % load calculated suscpetibilities
+        chiz = squeeze(chiq(3,3,:,:)); % extract zz tensor element
+    else
+        xlabr = 'Re[\chi^{zz}_{MF}] (meV)';
+        xlabi = 'Im[\chi^{zz}_{MF}] (meV)';
+        load([sim_loc chi_file.name],'-mat','freq_total','fields','chi','unit'); % load calculated suscpetibilities
+    chiz = squeeze(chi(3,3,:,:)); % extract zz tensor element
+    end
 
     % Convert the unit to meV
     if strcmp(unit, 'GHz')
