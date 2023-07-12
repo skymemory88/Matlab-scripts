@@ -30,10 +30,10 @@ switch platform
     case 'Unix' % for Mac/Linux
         addpath('/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/Programming scripts/Matlab/Plot functions/Fieldscan/functions/');
         addpath(genpath('/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/Programming scripts/Matlab/Plot functions/spec1d--Henrik/'));
-        Options.fileloc = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/',...
-            'My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/',...
-            'SC239/2021.07.24'];
-        loadname = '2021_07_0026';
+        Options.fileloc = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/PhD program/',...
+            'Research projects/LiHoF4 project/Data/Experiment/LiHoF4/',...
+            'SC140 (4x3x3mm)/2021.02.24'];
+        loadname = '2021_02_0041';
 end
 
 % Process options:
@@ -43,7 +43,7 @@ Options.dType = 'raw'; % Input data type: 1. Experimental ('raw'), 2. Simulated 
 Options.lnwd = 1.5; % plot linewidth
 Options.ftsz = 12; % plot font size
 Options.mksz = 2; % plot marker size
-Options.bgdmode = 3; % Background normalization (0: none. 1: Stitch background. 2: Load background. 3: S11 fit. 4: Manual offset)
+Options.bgdmode = 0; % Background normalization (0: none. 1: Stitch background. 2: Load background. 3: S11 fit. 4: Manual offset)
     Options.offset = 1; % background height (only for bgdmode 4)
 Options.nData = 1; % Number of dataset from VNA
 Options.phPlot = false; % Option to plot phase in color plots
@@ -1439,24 +1439,23 @@ mag = mag(:,f0 >= freq_l & f0 <= freq_h);
 analysis.Q0 = Q0;
 clearvars c idx ia ii HM trunc1 trunc2 dupl nop trimIdx
 
-weight(:,:,1) = abs(1./mag(:,:));      % Weight function option 1
+% weight(:,:,1) = abs(1./mag(:,:));      % Weight function option 1
 % weight = 1./gradientweight(mag);       % Weight function option 2
 % weight = ones(size(mag));                % Weight function option 3 (uniform)
-
-% weight = double.empty(size(mag,1),size(mag,2),0); % Weight function option 4
+weight = double.empty(size(mag,1),size(mag,2),0); % Weight function option 4
+for ii = 1:size(mag,2)
+    refm = max(mag(:,ii));
+    weight(:,ii,1) = abs( (mag(:,ii) - refm)./mag(:,ii) ); % asign more weights to the peak positions
+    weight(:,ii,1) = weight(:,ii,1)./max(weight(:,ii,1));
+    weight(:,ii,1) = ( weight(:,ii,1)./max(weight(:,ii,1)) ).^3; % amplify the weight distribution
+end
 % for ii = 1:size(mag,2)
-%     refm = max(mag(:,ii));
-%     weight(:,ii,1) = abs( (mag(:,ii) - refm)./mag(:,ii) ); % asign more weights to the peak positions
-%     weight(:,ii,1) = weight(:,ii,1)./max(weight(:,ii,1));
-% %     weight(:,jj,1) = ( weight(:,jj,1)./max(weight(:,jj,1)) ).^3; % amplify the weight distribution
+%     weight(fidx(ii), ii) = 1500; % extra weight for the peak centers from minimum search
 % end
-% % for ii = 1:size(mag,2)
-% %     weight(fidx(ii), ii) = 1500; % extra weight for the peak centers from minimum search
-% % end
-% weight(isinf(weight)) = 1;           % Remove infinities in weight function
+weight(isinf(weight)) = 1;           % Remove infinities in weight function
 
 switch Options.fitfunc % Pick fitting function from either (1) custom function of (2) spec1d
-    case 1 %Option 1: Custom function by Input-output formalism
+    case 1 % Option 1: Custom function by Input-output formalism
         % Step 1: Fit the data for the first time to extract "kpe" and "w0" far from the level crossing
         kpe = double.empty(length(B0),0);
         kpi = double.empty(length(B0),0);
@@ -1493,8 +1492,8 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
                 fprintf('Fitting, Magnetic field: %1$3.2f T, Core %2$u.\n', B0(ii), worker.ID);
             end
             % Fit using input-output formalism
-            param  =  [kpe0   kpi0     0      0     f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
-            bound_l = [kpe0   kpi0     0      0     f_init]; % lower bound of fitting parameters
+            param   =   [kpe0   kpi0     0       0       f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
+            bound_l = [kpe0   kpi0      0        0     f_init]; % lower bound of fitting parameters
             bound_u = [kpe0   kpi0    Inf    Inf    f_init]; % upper bound of fitting parameters
             fit = iptoptx(freq(:,ii), mag(:,ii), B0(ii), param, bound_l, bound_u, weight(:,ii), plt);
                      
@@ -1879,8 +1878,8 @@ switch Options.fitfunc % Pick fitting function from either (1) custom function o
                 fprintf('Fitting, current temperature: %1$3.2f K. Core %2$u.\n', T0(ii), worker.ID);
             end
                                 % Fit using input-output formalism
-            param  =  [kpe0   kpi0     0      0     f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
-            bound_l = [kpe0   kpi0     0      0     f_init]; % lower bound of fitting parameters
+            param   =   [kpe0   kpi0      0       0      f_init]; % param = {'kpe', 'kpi', 'Re[chi]', 'Im[chi]', 'wc'}
+            bound_l = [kpe0   kpi0      0       0      f_init]; % lower bound of fitting parameters
             bound_h = [kpe0   kpi0    Inf    Inf    f_init]; % upper bound of fitting parameters
             fit = iptoptx(freq(:,ii), mag(:,ii), T0(ii), param, bound_l, bound_h, weight(:,ii), plt);
           
