@@ -8,14 +8,30 @@ Options.data = true;
 Options.ebar = false;
 Options.mean = true;
 Options.conden = false;
+Options.sample = 239; % Sample to use (SC###)
 
+if strcmp(pathsep, ':')
+    platform = 'Unix';
+    divd = '/';
+else
+    platform = 'Win';
+    divd = '\';
+end
 switch dType
     case 'off'
-        path1 = "G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200 (1.2x3.0x3.5 mm)\";
-        list = fullfile(path1,"SC200_off_list.xlsx");
+        switch platform
+            case 'Win'
+                fpath = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
+                    'SC',num2str(Options.sample), divd];
+            case 'Unix'
+                fpath = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/',...
+                    'File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/',...
+                    'SC',num2str(Options.sample), divd];
+        end
+        list = fullfile(fpath, ['SC', num2str(Options.sample), '_off_list.xlsx']);
         impt = readtable(list);
-        temps_exp = table2array(impt(:,1));
-        locs = table2array(impt(:,3));
+        temps_exp = table2array(impt(:,3));
+        locs = table2array(impt(:,1));
         fnames = table2array(impt(:,2));
 
         Dfig = figure;
@@ -27,7 +43,7 @@ switch dType
         for ii = 1:length(temp)
             [~, Tidx] = min(abs(temps_exp-temp(ii)));
             temp(ii) = temps_exp(Tidx);
-            file = fullfile(path1, [locs{Tidx},'\'], [fnames{Tidx},'_interp.mat']);
+            file = fullfile(fpath, [locs{Tidx}, divd], [fnames{Tidx},'_interp.mat']);
             load(file, '-mat', 'analysis');
 
             figure(Dfig)
