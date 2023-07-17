@@ -26,7 +26,7 @@ D = 3; % setting dimensions
 kB = 0.0862875; % Boltzmann coefficient
 % Jij = -0.585; % coupling strength
 Jij = -1; % coupling strength
-eMeas = abs(Jij); % energy normalize agains coupling strength
+eMeas = abs(Jij); % normalize the energy against coupling strength
 
 minField = 0.00;
 maxField = 0.60;
@@ -46,6 +46,7 @@ Zee = 1;
 newAvSz = 0;
 
 for ii = 1:length(hT)
+    % for jj = 1:length(temp) % for debugging
     parfor jj = 1:length(temp)
         avSz = 0.1; %initial guess of average Sz
         beta = 1/(kB*temp(jj));
@@ -57,16 +58,16 @@ for ii = 1:length(hT)
                 En = squeeze(real(diag(En)));
                 [En, n] = sort(En); % sort the energy from lowest to the highest
                 wav = wav(:,n); % sort the eigen-vectors in its basis accordingly
-                Z = trace(exp(-beta.*En)); % Calculate the partition function weight
-                newAvSz = diag(exp(-beta*En))'*diag(wav'*kron(eye(2),Sz)*wav)/Z; % Direct product by two because of the two neighbours
+                Z = sum(exp(-beta.*En)); % Calculate the partition function weight
+                newAvSz = exp(-beta*En)'*diag(wav'*kron(eye(2),Sz)*wav)/Z; % Direct product by two because of the two neighbours
             else % Case: no hyperfine interaction
                 Hamlt = Jij*avSz*Sz - Zee*hT(ii)*Sx;
                 [wav, En] = eig(Hamlt);
                 En = squeeze(real(diag(En)));
                 [En, n] = sort(En); % sort the energy from lowest to the highest
                 wav = wav(:,n); % sort the eigen-vectors in its basis accordingly
-                Z = trace(exp(-beta.*En)); % Calculate the partition function weight
-                newAvSz = diag(exp(-beta*En))'*diag(wav'*Sz*wav)/Z; % Calculate the expectation value of Jz
+                Z = sum(exp(-beta.*En)); % Calculate the partition function weight
+                newAvSz = exp(-beta*En)'*diag(wav'*Sz*wav)/Z; % Calculate the expectation value of Jz
             end
             if abs(newAvSz - avSz) < delta
                 break

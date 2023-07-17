@@ -5,9 +5,20 @@ Options.RPA = true; % RPA pole searching
     omega = linspace(0,35,2001); % [GHz] frequency range
 Options.plot = true; % Option to plot the results
 Options.save = false; % Option to save results
-Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
-        '\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities',...
-        '\toy_model'];
+
+if strcmp(pathsep, ':')
+    platform = 'Unix';
+else
+    platform = 'Win';
+end
+switch platform
+    case 'Win' % for Windows
+        Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing\PhD program\',...
+            'Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\toy_model'];
+    case 'Unix' % for Mac/Linux
+        Options.filepath = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
+            'PhD program/Research projects/LiHoF4 project/Data/Simulations/MATLAB/Susceptibilities/toy_model'];
+end
 
 muB = 9.27401e-24; % Bohr magneton [J/T]
 muN = 3.15245e-5; % [meV/T]
