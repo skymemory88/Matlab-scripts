@@ -13,12 +13,12 @@ rho = 4/(5.175e-10 * 5.175e-10 * 10.750e-10); % magnetic moment number density i
 fil_scl = 1.0; % filling factor correction
 
 % Filling factor:  SC108 = 0.112, SC200/SC239 = 0.0127
-% filFctr = 0.25; % toy models
-% filFctr = 0.0112; % SC239 (int |By| dv/int |B| dv)
-% filFctr = 0.01005; % SC239 (int |By| dv/int |B| dv)
+% filFctr = 0.0091; % toy models
+% filFctr = 0.0127; % SC239 (int |By| dv/int |B| dv)
+filFctr = 0.0112; % SC239 (int |By| dv/int |B| dv)
 % filFctr = 0.008633; % SC239 (volume ratio)
 % filFctr = 0.112; % SC108
-filFctr = 0.004; % SC127
+% filFctr = 0.004; % SC127
 % filFctr = 0.01005*1.96; % SC107
 % filFctr = 0.01005*1.5; % SC140
 % filFctr = 0.033; % Caltech: Phys. Rev. Lett. 127, 207202 (2021)
@@ -26,15 +26,16 @@ filFctr = 0.004; % SC127
 % filFctr_2 = 0.15; % Filling factor for the second mode
 % filFctrs = [0.005 0.01 0.015 0.02 0.025 0.03 0.035 0.04];
 
-Options.simType = 2; % Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation
+% Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation (4) Susceptibilities from scratch
+Options.simType = 1; 
 Options.nZee = true; % nuclear Zeeman interaction option
         hyp = 1.0; % hyperfine isotope proportionality
 Options.RPA = false; % Use RPA susceptibilities
 Options.noise = false; % Add white noises to the backgroud
     sig2n = 30; % signal-to-noise level (dB)
 Options.plot = plotOpt; % Option to plot data
-    Options.x1x2 =  false; % Plot the matrix elements of the susceptibilities
-    Options.trace = false; % Calculate the trace of resonant frequency along field axis
+    Options.x1x2 =  true; % Plot the matrix elements of the susceptibilities
+    Options.trace = true; % Calculate the trace of resonant frequency along field axis
     Options.Q_1 = false; % Calculate 1/Q plot along the field axis
     Options.Elevel = false; % Plot energy eigenstates
     Options.Ediff = false; % Plot energy levels on top
@@ -67,13 +68,13 @@ dE = -0.0;
 % freq_l = 2.75; % frequency range lower limit [GHz]
 % freq_h = 2.87; % frequency range upper limit [GHz]
 
-% fc = 3.643 + dE;
-% freq_l = 3.52; % frequency range lower limit [GHz]
-% freq_h = 3.76; % frequency range upper limit [GHz]
+fc = 3.643 + dE;
+freq_l = 3.52; % frequency range lower limit [GHz]
+freq_h = 3.76; % frequency range upper limit [GHz]
 
-fc = 4.075 + dE;
-freq_l = 4.06; % frequency range lower limit [GHz]
-freq_h = 4.09; % frequency range upper limit [GHz]
+% fc = 4.075 + dE;
+% freq_l = 4.06; % frequency range lower limit [GHz]
+% freq_h = 4.09; % frequency range upper limit [GHz]
 
 % fc = 4.7353 + dE; % [Ghz]
 % freq_l = 4.710; % frequency range lower limit [GHz]
@@ -99,9 +100,9 @@ Options.scanMode = scanMode; % continuous variable choice: 1. Field, 2. Temperat
     cVar = linspace(cVar_l,cVar_h,cVar_np); % Only applies when calculating from scratch
 
 if Options.nZee == true
-    nZeePath = 'with Hz_I\';
+    nZeePath = 'Hz_I=1\';
 else
-    nZeePath = 'without Hz_I\test';
+    nZeePath = 'Hz_I=0\';
 end
 
 switch Options.scanMode
@@ -146,8 +147,8 @@ chi_idx = find(chi_elem); % index of chi element choice.
 
 % coupling strength
 filFctr = filFctr * fil_scl;
-gw0 = sqrt(mu0 * 2*pi * fc*1e9 * rho/2) * filFctr; % susceptibility prefactor [T^2/J. rad/s]^1/2
-gw2 = gw0^2 * 2*pi * 1e-9; % [T^2/J. GHz]
+gw0 = sqrt(mu0 * 2*pi * fc * rho/2) * filFctr; % susceptibility prefactor [T^2/J. rad/s]^1/2
+gw2 = gw0^2 * 2*pi; % [T^2/J. GHz]
 
 % Cavity loss rates (GHz)
 % kappa_i = 7.69e-4; % SC200: 2020_10_0009.dat
@@ -159,11 +160,11 @@ gw2 = gw0^2 * 2*pi * 1e-9; % [T^2/J. GHz]
 
 % kappa_i = 5.74e-4; % SC239: 2021_06_0040.dat
 % kappa_e = 3.66e-4; % SC239: 2021_06_0040.dat
-% kappa_i = 3.81e-4; % SC239: 2021_07_0003.dat
-% kappa_e = 5.56e-4; % SC239: 2021_07_0003.dat
+kappa_i = 3.81e-4; % SC239: 2021_07_0003.dat
+kappa_e = 5.56e-4; % SC239: 2021_07_0003.dat
 
-kappa_i = 1.77e-4; % SC127_1
-kappa_e = 6.92e-4; % SC127_1
+% kappa_i = 1.77e-4; % SC127_1
+% kappa_e = 6.92e-4; % SC127_1
 % kappa_i = 1.15e-4; % SC108
 % kappa_e = 8.18e-4; % SC108
 % kappa_i = 8.43e-4;
@@ -197,7 +198,7 @@ while true
             
             eee = eee - min(eee,[],2); % [meV]
             En(:,:) = squeeze(eee); % [meV]
-            Ediff = double.empty(7,size(En,1),0);
+            Ediff = double.empty(7,size(En,1),0); % energy differences (excitation modes)
             bzF = double.empty(size(Ediff,1),size(continu_var,2),0);
             Zn = sum(exp(-En.*beta),2); % Partition function
             for ii = 1:nLevel
@@ -236,14 +237,16 @@ while true
                 Ham(2:end,1) = gs';
                 ww(1,:,jj) = eig(Ham);
             end
-%             % pick out the frequencies along the field axis that is closest to bare frequency of the cavity
-            wn = abs(squeeze(ww) - fc);
-            fc = ww(wn == min(wn,[],1));
-            sim.wr = fc;
+            % pick out the frequencies along the field axis that is closest to bare frequency of the cavity
+            ww = squeeze(ww);
+            wn = abs(ww - fc);  % calculate detuning of each spin mode (from the cavity mode)
+            [~, idx] = min(wn, [], 1);  % index the spin mode with the smallest detunning
+            wr = ww(sub2ind(size(ww), idx, 1:size(ww, 2))); % resonant frequency of the hybridized system
+            sim.wr = wr;
             clearvars wn ww
 
             figure
-            plot(cVar,fc,'.k','linewidth',1);
+            plot(cVar,wr,'.k','linewidth',1);
             hold on
             plot(cVar, Ediff*mV2Gh, '-r');
             xlim([cVar_l cVar_h])
@@ -251,7 +254,9 @@ while true
             break;
         case 2 % Option 2: Load existing susceptibilities and interpolate
             if isfile(MF_file) && isfile(chi_file)
-                load(MF_file,'-mat','eee'); % loads eigenEnergy
+                load(MF_file,'-mat','eee','ion'); % loads eigenEnergy
+                elem_idx = find(ion.prop); % LiReF4, Re = Ho
+                ELEf = ion.gLande(elem_idx) * muB; % Lande factor * Bohr magneton [J/T]
                 En = squeeze(eee - min(eee,[],2)); % normalize to the ground state energy [meV]
                 switch Options.scanMode
                     case 'field'
@@ -281,7 +286,6 @@ while true
                         xlab = 'Temperature (K)';
                         titl = num2str(dscrt_var, '%.2f T');
                 end
-                chi = reshape(chi,[],size(chi,3),size(chi,4));
                 %% Calculate excitation spectrum
                 if Options.Ediff == true
                     Ediff = diff(En,1,2); % [meV]
@@ -321,7 +325,7 @@ while true
             end
             eee = eee - min(eee,[],2); % normalize the energy levels to the ground state [meV]
             Ediff = diff(eee,1,2); % [meV]
-            
+
             switch Options.scanMode
                 case 'field'
                     continu_var = vecnorm(fff);
@@ -343,14 +347,15 @@ while true
             I = ion.I(elem_idx); % Nuclear moment for Ho3+
             ELEf = ion.gLande(elem_idx) * muB; % Lande factor * Bohr magneton [J/T]
             NUCf = ion.nLande(elem_idx) * muN; % [J/T]
+
             Jz=diag(J:-1:-J); % Jz = -J, -J+1,...,J-1,J
             Jzh=kron(Jz,eye(2*I+1)); % Expand Jz space to include nuclear degree of freedom
             Iz=diag(I:-1:-I); % Iz = -I, -I+1,...,I-1,I
             Izh=kron(eye(2*J+1),Iz); % Expand Hilbert space
             JzhT = Jzh * ELEf; % electronic spin moment [J/T]
             IzhT = Izh * NUCf; % nuclear spin moment [J/T]
-                                   
-%             gf = sqrt(mu0 * hbar * 2*pi * fc*10^9 * rho/2) * filFctr; % [J/(A*m^2)]
+
+            %             gf = sqrt(mu0 * hbar * 2*pi * fc*10^9 * rho/2) * filFctr; % [J/(A*m^2)]
             spins = double.empty(length(continu_var), nLevel, size(freq,2),0); % A container for the elements of spin term summation in the denominator of S11
             Jz_exp = double.empty(length(continu_var), 0); % J spin expectation value
             JIz_exp = double.empty(length(continu_var), 0); % J-I pseudo-spin expectation value
@@ -358,7 +363,7 @@ while true
             gma = zeros(length(continu_var),1); % coupling strength
             coop = double.empty(length(continu_var), nLevel,0); % cooperativity
             w0 = double.empty(length(continu_var), nLevel,0); % resonant frequency of the excitation spectrum
-%             Gc2 = double.empty(length(continu_var),0);
+            %             Gc2 = double.empty(length(continu_var),0);
             for ii = 1:length(continu_var) % calculate susceptibility for all continu_var
                 En = squeeze(eee(ii,:)); % [meV]
                 if sim.temp ~= 0
@@ -368,8 +373,8 @@ while true
                 else
                     zn = zeros(size(En));
                     zn(1) = 1; % set the ground state occupation to unity
-%                     zn(1) = 0.5; % Saturate the first transition
-%                     zn(2) = 0.5;
+                    % zn(1) = 0.5; % Saturate the first transition
+                    % zn(2) = 0.5;
                 end
                 zn = zn(1:nMax);
                 En = En(1:nMax); % [meV]
@@ -385,27 +390,27 @@ while true
                 Jz_exp(ii,1) = zn*diag(tz(1:nMax,1:nMax));
                 JIz_exp(ii,1) = zn*diag(ttz(1:nMax,1:nMax));
                 Gc2(ii,:,:,1) = gw2 * abs(ttz(1:nMax,1:nMax) .* ttz(1:nMax,1:nMax).') .* NN / meV2J * mV2Gh; % [GHz^2]
-%                 Gc2(ii,:,:) = (squeeze(Gc2(ii,:,:)) - squeeze(Gc2(ii,:,:)).')/2; % take symmetric average to reduce numerical error
-                gma = gama*ones(1,nLevel);
-%                 % replace the assumed line width with fitted values from experiments
-%                 gma_load = load([location, nZeePath, sprintf('Exp_fit_gamma_%umK.mat', dscrt_var*1000)],'gma');
-%                 gma(1:length(gma_load.gma)) = flip(gma_load.gma);
+                % Gc2(ii,:,:) = (squeeze(Gc2(ii,:,:)) - squeeze(Gc2(ii,:,:)).')/2; % take symmetric average to reduce numerical error
+                gma = gama*ones(1,nLevel) * mV2Gh; % [GHz]
+                % % replace the assumed line width with fitted values from experiments
+                % gma_load = load([location, nZeePath, sprintf('Exp_fit_gamma_%umK.mat', dscrt_var*1000)],'gma');
+                % gma(1:length(gma_load.gma)) = flip(gma_load.gma);
 
                 for kk = 1:nLevel
                     w0(ii,kk,1) = dE(kk,kk+ndiff) * mV2Gh;
                     gc2 = Gc2(ii,kk+ndiff,kk);
-%                     gma_abs = 0; % stimulated absorption [GHz]
-% %                     gma_abs = 2*pi/hbar * gf*squeeze(abs(ttz(kk,kk+1))).*(1-zn(kk+1))'; % stimulated absorption [Hz.rad^2]
-%                     if kk > 1
-%                         gma_emi = 2*pi/hbar * (gf*sum(squeeze(abs(ttz(1:kk-1,kk)))))^2/(En(kk)*meV2J); % stimulated emission [Hz.rad^2]
-%                     else
-%                         gma_emi = 0; % no stimulated emission for ground state [GHz]
-%                     end 
-%                     gma(ii) = (gma_abs + gma_emi)/(2*pi)^2/1e9; % spin linewidth [GHz]
-% %                     gma(ii) = gama*mV2Gh; % uniform spin linewidth across all spin levels [GHz]
-%                     spins(ii,kk,:,1) = gc2./(1i*(freq - w0(ii,kk)) - gma); % spin term for each transition level [GHz]
+                    % gma_abs = 0; % stimulated absorption [GHz]
+                    % % gma_abs = 2*pi/hbar * gf*squeeze(abs(ttz(kk,kk+1))).*(1-zn(kk+1))'; % stimulated absorption [Hz.rad^2]
+                    % if kk > 1
+                    %     gma_emi = 2*pi/hbar * (gf*sum(squeeze(abs(ttz(1:kk-1,kk)))))^2/(En(kk)*meV2J); % stimulated emission [Hz.rad^2]
+                    % else
+                    %     gma_emi = 0; % no stimulated emission for ground state [GHz]
+                    % end
+                    % gma(ii) = (gma_abs + gma_emi)/(2*pi)^2/1e9; % spin linewidth [GHz]
+                    % % gma(ii) = gama*mV2Gh; % uniform spin linewidth across all spin levels [GHz]
+                    % spins(ii,kk,:,1) = gc2./(1i*(freq - w0(ii,kk)) - gma); % spin term for each transition level [GHz]
                     spins(ii,kk,:,1) = gc2./(1i*(freq - w0(ii,kk)) - gma(kk)); % spin term for each transition level [GHz]
-%                     coop(ii,kk,1) = gc2/(kappa_i + kappa_e)/gma;
+                    % coop(ii,kk,1) = gc2/(kappa_i + kappa_e)/gma;
                     coop(ii,kk,1) = gc2/(kappa_i + kappa_e)/gma(kk);
                 end
             end
@@ -418,31 +423,32 @@ while true
             sim.zn = zn;
             spin_term = squeeze(sum(spins,2)); % Sum over all levels [GHz]
             break;
-        case 4 % calculate MF-RPA susceptibilities from scratch (takes long time)
+        case 4 % Option 4: calculate susceptibilities from scratch (takes long time)
             LiReF4_MF_Yikai('Ho',dscrt_var,cVar,theta,phi);
             MF_RPA_Yikai('Ho',Options.scanMode,dscrt_var,freq,theta,phi,gama,1,Options.RPA);
-            
             load(chi_file,'-mat','chi','unit');
-            chi = reshape(chi,[],size(chi,3),size(chi,4));
             sim.freq = freq;
             sim.field = cVar;
+            sim.unit = unit;
     end
 end
 %% Simulat S11 using input-output formalism
 switch Options.simType
     case {2,4}
         sim.unit = unit;
+        chi = reshape(chi,[],size(chi,3),size(chi,4));
         for ii = 1:length(alpha) % varying phase angle
             chi_elem = find(chi_elem); % select the susceptibility tensorial component
             if strcmp(unit, 'J')
-                chi = squeeze(chi(chi_elem,:,:)); % [J/T^2]
+                chi = squeeze(chi(chi_elem,:,:)); % [1/J]
             elseif strcmp(unit, 'GHz')
-                chi = squeeze(chi(chi_elem,:,:))*Gh2mV*meV2J; % [GHz/T^2] --> [J/T^2]
+                chi = squeeze(chi(chi_elem,:,:)) / Gh2mV / meV2J; % [1/GHz] --> [1/J]
             elseif strcmp(unit, 'meV')
-                chi = squeeze(chi(chi_elem,:,:))*meV2J; % [meV/T^2] --> [J/T^2]
+                chi = squeeze(chi(chi_elem,:,:)) / meV2J; % [1/meV] --> [1/J]
             else
                 warning('Error: unrecognized susceptibility unit!')
             end
+            chi = ELEf^2 .* chi; % [J]
 
             S11 = 1 + 2*kappa_e./(1i.*(freq-fc) - (kappa_i + kappa_e) + gw2 * 1i*chi * exp(1i*alpha(ii)));
 %             S21_1 = kappa_e./(1i.*(freq-wc) - (kappa_i + kappa_e) + filFctr_1*1i*chi*exp(1i*alpha(ii)));
@@ -455,30 +461,30 @@ switch Options.simType
 %                 S11 = S11 + randn(size(S11))*0.01;
             end
             if Options.plot == true
-%                 s_para = figure;
-%                 map = pcolor(cVar,freq,mag2db(abs(S11))); % color plot of the S11 response
-% %                 map = pcolor(field,freq,mag2db(real(S11))); % color plot of the S11 response
-% %                 map = pcolor(field,freq,mag2db(S21)); % color plot of the S21 response
-%                 map.EdgeColor = 'none';
-%                 colormap(cmap)
-%                 colorbar
-%                 xlim([cVar_l cVar_h])
-%                 ylim([freq_l freq_h])
-%                 xlabel(xlab);
-%                 ylabel('Frequency (GHz)');
-%                 if Options.RPA == true
-%                     title(['MF-RPA simulation of S11 at ', titl])
-%                 else
-%                     title(['MF simulation of S11 at ', titl])
-%                 end
-% %                 caxis('auto')
-%                 caxis([-10 1])
-%                 if Options.Ediff == true
-%                     hold on
-%                     plot(cVar(1,:), Ediff(:,:)*mV2Gh, ':w', 'linewidth', 1.3); % plot the transition levels on top of the S11 color map
-%                 end
-%                 xlim([cVar_l cVar_h])
-%                 ylim([freq_l freq_h])                     
+                s_para = figure;
+                map = pcolor(cVar,freq,mag2db(abs(S11))); % color plot of the S11 response
+%                 map = pcolor(field,freq,mag2db(real(S11))); % color plot of the S11 response
+%                 map = pcolor(field,freq,mag2db(S21)); % color plot of the S21 response
+                map.EdgeColor = 'none';
+                colormap(cmap)
+                colorbar
+                xlim([cVar_l cVar_h])
+                ylim([freq_l freq_h])
+                xlabel(xlab);
+                ylabel('Frequency (GHz)');
+                if Options.RPA == true
+                    title(['MF-RPA simulation of S11 at ', titl])
+                else
+                    title(['MF simulation of S11 at ', titl])
+                end
+                caxis('auto')
+                % caxis([-10 1])
+                if Options.Ediff == true
+                    hold on
+                    plot(cVar(1,:), Ediff(:,:)*mV2Gh, ':w', 'linewidth', 1.3); % plot the transition levels on top of the S11 color map
+                end
+                xlim([cVar_l cVar_h])
+                ylim([freq_l freq_h])                     
                 if Options.x1x2 == true
                     x1 = real(chi/meV2J); % [meV/T^2]
                     x2 = imag(chi/meV2J); % [meV/T^2]
@@ -630,7 +636,7 @@ if Options.plot == true
 % Optional: Plot the lowest eight energy levels
 if Options.Elevel == true
 %     color = ["black","red","blue","magenta","green","yellow","cyan"];
-    theta = [0]; % Angle (in degrees) in the transverse field plane
+    theta = 0; % Angle (in degrees) in the transverse field plane
     marker = [":","-.","--","-"];
     figure
     hold on

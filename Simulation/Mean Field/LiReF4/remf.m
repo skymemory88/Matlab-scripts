@@ -1,4 +1,4 @@
-function [ion, evolution, E, V, h_mf1] = remf(ion, Bfield, t, alpha)
+function [ion, evolution, E, V, h_mf1] = remf(ion, Bfield, t)
 global strategies muB mu0 J2meV rundipole;
 persistent dipole;
 
@@ -16,7 +16,7 @@ for ii = 1:size(ion.name,1)
 end
 
 if(isempty(dipole))
-    dipole = dipole_direct([0 0 0], ion.dpRng, ion.abc{elem});
+    dipole = MF_dipole([0 0 0], ion.dpRng, ion.abc{elem}, ion.tau);
     for ii = 1:size(ion.name,1)
         ion.cf(:,:,ii) = {cf(ion.J(ii),ion.B(ii,:),ion.cfRot(ii))};
         ion.exch(:,:,ii) = {exchange([0,0,0], ion.ex(ii), ion.abc{elem}, ion.tau)}; % original version
@@ -29,7 +29,7 @@ if(isempty(dipole))
     end
 end
 if rundipole == true
-    dipole = dipole_direct([0 0 0], ion.dpRng, ion.abc{elem});
+    dipole = MF_dipole([0 0 0], ion.dpRng, ion.abc{elem}, ion.tau);
     for ii = 1:size(ion.name,1)
         ion.cf(:,:,ii) = {cf(ion.J(ii),ion.B(ii,:),ion.cfRot(ii))};
         ion.exch(:,:,ii) = {exchange([0,0,0], ion.ex(ii), ion.abc{elem}, ion.tau)}; % original version
@@ -43,7 +43,7 @@ if rundipole == true
     rundipole = false;
 end
 % % truncate to Ising space
-% dipole = zeros(3,3,4,4);
+% dipole = zeros(3,3,4,4); % remove dipole interaction
 % dipole(3,3) = 6.421e-6; % [meV] Phys. Rev. B 75, 054426 (2007)
 
 alt = [1  1  1
@@ -61,21 +61,21 @@ end
 eins = zeros(3,3,4,4);
 eins(1,1,:,:) = 1; eins(2,2,:,:) = 1; eins(3,3,:,:) = 1;
 demagn = zeros(3,3,4,4);
-demagn_t = ellipsoid_demagn(alpha);
+demagn_t = ellipsoid_demagn(ion.alpha);
 % demagn_t = [7.55 0 0; 0 1.68 0; 0 0 -0.32]; % Thesis "Ultra-low temperature dilatometry" by John L. Dunn
 demagn(1,1,:,:) = demagn_t(1,1);
 demagn(2,2,:,:) = demagn_t(2,2);
 demagn(3,3,:,:) = demagn_t(3,3);
 
 Vc = sum( ion.abc{elem}(1,:) .* cross(ion.abc{elem}(2,:),ion.abc{elem}(3,:)) ); % Volume of unit cell [A^-3]
-gfac = mu0/4/pi * muB^2 * J2meV * 10^30; % [meV*Ang^-3] (dipole_direct gives [Ang^3])
+gfac = mu0/4/pi * (ion.gLande*muB).^2 * J2meV * 10^30; % [meV*Ang^-3] (dipole_direct gives [Ang^3])
 % Lorenz = 3.124032/1000; % Original code (Ho)
 % Lorenz = 3.15452/1000; % Original code (Er)
 
 ion.d = zeros([3,3,4,4,size(ion.name,1)]);
 ion.d_ex = zeros([3,3,4,4,size(ion.name,1)]);
 for ii = 1:size(ion.name,1)
-    ion.d(:,:,:,:,ii) = ion.gLande(ii)^2*gfac*(dipole +  4*pi/Vc*(eins/3 - ion.demag*demagn)); % Lorenz_term = N/V * mu0/4pi * (muB)^2 * 4pi/3
+    ion.d(:,:,:,:,ii) = gfac(ii)*(dipole +  4*pi/Vc*(eins/3 - ion.demag*demagn)); % Lorenz_term = N/V * mu0/4pi * (muB)^2 * 4pi/3
     ion.d_ex(:,:,:,:,ii) = ion.exch{:,:,ii};
     evolution.(ion.name{ii})(1,:,:) = ion.mom(:,:,ii);
     evolution.(ion.name_hyp{ii})(1,:,:) = ion.mom_hyp(:,:,ii);
@@ -247,7 +247,7 @@ Jx = (Jp+Jm)/2;
 Jy = (Jp-Jm)/2i;
 
 % Calculate Hamiltonian
-Hzeeman = -ELEf*(hvec(1)*Jx + hvec(2)*Jy + hvec(3)*Jz); % Electronic Zeeman interaction [meV]
+Hzeeman = -ELEf * (hvec(1)*Jx + hvec(2)*Jy + hvec(3)*Jz); % Electronic Zeeman interaction [meV]
 Hint = -(h_int(1)*Jx + h_int(2)*Jy + h_int(3)*Jz); % dipole-dipole interaction
 % Hint = -h_int(3)*Jz; % include only diagonal interaction
 O44 = (Jp^4+Jm^4)/2; % off-diagonal CEF term for in-plane anisotropy
@@ -273,14 +273,14 @@ beta = 11.6/t; % [kB*T]^-1 in [meV]
 
 % Calculate Matrixelements and Moments
 if t == 0 % At zero temperature, use only lowest eigenvalue.
-    jx = real(wv(:,1)'*Jx*wv(:,1));
-    jy = real(wv(:,1)'*Jy*wv(:,1));
-    jz = real(wv(:,1)'*Jz*wv(:,1));
+    jx = real(wv(:,1)' * Jx * wv(:,1));
+    jy = real(wv(:,1)' * Jy * wv(:,1));
+    jz = real(wv(:,1)' * Jz * wv(:,1));
 else % Boltzman factor (with t in Kelvin)
     z = exp(-ee*beta)/sum(exp(-ee*beta)); % Density matrix element
-    jx = real(diag(wv'*Jx*wv))'*z;
-    jy = real(diag(wv'*Jy*wv))'*z;
-    jz = real(diag(wv'*Jz*wv))'*z;
+    jx = real(diag(wv' * Jx * wv))'*z;
+    jy = real(diag(wv' * Jy * wv))'*z;
+    jz = real(diag(wv' * Jz * wv))'*z;
 %     energies = sum(E)*z; % This assignment is very puzzling --Yikai
 end
 
@@ -320,12 +320,12 @@ O44 = (Jph^4+Jmh^4)/2; % off-diagonal CEF term for in-plane anisotropy
 H_h4 = h4*O44*h_int(1)^2; % order by disorder anisotropy
 Hint = -(h_int(1)*Jxh + h_int(2)*Jyh + h_int(3)*Jzh); % virtual mean field
 % Hint =  -h_int(3)*Jzh; % include only dipole interaction along z-axis
-Hzeeman = -ELEf*(hvec(1)*Jxh + hvec(2)*Jyh + hvec(3)*Jzh); % Electron Zeeman interaction
-Hyper = A*(Ixh*Jxh + Iyh*Jyh + Izh*Jzh); % hyperfine interaction
+Hzeeman = -ELEf * (hvec(1)*Jxh + hvec(2)*Jyh + hvec(3)*Jzh); % Electron Zeeman interaction
+Hyper = A * (Ixh*Jxh + Iyh*Jyh + Izh*Jzh); % hyperfine interaction
 
 if Options.nZee == true 
-    HzeemanI = -NUCf*(hvec(1)*Ixh + hvec(2)*Iyh + hvec(3)*Izh); % Nuclear Zeeman interaction
-    % Ham = Hcfh + H_h4 + Hzeeman + HzeemanI + A*(Izh*Jzh); % with Ising hyperfine interaction
+    HzeemanI = -NUCf * (hvec(1)*Ixh + hvec(2)*Iyh + hvec(3)*Izh); % Nuclear Zeeman interaction
+%     Ham = Hcfh + H_h4 + Hzeeman + HzeemanI + A*(Izh*Jzh); % with Ising hyperfine interaction
     Ham = Hcfh + H_h4 + Hint + Hzeeman + HzeemanI + Hyper; % full Hamiltonian
 else
 %     Ham = Hzeeman + Hyper + HvM; % barebone hamiltonian
@@ -343,7 +343,7 @@ ee = real(diag(ee)); % Take only the real part of the eigen-energy to form a dia
 [ee, n] = sort(ee); % sort the energy from lowest to the highest
 
 energies = ee; % save the unnormalized eigenenergies
-ee = ee-min(ee); % Normalize the energy amplitude to the lowest eigen-energy
+ee = ee - min(ee); % Normalize the energy amplitude to the lowest eigen-energy
 
 wv = wv(:,n); % sort the eigen-vectors in its basis accordingly
 beta = 11.6/t; % [kB*T]^-1 in [meV]
@@ -351,14 +351,14 @@ beta = 11.6/t; % [kB*T]^-1 in [meV]
 % Calculate Matrix elements and Moments
 if t == 0 
     % energies=e(1,1); % At zero temperature, use only lowest eigenvalue.
-    jx = real(wv(:,1)'*Jxh*wv(:,1));
-    jy = real(wv(:,1)'*Jyh*wv(:,1));
-    jz = real(wv(:,1)'*Jzh*wv(:,1));
+    jx = real(wv(:,1)' * Jxh * wv(:,1));
+    jy = real(wv(:,1)' * Jyh * wv(:,1));
+    jz = real(wv(:,1)' * Jzh * wv(:,1));
 else % Boltzman factor (with t in Kelvin)
     z = exp(-ee*beta)/sum(exp(-ee*beta)); % Partition function
-    jx = real(diag(wv'*Jxh*wv))'*z; % Calculate the expectation values
-    jy = real(diag(wv'*Jyh*wv))'*z;
-    jz = real(diag(wv'*Jzh*wv))'*z;
+    jx = real(diag(wv' * Jxh * wv))'*z; % Calculate the expectation values
+    jy = real(diag(wv' * Jyh * wv))'*z;
+    jz = real(diag(wv' * Jzh * wv))'*z;
 %     energies = sum(E)*z; % this is a puzzling assignment (Yikai)
 end
 

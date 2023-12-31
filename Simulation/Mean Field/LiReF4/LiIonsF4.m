@@ -1,8 +1,7 @@
-function [ion,history,E,V] = LiIonsF4(ion,temp,field,phi,theta,alpha)
+function [ion,history,E,V] = LiIonsF4(ion,temp,field,phi,theta)
 %Compute the magnetization and the alternated magnetization for a range
 %of temperatures and fields. (1-x) is the dilution. temp and h are the 
 %temperature and field arrays. xHypIso is the proportion of nuclear moments
-%isotops for Er. alpha is, in the case the sample is an ellipsiod (a,c,c),
 %the ratio a/c (for demagnetization tensor).
 
 global strategies rundipole Options;
@@ -59,9 +58,9 @@ for ii = 1:length(discrt_var)
     for jj = 1:length(continu_var)
         switch Options.scanMode % determine x-variable and data slicing direction
             case 'field'
-                [ion, evolution, energy, v, ~] = remf(ion, field(:,jj)', temp(ii), alpha);
+                [ion, evolution, energy, v, ~] = remf(ion, field(:,jj)', temp(ii));
             case 'temp'
-                [ion, evolution, energy, v, ~] = remf(ion, field(:,ii)', temp(jj), alpha);
+                [ion, evolution, energy, v, ~] = remf(ion, field(:,ii)', temp(jj));
         end    
         for kk = 1:size(ion.name,1)
             ion.altJmom(:,jj,kk) = mean(alt.*ion.mom(:,:,kk));

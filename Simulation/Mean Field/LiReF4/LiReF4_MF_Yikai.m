@@ -1,44 +1,47 @@
 function [vvv, eee, fff, ttt] = LiReF4_MF_Yikai(mion,temp,Bfield,theta,phi,hyp)
 % Argument: mion, temp, field, theta, phi
 % mion: Magnetic ion type
-% Temp(s): can be a single value or an array 
-% Field(s): can be a single value or an array 
-% theta(in degrees): angle between the field and a-axis in ac-plane, 0 means a perfect transverse magnetic field, 
+% Temp(s): can be a single value or an array
+% Field(s): can be a single value or an array
+% theta(in degrees): angle between the field and a-axis in ac-plane, 0 means a perfect transverse magnetic field,
 % phi(in degrees): ab-plane rotation, phi(in radian) = 0 means H along x
 
-clearvars -except temp Bfield theta phi mion hyp
 %% Setup parameters.
 global rundipole muB mu0 muN J2meV
-    rundipole = true;
-    muB = 9.274e-24; % [J/T]
-    muN = 3.15245e-5; % [meV/T]
-    mu0 = 4e-7*pi; % [H/m]
-    J2meV = 6.24151e+21; % [mev/J]
+rundipole = true;
+muB = 9.274e-24; % [J/T]
+muN = 3.15245e-5; % [meV/T]
+mu0 = 4e-7*pi; % [H/m]
+J2meV = 6.24151e+21; % [mev/J]
 
 global Options;
-    Options.hyperfine = hyp; % hyperfine interaction option
-    Options.nZee = hyp; % Nuclear Zeeman interaction option
-    Options.demag = false; % Demagnetization factor option
-        alpha = 0; % shape in calculating demagnetization factor is a needle (0), sphere (1), disc (inf)
-    Options.plotting = false; % Choose whether or not to plot the figures at the end
-    
-global strategies; % global convergence strategies switches
-    strategies.powerlaw = false; % Use a starting guess with the assumption the variables follow a power law.
-    strategies.accelerator = 0.0; % accelerate. Beware: it often doesn't accelerate actually. Can speed up if the system has to break a symetry
-    strategies.damping = 0.2; % damping factor. May reduce exponential fit efficiency
-    strategies.expfit = true; % turn on fitting to an exponential.
-    strategies.expfit_period = 30; % period between exponential fit.
-    strategies.expfit_deltaN = 5; % The exponential fit points distance. Three points used: N, N-deltaN, N-2deltaN.
-    strategies.symmetry = false; % Copy the state of one site to its crystal symmetry equivalent sites
+Options.hyperfine = hyp; % hyperfine interaction option
+Options.nZee = true; % Nuclear Zeeman interaction option
+Options.demag = true; % Demagnetization factor option
+ion.alpha = 0; % shape in calculating demagnetization factor is a needle (0), sphere (1), disc (inf)
+Options.plotting = false; % Choose whether or not to plot the figures at the end
 
-if Options.nZee == true
-    Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
-            '\PhD program\Research projects\Li', mion, 'F4 project\Data\Simulations\Matlab\Susceptibilities',...
-            '\with Hz_I'];
+global strategies; % global convergence strategies switches
+strategies.powerlaw = false; % Use a starting guess with the assumption the variables follow a power law.
+strategies.accelerator = 0.0; % accelerate. Beware: it often doesn't accelerate actually. Can speed up if the system has to break a symetry
+strategies.damping = 0.2; % damping factor. May reduce exponential fit efficiency
+strategies.expfit = true; % turn on fitting to an exponential.
+strategies.expfit_period = 30; % period between exponential fit.
+strategies.expfit_deltaN = 5; % The exponential fit points distance. Three points used: N, N-deltaN, N-2deltaN.
+strategies.symmetry = true; % Copy the state of one site to its crystal symmetry equivalent sites
+
+if ispc
+        Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
+            '\PhD program\Research projects\Li', mion, 'F4 project\Data\Simulations\Matlab\Susceptibilities\'];
+elseif ismac
+        Options.filepath = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
+            'PhD program/Research projects/Li', mion, 'F4 project/Data/Simulations/Matlab/Susceptibilities/'];
+end
+
+if Options.nZee == true && Options.hyperfine == true
+    Options.filepath = [Options.filepath,'Hz_I=1'];
 else
-    Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing',...
-            '\PhD program\Research projects\Li', mion, 'F4 project\Data\Simulations\Matlab\Susceptibilities',...
-            '\without Hz_I\test'];
+    Options.filepath = [Options.filepath,'Hz_I=0'];
 end
 
 if length(Bfield) > length(temp)
@@ -62,7 +65,7 @@ fields = [Hx; Hy; Hz];
 ion.name = [{'Er'};{'Ho'};{'Yb'};{'Tm'};{'Gd'};{'Y'}];
 ion.name_hyp = [{'Er_hyp'};{'Ho_hyp'};{'Yb_hyp'};{'Tm_hyp'};{'Gd_hyp'};{'Y_hyp'}];
 ion.prop = [0; 0; 0; 0; 0; 0]; % ion proportion
-ion.cfRot = [0; 11; 0; 0; 0; 0]; % crystal field basis rotation (in degrees)
+ion.cfRot = [0; -11; 0; 0; 0; 0]; % crystal field basis rotation (in degrees)
 ion.h4 = 0; % phenomenological in-plane anisotropy term
         
 %Ions' hyperfine
@@ -129,8 +132,7 @@ ion.tau = [ 0    0    0
 % Ions' cf parameters (ueV)
 ion.B = [[60.2258   -0.1164   -4.3280   0.00   -0.0019   -0.0850   -0.0227]   % Er
 %          [-60.0   0.350   3.60   0.00   0.000400   0.0700   0.0098]          % Ho -- Phys. Rev. B 75, 054426 (2007)
-         [-60.0   0.350   3.60   0.00   0.000400   0.0655   0.0098]          % Ho -- SC239 (Jz/1.3004) {phi=12, nZ=1, demag=0}
-%          [-60.0   0.350   3.60   0.00   0.000400   0.0655   0.0098]          % Ho -- SC239 (Jz/1.3004) {phi=7, nZ=0, demag=0}
+         [-60.0   0.350   3.60   0.00   0.000400   0.0655   0.0098]          % Ho -- SC239 (Jz/1.3004), {phi=7, nZ=0} or {phi=12, nZ=1}, demag=0
 %          [-57.9   0.309   3.51   0.00   0.000540   0.0631   0.0171]          % Ho -- Phys. Rev. B 92, 144422 (2015)
 %          [-57.9   0.309   3.60   0.00   0.000540   0.0570   0.0130]          % Ho -- PRB 2015 mod(Jz*0.89)
 %          [-56.2   0.325   3.61   0.00   0.000181   0.0758   0.0000]          % Ho -- Handbook phys. & chem. Rare-Earths V.23 (1996)
@@ -161,7 +163,7 @@ ion.renorm = [[1, 1, 1]         % Er
 
 % Heisenberg exchange interaction
 ex.Er = 0;
-ex.Ho = -0.0001; % [meV] AFM exchange [notation convention: PRB 75, 054426 (2007)]
+ex.Ho = -1e-4; % [meV] AFM exchange [notation convention: PRB 75, 054426 (2007)]
 ex.Yb = 0;
 ex.Tm = 0;
 ion.ex = [ex.Er; ex.Ho; ex.Yb; ex.Tm; 0; 0];
@@ -185,7 +187,7 @@ for ii = 1:length(ion.name)
     ion.mom(:,:,ii) = ion.mom(:,:,ii) .* 5.51;
 end
 %% Calculate and save results inside the LiIonsF4 function
-[ion,~,E,V] = LiIonsF4(ion,temp,fields,phi,theta,alpha);
+[ion,~,E,V] = LiIonsF4(ion,temp,fields,phi,theta);
 %% Plot data
 n = ion.prop~=0;
 if Options.plotting == true

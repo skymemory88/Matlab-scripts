@@ -10,32 +10,38 @@ function  MF_RPA_Yikai(mion, scanMode, dscrt_var, freq_total, theta, phi, gama, 
 % hyp: Hyperfine isotope proportion (0~1)
 % RPA_Mode: RPA option (true/false)
 
-Options.plotting = true; % Decide whether or not to plot the data at the end
+Options.plotting = false; % Decide whether or not to plot the data at thes end
 Options.unit = 'meV'; % Energy unit choice: J, GHz, meV (default)
 Options.saving = true; % Options to save the susceptibility tensors
 Options.scanMode = scanMode; % 1. Field plot with RPA; 2. Temp plot with RPA; 3. wavevector plot with RPA
-Options.nZee = hyp;
+Options.nZee = true;
 Options.RPA = RPA_mode; % Apply random phase approximation (RPA) correction
-Options.Options.Kplot = true; % k-dependent plot for RPA susceptibilities
-    if Options.Options.Kplot == true
-        % qz = (6.9:0.0025:7.5)';
-        qx = linspace(0,2,301)';
-        qy = zeros(length(qx),1);
-        qz = zeros(length(qx),1);
-        qvec = [qx qy qz];
-        cVar0 = [4 5]; % selected points of the continuous variable for k-plot
-    else
-        qx = 0.0;
-%         qx = [0.01 0.1 0.3 0.6 1]';
-        qy = zeros(size(qx,1),1);
-        qz = zeros(size(qx,1),1);
-        qvec = [qx qy qz];
-    end
+Options.Kplot = false; % k-dependent plot for RPA susceptibilities
+
 if Options.RPA == false
-    Options.Options.Kplot = false;
+    Options.Kplot = false;
+end
+if Options.Kplot == true
+    % qz = (6.9:0.0025:7.5)';
+    qx = linspace(0,2,301)';
+    qy = zeros(length(qx),1);
+    qz = zeros(length(qx),1);
+    qvec = [qx qy qz];
+    cVar0 = [4 5]; % selected points of the continuous variable for k-plot
+else
+    qx = 0.0;
+    %         qx = [0.01 0.1 0.3 0.6 1]';
+    qy = zeros(size(qx,1),1);
+    qz = zeros(size(qx,1),1);
+    qvec = [qx qy qz];
 end
 clearvars -except dscrt_var theta phi gama Options mion freq_total hyp qvec cVar0 nZee_path
 
+if strcmp(pathsep, ':')
+    platform = 'Unix';
+else
+    platform = 'Win';
+end
 % Declare physical constants as global for consistency
 const.hbar = 1.05457E-34; % Reduced Planck constant [J.s]
 const.J2meV = 6.24151e+21; % convert Joule to meV
@@ -59,18 +65,25 @@ for ii = 1:length(dscrt_var)
     ipt = false;
     counter = 0;
     if Options.nZee == true
-        nZee_path = 'with Hz_I';
+        nZee_path = 'Hz_I=1';
     else
-        nZee_path = 'without Hz_I/test';
+        nZee_path = 'Hz_I=0';
     end
-    location = ['G:\My Drive\File sharing\PhD program\Research projects\Li', mion,...
-        'F4 project\Data\Simulations\Matlab\Susceptibilities\', nZee_path];
+    switch platform
+        case 'Win'
+            Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\',...
+                'Simulations\MATLAB\Susceptibilities\', nZee_path, '\'];
+        case 'Unix'
+            Options.location = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/'...
+                'File sharing/PhD program/Research projects/LiHoF4 project/Data/',...
+                'Simulations/MATLAB/Susceptibilities/', nZee_path, '/'];
+    end
     while ~ipt
         switch Options.scanMode % 1. Field plot with RPA. 2. wavevector plot with RPA
             case 'field'
                 filename = strcat(['Hscan_Li',mion,'F4_'],...
                     sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
-                file = fullfile(location,filename);
+                file = fullfile(Options.location, filename);
                 load(file,'-mat','eee','fff','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
                 file_part = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e_%5$.3f-%6$.3fGHz'...
                     , dscrt_var(ii), theta, phi, gama, min(freq_total), max(freq_total));
@@ -81,7 +94,7 @@ for ii = 1:length(dscrt_var)
             case 'temp'
                 filename = strcat(['Tscan_Li',mion,'F4_'],...
                     sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f', dscrt_var(ii), theta, phi, hyp),'.mat');
-                file = fullfile(location,filename);
+                file = fullfile(Options.location,filename);
                 load(file,'-mat','eee','ttt','vvv','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
                 file_part = sprintf('%1$3.3fT_%2$.2fDg_%3$.1fDg_%4$.2e_%5$.3f-%6$.3fGHz'...
                     , dscrt_var(ii), theta, phi, gama, min(freq_total), max(freq_total));
@@ -111,7 +124,7 @@ for ii = 1:length(dscrt_var)
     eigenW = vvv; % load eigenstates
 %     eigenW(:,9:end,9:end) = 0; % truncate the Hilbert space
     if Options.RPA == true
-        if Options.Options.Kplot == true
+        if Options.Kplot == true
             bidx = int16.empty(0,length(cVar0));
             for jj = 1:length(cVar0)
                 [~,bidx(jj)] = min(abs( cVar - cVar0(jj) ));
@@ -132,33 +145,33 @@ for ii = 1:length(dscrt_var)
 
     if Options.saving == true % Save the susceptibilities
         if Options.RPA == true
-            savefile1 = fullfile(location,save_name);
-            save_vars = {dscrt_var, cVar, freq_total, chi0, gama, qvec, chiq};
+            savefile1 = fullfile(Options.location,save_name);
+            save_vars = {dscrt_var, cVar, freq_total, ion, chi0, gama, qvec, chiq};
             save_file(save_vars, savefile1, Options); % save the data w. RPA corrections
         else
-            savefile2 = fullfile(location,save_name);
-            save_vars = {dscrt_var, cVar, freq_total, chi0, gama};
+            savefile2 = fullfile(Options.location,save_name);
+            save_vars = {dscrt_var, cVar, freq_total, ion, chi0, gama};
             save_file(save_vars, savefile2, Options); % Save the data w/o RPA corrections
         end
     end
     
     if Options.plotting == true % Plot the susceptibilities
         plot_var = {cVar, freq_total, chi0, gama, [0,0,0], dscrt_var(ii)};
-        if Options.Options.Kplot == true
+        if Options.Kplot == true
             plot_var{3} = chiq;
             plot_var{5} = qvec;
-            figs(plot_var, Options, const, "\chi_{RPA}", Options.Options.Kplot);
+            figs(plot_var, Options, const, "\chi_{RPA}", Options.Kplot);
             chi0_p = repmat(chi0,1,1,1,1,length(qvec));
 %             chi0_p = permute(chi0_p,[1 2 3 5 4]); % Add the additional dimension for the plotting purpose
             plot_var{3} = chi0_p;
-            figs(plot_var, Options, const, "chi_0", Options.Options.Kplot);
+            figs(plot_var, Options, const, "chi_0", Options.Kplot);
         else
-            figs(plot_var, Options, const, "\chi_0", Options.Options.Kplot);
+            figs(plot_var, Options, const, "\chi_0", Options.Kplot);
             if Options.RPA == true
                 plot_var{3} = chiq;
-                figs(plot_var, Options, const, "\chi_{RPA}", Options.Options.Kplot);
+                figs(plot_var, Options, const, "\chi_{RPA}", Options.Kplot);
                 plot_var{3} = chiq-chi0;
-                figs(plot_var, Options, const, "\chi_{RPA}-\chi_0", Options.Options.Kplot);
+                figs(plot_var, Options, const, "\chi_{RPA}-\chi_0", Options.Kplot);
             end
         end
     end
@@ -293,7 +306,7 @@ else
 end
 end
 
-function save_file(save_vars,savefile,opt)
+function save_file(save_vars, savefile, opt)
 switch opt.scanMode
     case 'field'
         temp = save_vars{1};
@@ -303,15 +316,16 @@ switch opt.scanMode
         temp = save_vars{2};
 end
 freq_total = save_vars{3};
-chi = save_vars{4};
-gama = save_vars{5};
+ion = save_vars{4};
+chi = save_vars{5};
+gama = save_vars{6};
 unit = opt.unit;
-if length(save_vars) == 7
-    qvec = save_vars{6};
-    chiq = save_vars{7};
-    save(savefile,'temp','fields','freq_total','chi','gama','qvec','chiq','unit','-v7.3');
+if length(save_vars) == 8
+    qvec = save_vars{7};
+    chiq = save_vars{8};
+    save(savefile,'temp','fields','freq_total','ion','chi','gama','qvec','chiq','unit','-v7.3');
 else
-    save(savefile,'temp','fields','freq_total','chi','gama','unit','-v7.3');
+    save(savefile,'temp','fields','freq_total','ion','chi','gama','unit','-v7.3');
 end
 end
 
@@ -373,16 +387,14 @@ end
 % If exists, load spin-linewidths extracted from experiments for field scan simulation
 if temperatures(1) == temperatures(end) % for fixed temperature calculations
     if Options.nZee && ismember(temperatures(1), [0.15 0.18 0.22 0.30])
-        location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I\';
-        gma_load = load([location, sprintf('Exp_fit_gamma_%umK.mat', 1000*temperatures(1))],'gma');
+        gma_load = load([Options.location, sprintf('Exp_fit_gamma_%umK.mat', 1000*temperatures(1))],'gma');
         gma_load = flip(gma_load.gma)*const.Gh2mV; % [meV]
         for kk = 1:length(gma_load)
             gamma(kk,kk+1) = gma_load(kk);
             gamma(kk+1,kk) = gma_load(kk);
         end
     elseif ~Options.nZee && ismember(temperatures(1), [0.1 0.13 0.15 0.18 0.24 0.25])
-        location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\';
-        gma_load = load([location, sprintf('Exp_fit_gamma_%umK.mat', 1000*temperatures(1))],'gma');
+        gma_load = load([Options.location, sprintf('Exp_fit_gamma_%umK.mat', 1000*temperatures(1))],'gma');
         gma_load = flip(gma_load.gma)*const.Gh2mV; % [meV]
         for kk = 1:length(gma_load)
             gamma(kk,kk+1) = gma_load(kk);

@@ -1,6 +1,6 @@
 function [qvec, fields, freq_total, chi, deno] = RPA(varargin)
-Options.saving = true; % saving option
-Options.plot = false; % plot option
+Options.saving = false; % saving option
+Options.plot = true; % plot option
 
 const.muB = 9.27401e-24; % Bohr magneton [J/T]
 const.muN = 5.05078e-27; % Nuclear magneton [J/T]
@@ -19,12 +19,26 @@ Options.hyperfine = varargin{6}; % hyperfine interaction option
 Options.nZee = varargin{6}; % nuclear Zeeman interaction option
 
 if Options.nZee == true
-    nZee_path = 'with Hz_I\';
+    nZee_path = 'Hz_I=1';
 else
-    nZee_path = 'without Hz_I\test\';
+    nZee_path = 'Hz_I=0';
 end
-location = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing\PhD program\Research projects\Li',...
-    mion, 'F4 project\Data\Simulations\Matlab\Susceptibilities\', nZee_path];
+
+if strcmp(pathsep, ':')
+    platform = 'Unix';
+else
+    platform = 'Win';
+end
+
+switch platform
+    case 'Win'
+        location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab',...
+            '\Susceptibilities\',nZee_path];
+    case 'Unix'
+        Options.location = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/'...
+            'File sharing/PhD program/Research projects/LiHoF4 project/Data/',...
+            'Simulations/MATLAB/Susceptibilities/', nZee_path];
+end
 
 % load the MF and MF susceptibility files
 MF_name = strcat(['Hscan_Li',mion,'F4_'],...
