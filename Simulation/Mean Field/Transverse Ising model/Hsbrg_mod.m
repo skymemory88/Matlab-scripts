@@ -251,20 +251,18 @@ for nb = 1:size(fff,1)
     end
     if Options.RPA == true
         for nq = 1:size(qvec,1)
-            Smnx = wav' * Sx * wav; % <Sx>_mn
-            Smnx = Smnx(2:end,1); % off diagonal elements between <n| and |0>
-            Smny = wav' * Sy * wav; % <Sy>_mn
-            Smny = Smny(2:end,1);
+%             Smnx = wav' * Sx * wav; % <Sx>_mn
+%             Smnx = Smnx(2:end,1); % off diagonal elements between <n| and |0>
+%             Smny = wav' * Sy * wav; % <Sy>_mn
+%             Smny = Smny(2:end,1);
             Smnz = wav' * Sz * wav; % <Sz>_mn
             Smnz = Smnz(2:end,1);
-%             Jzz = abs(squeeze(Jq(3,3,nq))); % Ising element of q=0 interaction tensor
-            Jab = abs(squeeze(Jq(:,:,nq))); % Ising element of q=0 interaction tensor
+            Jzz = abs(squeeze(Jq(3,3,nq))); % Ising element of q=0 interaction tensor
+%             Jab = abs(squeeze(Jq(:,:,nq))); % Ising element of q=0 interaction tensor
             dE0 = En(2:end); % MF excitation modes at 0 K
             for nw = 1:length(omega) % search for RPA poles
                 dE2 = (dE0.^2 - omega(nw)^2);
-%                 deno(nb,nw,1) = prod(dE2)*(1 - (2*dE0') * (abs(Smnz).^2 ./dE2) * Jzz); % Ising interaction
-                deno(nb,nw,1) = prod(dE2) * (1 - 2*dE0' * ((Smnz.^2.*Jab(3,3)...
-                    + Smnx.*Smnz.*Jab(1,3) + Smny.*Smnz.*Jab(2,3))./dE2)); % Heisenberg interaction
+                deno(nb,nw,1) = prod(dE2)*(1 - (2*dE0') * (abs(Smnz).^2 ./dE2) * Jzz); % Ising interaction
             end
             pks = squeeze(mag2db(1./abs(deno(nb,:,1)))); % search for poles
             [~,loc] = findpeaks(pks, 'SortStr', 'none');

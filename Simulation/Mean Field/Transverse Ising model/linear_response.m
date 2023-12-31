@@ -26,10 +26,10 @@ if ~isfield(ion, 'mat')
                1 1 1]; % default: Isotropic
 %     ion.mat = [1 0 0;
 %                0 1 0;
-%                0 0 1]; % Diagonal
+%                0 0 1]; % diagonal
 %     ion.mat = [0 0 0;
 %                0 0 0;
-%                0 0 1]; $ Ising
+%                0 0 1]; % Ising
 end
 eee = squeeze(eee);
 fields = fff;
@@ -51,7 +51,7 @@ end
 
 [chi] = MF_chi(ion, freq_total, fields, En, temp, wav, const);
 if Options.RPA == true
-    [chiq, RPA_pol] = RPA_chi(ion, En, freq_total, fields, [0 0 0], chi, const); % calculate RPA susceptibility
+    [chiq, poles] = RPA_chi(ion, En, freq_total, fields, [0 0 0], chi, const); % calculate RPA susceptibility
 end
 varargout{1} = fields;
 varargout{2} = freq_total;
@@ -71,7 +71,7 @@ if exist('chiq','var')
     chi0 = chi;
     chi = chiq;
     varargout{4} = chiq;
-    varargout{5} = RPA_pol;
+    varargout{5} = poles;
     if Options.saving == true % Save the susceptibilities
         file_part = sprintf('%1$3.3fK_%2$.2e_%3$.3f-%4$.3fGHz', temp,...
             const.gama, min(freq_total), max(freq_total));
@@ -79,7 +79,7 @@ if exist('chiq','var')
 %         save_name = strcat('RPA_LHF-Ising_', file_part, '.mat');
         savefile = fullfile(filepath, save_name);
         save(savefile, 'temp', 'fields', 'freq_total', 'chi0',...
-            'const', 'chi', 'RPA_pol', 'Options', '-v7.3');
+            'const', 'chi', 'poles', 'Options', '-v7.3');
     end
 end
 end
@@ -87,16 +87,17 @@ end
 function [chi0] = MF_chi(ion, freq_total, field, E, T, V, const)
 fprintf('Computing MF susceptibility at T = %.3f K\n', T);
 ELEf = ion.gLande * const.muB * const.J2meV; % Lande factor * Bohr magneton (meV/T)
+% NUCf = ELEf; % [meV/T] for debugging
 % NUCf = ion.nLande * muN * J2meV; % [meV/T]
 NUCf = 0; % excluding nuclear contribution
 
 %Initiate ionJ operators
-Jz = diag(ion.J:-1:-ion.J); % Jz = -J, -J+1,...,J-1,J
+Jz = diag(ion.J:-1:-ion.J); % Jz = -J, -J+1, ..., J-1, J
 Jp = diag(sqrt( (ion.J-((ion.J-1):-1:-ion.J) ).*(ion.J+1+( (ion.J-1):-1:-ion.J) )), 1); % electronic spin ladder operator
 Jm = Jp'; % electronic spin ladder operator
 if any(ion.hyp) % hyperfine interaction option
     %Initiate I operators
-    Iz = diag(ion.I:-1:-ion.I); %Iz = -I, -I+1,...,I-1,I
+    Iz = diag(ion.I:-1:-ion.I); %Iz = -I, -I+1, ..., I-1, I
     IhT.z = kron(eye(2*ion.J+1), Iz); % Expand Hilbert space
     Ip = diag(sqrt( (ion.I-((ion.I-1):-1:-ion.I) ).*(ion.I+1+((ion.I-1):-1:-ion.I))), 1); % Nuclear spin ladder operator
     Im = Ip'; % Nuclear spin ladder operator
@@ -131,9 +132,9 @@ else
 end
 
 chi0 = zeros(3,3,length(freq_total(1,:)),size(field,1));
-for ii = 1:size(field,1) % calculate susceptibility for all fields
-    wav = squeeze(V(ii,:,:,:)); % Obtain the corresponding eigen vectors
-    ee = squeeze(E(ii,:,:)); % Obtain the corresponding eigen energies in meV
+for nb = 1:size(field,1) % calculate susceptibility for all fields
+    wav = squeeze(V(nb,:,:,:)); % Obtain the corresponding eigen vectors
+    ee = squeeze(E(nb,:,:)); % Obtain the corresponding eigen energies in meV
     beta = 1/(const.kB*T); %[meV^-1]
     if T == 0
         zz = zeros(size(ee));
@@ -146,15 +147,15 @@ for ii = 1:size(field,1) % calculate susceptibility for all fields
     pmn = pn - pm; % population factor
 %     pmn = ones(size(pn)); % for debugging
     [en, em] = meshgrid(ee, ee);
-    parfor jj = 1:size(freq_total,2) %calculate susceptibility for all frequencies
-        freq = freq_total(jj);
+    parfor nw = 1:size(freq_total,2) %calculate susceptibility for all frequencies
+        freq = freq_total(nw);
         dE = em - en - freq * const.f2E; % [meV]
         gamma = ones(size(dE)) * const.gama;
         deno0 = 1 ./ (dE - 1i*gamma); % [meV^-1]
 
-        ttx1  = wav'  * (Cxx(ii) * JhT.x + NUCf/ELEf * IhT.x) * wav;
-        tty1  = wav'  * (Cyy(ii) * JhT.y + NUCf/ELEf * IhT.y) * wav;
-        ttz1  = wav'  * (Czz(ii) * JhT.z + NUCf/ELEf * IhT.z) * wav;
+        ttx1  = wav'  * (Cxx(nb) * JhT.x + NUCf/ELEf * IhT.x) * wav;
+        tty1  = wav'  * (Cyy(nb) * JhT.y + NUCf/ELEf * IhT.y) * wav;
+        ttz1  = wav'  * (Czz(nb) * JhT.z + NUCf/ELEf * IhT.z) * wav;
 
 %         ttx1  = wav'  * (Cxx(ii) * JhT.x) * wav;
 %         tty1  = wav'  * (Cyy(ii) * JhT.y) * wav;
@@ -200,67 +201,69 @@ for ii = 1:size(field,1) % calculate susceptibility for all fields
         chi_tzy  = (ttz1) .* (tty1.') .* pmn .* deno0;
         zy = sum(sum(chi_tzy));
 
-        chi0(:,:,jj,ii) = [xx xy xz
+        chi0(:,:,nw,nb) = [xx xy xz
                            yx yy yz
                            zx zy zz];
     end
 end
 end
 
-function [chiq, RPA_pol] = RPA_chi(ion, En, freq_total, field, qvec, chi0, const)
+function [chiq, poles] = RPA_chi(ion, En, freq_total, field, qvec, chi0, const)
 unitN = size(ion.tau,1); % Number of magnetic atoms in one unit cell
 Vc = sum( ion.abc(1,:) .* cross(ion.abc(2,:), ion.abc(3,:)) ); % Volume of unit cell [Ang^-3]
 gfac = const.mu0/4/pi * (ion.gLande * const.muB)^2 * const.J2meV * 1e30; % [meV*A^3]
-
 eins = zeros(3,3,4,4);
 eins(1,1,:,:) = 1; eins(2,2,:,:) = 1; eins(3,3,:,:) = 1;
 Jij = zeros(3, 3, unitN, unitN, size(qvec,1));
-chiq = zeros(3, 3, length(freq_total(1,:)), size(field,1), size(qvec,1));
-RPA_pol = zeros(3, 3, length(freq_total(1,:)), size(field,1), size(qvec,1));
 switch ion.int
     case 'dipole'
-        for ii = 1:size(qvec,1)
-            Jij(:,:,:,:,ii) = gfac * (MF_dipole(qvec(ii,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc); % [meV] dipole only
+        for nq = 1:size(qvec,1)
+            Jij(:,:,:,:,nq) = gfac * (MF_dipole(qvec(nq,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc); % [meV] dipole only
         end
     case 'exchange'
-        for ii = 1:size(qvec,1)
-            Jij(:,:,:,:,ii) = MF_exchange(qvec(ii,:), ion.ex, ion.abc, ion.tau); % [meV] exchange only
-%             Jij(:,:,:,:,ii) = exchange(qvec(ii,:), abs(ion.ex), ion.abc, ion.tau);
+        for nq = 1:size(qvec,1)
+            Jij(:,:,:,:,nq) = MF_exchange(qvec(nq,:), ion.ex, ion.abc, ion.tau); % [meV] exchange only
+%             Jij(:,:,:,:,nq) = exchange(qvec(nq,:), abs(ion.ex), ion.abc, ion.tau);
         end
     case 'both'
-        for ii = 1:size(qvec,1)
-%             Jij(:,:,:,:,ii) = gfac * (MF_dipole(qvec(ii,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc)...
-%                 - MF_exchange(qvec(ii,:), ion.ex, ion.abc, ion.tau); % [meV]
-            Jij(:,:,:,:,ii) = gfac * (MF_dipole(qvec(ii,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc)...
-                - exchange(qvec(ii,:), abs(ion.ex), ion.abc, ion.tau); % [meV]
+        for nq = 1:size(qvec,1)
+%             Jij(:,:,:,:,nq) = gfac * (MF_dipole(qvec(nq,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc)...
+%                 - MF_exchange(qvec(nq,:), ion.ex, ion.abc, ion.tau); % [meV]
+            Jij(:,:,:,:,nq) = gfac * (MF_dipole(qvec(nq,:), ion.dpRng, ion.abc, ion.tau) + 4*pi*eins/3/Vc)...
+                - exchange(qvec(nq,:), abs(ion.ex), ion.abc, ion.tau); % [meV]
         end
 end
 J = sum(sum(Jij,4),3)/unitN; % average over the unit cell
 J = abs(J);
 
-for ii = 1:size(field,1)
-    if ismember(ii, 1:round(size(field,1)/5):size(field,1))
+chiq = zeros(3, 3, length(freq_total(1,:)), size(field,1), size(qvec,1));
+pks = zeros(3, 3, length(freq_total(1,:)), size(field,1), size(qvec,1));
+poles = zeros(size(field,1), factorial(size(En,2)-1));
+for nb = 1:size(field,1)
+    if ismember(nb, 1:round(size(field,1)/5):size(field,1))
         fprintf('Computing RPA susceptibility at B = (%.1f %.1f %.1f) T\n',...
-            field(ii,1), field(ii,2), field(ii,3));
+            field(nb,1), field(nb,2), field(nb,3));
     end
-    ee = squeeze(En(ii,:,:)); % Obtain the corresponding eigen energies in meV
-    [en, em] = meshgrid(ee, ee);
-    dE = (em - en - 1i*const.gama)./const.f2E; % [GHz]
+%     ee = squeeze(En(ii,:,:)); % Obtain the corresponding eigen energies in meV
+%     [en, em] = meshgrid(ee, ee);
+%     dE = (em - en - 1i*const.gama)./const.f2E; % [GHz]
     for nq = 1:size(qvec,1)
-        Jq = squeeze(J(:,:,nq)) .* ion.mat;
-        parfor kk = 1:length(freq_total(1,:))
-%         for kk = 1:length(freq_total(1,:))
-            chi_mf = squeeze(chi0(:,:,kk,ii));
+        Jq = squeeze(J(:,:,nq)) .* ion.mat; % truncate the interaction tensor
+        parfor nw = 1:length(freq_total(1,:))
+%             for kk = 1:length(freq_total(1,:))
+            chi_mf = squeeze(chi0(:,:,nw,nb));
             MM = chi_mf * Jq; % [meV * meV^-1]
             deno = squeeze(eye(size(MM)) - MM);
-            chiq(:,:,kk,ii,nq) = chi_mf/deno;
-            fct = prod(dE - freq_total(kk), 'all');
-            RPA_pol(:,:,kk,ii,nq) = inv((eye(size(MM)) - MM)*fct);
+            chiq(:,:,nw,nb,nq) = deno\chi_mf; % RPA susceptibility
+            pks(:,:,nw,nb,nq) = inv(det(deno)); % take the inverse of the denominator tensor
+%             pks(:,:,kk,ii,nq) = inv(det(deno*prod(dE,'all'))); % take the inverse of the denominator tensor
         end
+        [~,loc] = findpeaks(squeeze(abs(pks(3,3,:,nb))), 'SortStr', 'none'); % search for poles along z
+        poles(nb, 1:length(loc)) = flip(freq_total(loc));
     end
 end
 chiq = squeeze(chiq);
-RPA_pol = squeeze(RPA_pol);
+poles = squeeze(poles);
 end
 
 % subs = ["xx", "yy", "zz"];

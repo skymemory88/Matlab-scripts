@@ -2,20 +2,14 @@
 
 Options.damp = 0.2; % update damping
 Options.RPA = true; % RPA pole searching
-    omega = linspace(0,35,2001); % [GHz] frequency range
+    omega = linspace(0,5,3001); % [GHz] frequency range
 Options.plot = true; % Option to plot the results
 Options.save = false; % Option to save results
 
-if strcmp(pathsep, ':')
-    platform = 'Unix';
-else
-    platform = 'Win';
-end
-switch platform
-    case 'Win' % for Windows
+if ispc
         Options.filepath = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing\PhD program\',...
             'Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\toy_model'];
-    case 'Unix' % for Mac/Linux
+elseif ismac
         Options.filepath = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
             'PhD program/Research projects/LiHoF4 project/Data/Simulations/MATLAB/Susceptibilities/toy_model'];
 end
@@ -60,20 +54,20 @@ ion.mat = [0  0  0;
            0  0  0;
            0  0  1]; % Ising
 % lattice constants
-ion.abc = [5.175   0   0
-           0   5.175   0
-           0   0   10.75];
+ion.abc = [5.175    0    0
+             0   5.175   0
+             0   0   10.75];
 % basis vector
-ion.tau = [ 0    0    0
-            0   1/2  1/4
-           1/2  1/2  1/2
-           1/2   0   3/4];
+ion.tau = [ 0     0     0
+            0    1/2   1/4
+           1/2   1/2   1/2
+           1/2    0    3/4];
 
-temp = 0; % temperature
+temp = 0.0; % temperature
 qvec = [0 0 0];
 omega = omega*f2E;
 
-Bx = linspace(0,17,801); % transverse field along x
+Bx = linspace(0,9,401); % transverse field along x
 By = zeros(size(Bx));
 Bz = zeros(size(Bx));
 fields = [Bx' By' Bz'];
@@ -82,7 +76,7 @@ fields = [Bx' By' Bz'];
 sigx = [0   1
         1   0];
 sigy = [ 0   -1i
-        1i  0];
+         1i   0];
 sigz = [1   0
         0  -1];
 
@@ -159,11 +153,10 @@ for nb = 1:size(fields,1)
     uni = uni(:,n);
     uni = uni(:,1:2); % truncate to Ising subspace
 
-    jz = uni'*Jz*uni; % truncate Jz operator
+    jz = uni' * Jz * uni; % truncate Jz operator
     [ket, jz] = eig(jz); % second rotation to diagonalize Jz
     if jz(1) < 0 % ensure Czz > 0
         ket = flip(ket,2);
-        jz = ket'*uni'*Jz*uni*ket;
     end
 
     % fix the relative phase between the two basis vectors
@@ -172,8 +165,9 @@ for nb = 1:size(fields,1)
     thta = angle(ket(1,2));
     ket(:,2) = ket(:,2)*exp(-1i*thta);
 
-    jx = ket'*uni'*Jx*uni*ket; % truncate Jx operator
-    jy = ket'*uni'*Jy*uni*ket; % truncate Jy operator
+    jx = ket'*uni' * Jx * uni*ket; % truncate Jx operator
+    jy = ket'*uni' * Jy * uni*ket; % truncate Jy operator
+    jz = ket'*uni' * Jz * uni*ket; % truncate Jz operator
     
     % compute coefficients for the 2x2 spin operators
     Czz(nb) = mean(linsolve(sigz, diag(jz)));
@@ -191,7 +185,7 @@ for nb = 1:size(fields,1)
     Cyx(nb) = off_coef(1);
     Cyy(nb) = off_coef(2);    
     
-    Ht = ket'*uni'* ham0 *uni*ket; % (Hcf + Hx) hamiltonian
+    Ht = ket'*uni'* ham0 *uni*ket; % (Hcf + Hz) hamiltonian
     Bx(nb,1) = 2*mean([abs(Ht(2,1)) abs(Ht(1,2))]); % factor '2' for Ising spin
     S_mf = [0 0 jz(1)]; % initial guesses for electronic spin operators
     beta = 1/(kB*temp); % Boltzman constant
@@ -288,7 +282,7 @@ for nb = 1:size(fields,1)
             dE2 = (dE0.^2 - omega(nw)^2);
             deno(nb,nw,1) = prod(dE2)*(1 - J0 * (2*dE0') * (abs(jmn).^2 ./dE2));
         end
-        pks = squeeze(mag2db(1./abs(deno(nb,:,1)))); % search for poles
+        pks = squeeze(mag2db(1./abs(deno(nb,:,1)))); % peak searching
         [~,loc] = findpeaks(pks, 'SortStr', 'none');
         poles(nb,1:length(loc)) = flip(omega(loc));
         for ii = 2:size(poles,2)
