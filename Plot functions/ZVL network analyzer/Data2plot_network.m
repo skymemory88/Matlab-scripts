@@ -1,8 +1,9 @@
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\spec1d--Henrik');
 addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan\functions');
 format long g;
-location = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC239\2021.07.14';
-file = 'detune_300K_air.dat';
+location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
+    'SC239\2022.08.31'];
+file = 'detune_875mK_vac.dat';
 scan = importdata(fullfile(location,file),',',3);
 
 freq11=scan.data(:,1);
@@ -71,19 +72,19 @@ Q11 = freq11(Idx11)/bw11; %Calculate the quality factor
 % scan = importdata('transsmission_300K.dat',',',3);
 %For import from a second file.
 
-% freq11_2=scan.data(:,1);
-% S11_2=scan.data(:,4);
-% S11i_2=scan.data(:,5);
-% amp11_2=sqrt(S11_2.^2+S11i_2.^2);
-% dB_S11_2=mag2db(amp11_2);
-% psd_2 = db2pow(-amp11_2)./freq11_2;    %Calculate power density spectrum
+freq11_2=scan.data(:,1);
+S11_2=scan.data(:,4);
+S11i_2=scan.data(:,5);
+amp11_2=sqrt(S11_2.^2+S11i_2.^2);
+dB_S11_2=mag2db(amp11_2);
+psd_2 = db2pow(-amp11_2)./freq11_2;    %Calculate power density spectrum
 
-% %Option 1: Calculate graphic Quality factors from peaking finding and -3 dB
-% [~,Idx11_2] = min(amp11_2); %Find the peak and its corresponding index
-% bw11_2 = range(freq11_2(dB_S11_2 <= -3));
-% f0_2 = freq11_2(Idx11_2);
-% Q11_2 = freq11_2(Idx11_2)/range(bw11_2); %Calculate the quality factor
-% 
+%Option 1: Calculate graphic Quality factors from peaking finding and -3 dB
+[~,Idx11_2] = min(amp11_2); %Find the peak and its corresponding index
+bw11_2 = range(freq11_2(dB_S11_2 <= -3));
+f0_2 = freq11_2(Idx11_2);
+Q11_2 = freq11_2(Idx11_2)/range(bw11_2); %Calculate the quality factor
+
 % % Option 2: Calculate Quality factors from custom lorentzian fit
 % param = [bw11_2 f0_2 0 1]; % Set up starting point of the parameters for the lorentzian fit
 % % Param = [1.Bandwidth 2.Resonant frequency 3.Noise floor 4.Scaling factor]
@@ -112,20 +113,22 @@ Q11 = freq11(Idx11)/bw11; %Calculate the quality factor
 % dB3=mag2db(amp3);
 
 figure % amplitude plot
-plot(freq11,dB_S11,'-o','Markersize',1.5);
+plot(freq11./1e9,dB_S11,'-o','Markersize',1.5);
 hold on
+plot(freq11_2./1e9,dB_S11_2,'-+','Markersize',1.5);
+% plot(fdB_S11_2,'red');
 % plot(fdB_S11,'red');
 % plot(freq21,dB_S21,'-x','Markersize',1.5);
 %plot(freq11,compl_11,'s', 'Markersize', 1.5);
 %plot(freq21,compl_21,'s', 'Markersize', 1.5);
+set(gca,'FontSize',14)
 title('S11 response at 300K');
-xlabel('Frequency (Hz)');ylabel('S11 (dB)');
+xlabel('Frequency (GHz)');ylabel('S11 (dB)');
 
 figure % smithplot
-smithplot(freq11,S11+1i*S11i)
-
-% plot(freq11_2,dB_S11_2,'-+','Markersize',1.5);
-% plot(fdB_S11_2,'red');
+smithplot(freq11./1e9, S11+1i*S11i)
+hold on
+smithplot(freq11_2./1e9, S11_2+1i*S11i_2)
 % %Mark down the resonant frequencies from numerical calculations with verticle lines
 %{
 plot(freq11_3,dB3,'s','Markersize',1.5);
@@ -140,6 +143,6 @@ plot(vline(:,1),vline(:,2),'r');
 title('S11 response at 300K');
 % legend(sprintf('Cavity (f_0 = 3.57 GHz), Q_g = %.2f and Q_f = %.2f', Q11, Q11_fit), sprintf('Active (f_0 = 3.40GHz), Q_g = %.2f and Q_f = %.2f', Q11_2, Q11_fit_2));
 % legend(num2str(ff0/1e9, 'Cavity (f_0 = %3.2f GHz)'),num2str(ff0_2/1e9, 'Active (f_0 = %3.2f GHz)'));
-xlabel('Frequency (Hz)');ylabel('S11 (dB)');
+xlabel('Frequency (GHz)');ylabel('S11 (dB)');
 hold off
 clearvars
