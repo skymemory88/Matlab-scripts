@@ -38,7 +38,7 @@ end
 
 % Process options:
 Options.analysis = 3; % Analysis options (1.simple plot, 2.on-resonance fit, 3.off-resonance fit, 4.temp scan)
-% Options.save = 'n'; % Option to save the analysis
+Options.save = 'n'; % Option to save the analysis
 Options.dType = 'raw'; % Input data type: 1. Experimental ('raw'), 2. Simulated ('sim'), 3. pre-processed exp. data ('proc')
 Options.lnwd = 1.5; % plot linewidth
 Options.ftsz = 12; % plot font size

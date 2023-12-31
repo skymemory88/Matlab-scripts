@@ -1,9 +1,9 @@
 %% isolated frequency sweep plotter
 clearvars
-B0 = [0.1 4.23 7.0]; % field location of frequency cuts to plot/fit
+B0 = [0.4 2.3 3.8 4.946 6.5]; % field location of frequency cuts to plot/fit
 bidx = uint32.empty(length(B0),0);
 % load the processed data
-Options.plot = 'compressed'; % plot the frequency sweeps onto the same or individual plots
+Options.plot = 'individual'; % plot the frequency sweeps onto a 'compressed' figure or 'individual' plots
 Options.yScale = 'dB'; % 1. 'lin': linear. 2. 'dB': log scale
 Options.fit = true; % Option to fit the data
     dType = 'off'; % specify the data type (on/off resonance) for fitting function selection
@@ -28,10 +28,8 @@ switch Options.load_method
     case 'manual'
         fileloc = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\',...
             'File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
-            'SC107 (4x5x2mm)\19.05.2019'];
-%         fileloc = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
-%             'SC239\2021.07.16'];
-        loadname = '2019_05_0026';
+            'SC239\2021.07.16'];
+        loadname = '2021_07_0015';
         LoadObj = fullfile(fileloc,loadname);
         load([LoadObj, '_interp'], '-mat', 'S11', 'freq', 'continu_var', 'analysis');
         for ii = 1:size(S11,2)
@@ -106,7 +104,8 @@ switch Options.plot
                     yDat = S11(:,bidx(ii));
                     yFit = feval(S11_fit{ii},freq(:,bidx(ii)));
             end
-            scatter( freq(:,bidx(ii)), yDat, 'o', 'filled');
+            plot( freq(:,bidx(ii)), smooth(yDat), '.');
+%             scatter( freq(:,bidx(ii)), yDat, 'o', 'filled');
 %             plot(freq(:,bidx(ii)), yFit, '-', 'Color', mc{2});
             plot(freq(:,bidx(ii)), yFit, '--k', 'LineWidth', 2);
         end
@@ -139,12 +138,14 @@ switch Options.plot
         end
 end
 
-figure;
-plot(continu_var(1,:),analysis.xr,'.');
-hold on
-ylabel('Re[\chi]')
-xlabel('Magnetic Field (T)');
-yyaxis right
-plot(continu_var(1,:),analysis.xi,'.');
-ylabel('Im[\chi]')
-set(gca,'FontSize',14)
+if isfield(analysis, 'xr')
+    figure;
+    plot(continu_var(1,:),analysis.xr,'.');
+    hold on
+    ylabel('Re[\chi]')
+    xlabel('Magnetic Field (T)');
+    yyaxis right
+    plot(continu_var(1,:),analysis.xi,'.');
+    ylabel('Im[\chi]')
+    set(gca,'FontSize',14)
+end

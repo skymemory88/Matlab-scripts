@@ -1,24 +1,32 @@
-Options.RPA  = true;
-Options.filfctr = 0.0114; % filling factor correction
+Options.RPA  = false;
+Options.filfctr = 0.0112; % filling factor correction
 % Options.filfctr = 0.112; % filling factor correction
-Options.Bcorrt = 4.4/4.6; % field correction (default = 1)
+% Options.Bcorrt = 4.6/4.8; % field correction (default = 1)
 Options.nZee = true; % Nuclear Zeeman interaction
-Options.search = 'automatic'; % 1. 'Automatic' search and match or, 2. 'manual' appointment of files 
+Options.search = 'spec'; % 1. 'Automatic' search and match or, 2. 'manual' appointment of files, 3. 'spec' specify experimental temperatures
     sample = 239; % Sample to use (SC###)
     sim_temps = [0.15 0.3 0.5 0.8]; % temperatures
     % sim_temps = 0.15;
+    % exp_temps = [0.1 0.3 0.5 0.8]; % only works under 'spec' mode
     theta = 0.0; % c-axis deviation
-    phi = 15.0; % in-plane (a-b) rotation
+    phi = 0.0; % in-plane (a-b) rotation
     freq_l = 4.69; % frequency range lower limit [GHz]
     freq_h = 4.745; % frequency range upper limit [GHz]
     gama = 9e-5; % default spin linewidth
     if strcmp(pathsep, ':')
         platform = 'Unix';
+        divd = '/';
     else
         platform = 'Win';
+        divd = '\';
+    end
+    if Options.nZee == true
+        nZ_path = 'Hz_I=1';
+    else
+        nZ_path = 'Hz_I=0';
     end
 switch Options.search
-    case 'automatic'
+    case {'automatic', 'spec'}
         % set experimental data loading parameters
         switch platform
             case 'Win' % for Windows
@@ -26,22 +34,13 @@ switch Options.search
                     'LiHoF4 project\Data\Experiment\LiHoF4\SC', num2str(sample), '\'];
                 sim_loc = ['G:\.shortcut-targets-by-id\1CapZB_um4grXCRbK6t_9FxyzYQn8ecQE\File sharing\PhD program\',...
                     'Research projects\LiHoF4 project\Data\Simulations\Matlab\Susceptibilities\'];
-                if Options.nZee == true
-                    sim_loc = [sim_loc,'Hz_I=1\'];
-                else
-                    sim_loc = [sim_loc, 'Hz_I=0\'];
-                end
             case 'Unix' % for Mac/Linux
                 exp_loc = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
                     'PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC', num2str(sample), '/'];
                 sim_loc = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
                     'PhD program/Research projects/LiHoF4 project/Data/Simulations/MATLAB/Susceptibilities/'];
-                if Options.nZee == true
-                    sim_loc = [sim_loc,'Hz_I=1/'];
-                else
-                    sim_loc = [sim_loc, 'Hz_I=0/'];
-                end
         end
+        sim_loc = [sim_loc, nZ_path, divd];
         
         dat_lst = readtable(fullfile(exp_loc, sprintf("SC%u_off_list.xlsx", sample)));
         folder = table2array(dat_lst(:,1));
@@ -57,8 +56,8 @@ switch Options.search
                 folder = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
                     'PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/',...
                     'SC107/19.05.2019/']; % for Mac/Linux
-                efiles = '2019_05_0026';
         end
+        efiles = '2019_05_0026';
 end
 
 muB = 9.274e-24; % Bohr magneton [J/T]
@@ -69,7 +68,7 @@ J2meV = 6.24151e+21; % [meV/J]
 Gh2mV = hbar * 2*pi * 10^9 * J2meV; % [meV/GHz]
 ELEf = gLande(6,2) * muB * J2meV; % [meV/T]
 
-mkr = ['o','s','^','x','<','>']; % marker style pool
+mkr = ["o", "s", "^", "d", "<", ">","*","x"]; % marker style pool
 lin = ["-", "--" , "-.", ":"]; % line style pool
 mc = {[0, 0.4470, 0.7410]; [0.8500, 0.3250, 0.0980]; [0.9290, 0.6940, 0.1250]; ...
     [0.4940, 0.1840, 0.5560]; [0.4660, 0.6740, 0.1880];[0.3010, 0.7450, 0.9330]}; % marker color pool
@@ -78,7 +77,6 @@ lgd_sim = string(sim_temps.*1000); % legends for calculated data
 lgd_sim = 'Sim.' + lgd_sim + ' mK';
 lgd_sim = lgd_sim';
 % lgd_sim = strings(length(temps),1); % container for legends for simulated data
-exp_temps = double.empty(length(sim_temps),0); % container for legends for experimental data
 
 % plot the data
 chir_fig = figure;
@@ -90,14 +88,22 @@ hold on
 for ii = 1:length(sim_temps)
     switch Options.search
         case 'automatic'
-            [~, idx] = min(abs(etemps-sim_temps(ii))); % find the closest experimental temperature
+            exp_temps = double.empty(length(sim_temps),0); % container for legends for experimental data
+            [~, idx] = min(abs(etemps - sim_temps(ii))); % find the closest experimental temperature
             exp_file = fullfile([exp_loc, folder{idx}], efiles{idx}); % locate the experimental data
             exp_temps(ii,1) = etemps(idx); % record the actual experimental temperatures
             load([exp_file, '_interp'], '-mat', 'analysis', 'continu_var');
         case 'manual'
+            exp_temps = double.empty(length(sim_temps),0); % container for legends for experimental data
             exp_file = fullfile(folder, efiles);
             load([exp_file, '_interp'], '-mat', 'analysis', 'continu_var');
             exp_temps(ii,1) = analysis.temp;
+        case 'spec'
+            if ~exist('exp_temps', 'var'); exp_temps = sim_temps; end % default to matching temperatures if not specified
+            [~, idx] = min(abs(etemps - exp_temps(ii))); % find the closest experimental temperature
+            exp_file = fullfile([exp_loc, folder{idx}], efiles{idx}); % locate the experimental data
+            exp_temps(ii) = etemps(idx); % record the actual experimental temperatures
+            load([exp_file, '_interp'], '-mat', 'analysis', 'continu_var');
     end
     f0 = analysis.w0; % resonant frequency
     B0 = analysis.Hs;
@@ -109,13 +115,14 @@ for ii = 1:length(sim_temps)
     figure(chir_fig)
     scatter(continu_var(1,1:15:end)*Options.Bcorrt, analysis.xr(1:15:end)/gw2, 'Marker', mkr(mod(ii,length(mkr))),...
         'MarkerEdgeColor', mc{mod(ii,size(mc,1))}, 'MarkerFaceColor', mc{mod(ii,size(mc,1))}); % plot the experimental Re[chi]
-
     figure(chii_fig)
-    scatter(continu_var(1,:)*Options.Bcorrt, medfilt1(analysis.xi)/gw2, 'Marker', '.',...
-        'MarkerEdgeColor', mc{mod(ii,size(mc,1))}, 'MarkerFaceColor', mc{mod(ii,size(mc,1))}); % plot the experimental Im[chi]
-%     figure(chii_fig)
-%     plot(continu_var(1,1:15:end), analysis.xi(1:15:end), 'LineStyle', '-', 'Marker', mkr(mod(ii,length(mkr))),...
-%         'Color', mc{mod(ii,size(mc,1))}); % plot the experimental data
+    xi = medfilt1(analysis.xi);
+    plot(continu_var(1,1:5:end)*Options.Bcorrt, xi(1:5:end)/gw2, 'LineStyle', '-',...
+        'Marker',  mkr(mod(ii,length(mkr))), 'MarkerEdgeColor', mc{mod(ii,size(mc,1))}, 'MarkerFaceColor', mc{mod(ii,size(mc,1))}); % plot the experimental Im[chi]
+
+    % scatter(continu_var(1,:)*Options.Bcorrt, medfilt1(analysis.xi)/gw2,...
+        % 'Marker',  '.', 'MarkerEdgeColor', mc{mod(ii,size(mc,1))}, 'MarkerFaceColor', mc{mod(ii,size(mc,1))}); % plot the experimental Im[chi]
+
     if exist('freq_l','var') && exist('freq_h','var')
         sim_file = sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e_%5$.3f-%6$.3fGHz',...
             sim_temps(ii), theta, phi, gama, freq_l, freq_h);
@@ -166,14 +173,13 @@ for ii = 1:length(sim_temps)
     
     figure(chir_fig);
     plot(fields, chir, 'LineStyle', lin(1), 'Color', mc{mod(ii,size(mc,1))}, 'lineWidth', 1.5);
-%     plot(fields, real(chiz(fidx,:))/ConvUnit, 'LineStyle', lin(1), 'Color', mc{mod(ii,size(mc,1))}, 'lineWidth', 1.5);
-
+    % plot(fields, chir, 'LineStyle', lin(1), 'Color', 'r', 'lineWidth', 1.5);
     figure(chii_fig);
     plot(fields, chii, 'LineStyle', lin(2), 'Color', mc{mod(ii,size(mc,1))}, 'lineWidth', 1.5);
-%     plot(fields, imag(chiz(fidx,:))/ConvUnit, 'LineStyle', lin(1), 'Color', mc{mod(ii,size(mc,1))}, 'lineWidth', 1.5);
+    % plot(fields, chii, 'LineStyle', lin(2), 'Color', 'r', 'lineWidth', 1.5);
 end
 
-lgd_exp = string(exp_temps.*1000); % legends for experimental data
+lgd_exp = string(exp_temps'.*1000); % legends for experimental data
 lgd_exp = 'Exp.' + lgd_exp + ' mK';
 lgd = [lgd_exp lgd_sim]';
 lgd = lgd(:); % interweaved legends

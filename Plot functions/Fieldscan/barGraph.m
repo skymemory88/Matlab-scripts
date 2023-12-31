@@ -4,24 +4,18 @@ clearvars
 Options.figSty = 'Bar1D'; % 1: Bar1D grouped, 2. Bar2D stacked, 3. Bar3D detached, 4. TempFig
 Options.nZee = true; % Option to include nuclear Zeeman effect
 Options.gamma = true; % Option to plot spin linewidth from fitting
-addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan');
+mion = 'Ho'; % Magnetic ion species
 
 fc = 3.642; % cavity resonant frequency [GHz]
 Hc = 5; % critical field (T)
 theta = 0.0; % magnetic field angle in a-c plane
-phi = 12; % magnetic field angle in a-b plane
+phi = -13.5; % magnetic field angle in a-b plane
 n_trans = 6; % number of excitation spectra to include
 
-% sim_temps = [0.0 0.015 0.035 0.05 0.075 0.1:0.005:0.3]; % simulation temperatures
-% sim_temps = [0.1 0.13 0.18 0.24 0.25]; % simulation temperatures
-% exp_temps = [0.1 0.135 0.18 0.24 0.25]; % experimental temperatures
-% exp_temps = [0.135]; % experimental temperatures
-
-% sim_temps = [0.15 0.18 0.22 0.30]; % simulation temperatures
-% exp_temps = [0.15 0.181 0.22 0.30]; % simulation temperatures
-
-sim_temps = 0.18; % simulation temperatures
-exp_temps = 0.181; % simulation temperatures
+sim_temps = [0.1 0.18 0.3]; % simulation temperatures
+exp_temps = [0.15 0.18 0.3]; % simulation temperatures
+% sim_temps = 0.15; 
+% exp_temps = 0.15;
 % crossB = [6.502 8.266 9.838 11.43 13.00 14.28]; % manually set field locations for anti-crossings
 
 lgd_sim = string(sim_temps.*1000);
@@ -42,19 +36,42 @@ mc = {[0, 0.4470, 0.7410]; [0.8500, 0.3250, 0.0980]; [0.9290, 0.6940, 0.1250]; .
 xnames = ["|5\rangle\rightarrow|6\rangle", "|4\rangle\rightarrow|5\rangle", "|3\rangle\rightarrow|4\rangle",...
     "|2\rangle\rightarrow|3\rangle", "|1\rangle\rightarrow|2\rangle", "|0\rangle\rightarrow|1\rangle"];
 
-if Options.nZee == true
-    Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li', 'Ho',...
-        'F4 project\Data\Simulations\Matlab\Susceptibilities\with Hz_I'];
+if strcmp(pathsep, ':')
+    platform = 'Unix';
+    divd = '\';
 else
-    Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\Li', 'Ho',...
-        'F4 project\Data\Simulations\Matlab\Susceptibilities\without Hz_I\test'];
+    platform = 'Win';
+    divd = '\';
+end
+
+% determine the OS envirnment
+switch  platform
+    case 'Win'
+        fpath = ['G:\My Drive\File sharing\PhD program\Research projects\Li', mion, 'F4 project\Data\',...
+            'Simulations\Matlab\Susceptibilities\'];
+        addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan');
+        addpath('');
+    case 'Unix'
+        fpath = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
+            '/PhD program/Research projects/Li', mion, 'F4 project/Data/',...
+            'Simulations/Matlab/Susceptibilities/'];
+        addpath('/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
+            'Programming scripts/Matlab/Plot functions/Fieldscan');
+        addpath(['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/',...
+            'File sharing/Programming scripts/Matlab/Simulation/Mean Field/LiReF4'])
+end
+
+% nuclear Zeeman interaction option
+if Options.nZee == true
+    Options.location = [fpath,'Hz_I=1'];
+else
+    Options.location = [fpath,'Hz_I=0'];
 end
 
 g_sim = zeros(length(exp_temps), n_trans); % coupling strengths
 pop = zeros(length(exp_temps), n_trans); % Population factor (P_n - P_n+1)
 g2s_sim = zeros(length(exp_temps), 1); % coupling strengths
 for ii = 1:length(sim_temps)
-    cd 'G:\My Drive\File sharing\Programming scripts\Matlab\Simulation\Mean Field\LiReF4'
     lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f', sim_temps(ii), theta, phi, 1),'.mat'];
     eFile = fullfile(Options.location, lname);
     load(eFile,'-mat','eee','fff');
@@ -75,9 +92,8 @@ for ii = 1:length(sim_temps)
     for jj = 1:size(Ediff,2)
 %         [~,idx] = min(abs(fields-crossB(jj))); % use manually set field locations
 %         [~,idx] = min(abs(Ediff(:,jj)-fc)); % search at the entire field range
-%         [~,idx] = min(abs(Ediff(fields <= Hc,jj)-fc)); % search only below critical field
-
-        [~,idx] = min(abs(Ediff(fields >= Hc,jj)-fc)); % search only above critical field
+%         [~,idx] = min(abs(Ediff(fields <= Hc,jj)-fc)); % search only below critical field (FM state)
+        [~,idx] = min(abs(Ediff(fields >= Hc,jj)-fc)); % search only above critical field (PM state)
         idx = length(fields(fields < Hc)) + idx; % add back the truncated length
 %         b0(jj) = fields(idx); % for debugging
         g_sim(ii,jj) = sqrt(Gc2(jj+1, jj, idx));
@@ -128,7 +144,7 @@ switch Options.figSty
         xx = xx - 0.05*length(exp_temps);
         for ii = 1:length(exp_temps)
             xp = xx(g_exp(ii,:) ~= 0);
-            xx = xx + 0.1;
+            xx = xx + 0.15;
             plot(xp, nonzeros(g_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', mc{ii}, 'MarkerSize', 10,...
                 'MarkerEdgeColor', 'k', 'Color', 'k');
         end
