@@ -1,48 +1,121 @@
-function [spin, coef, en0, dEt, accpRate] = equilibrate(const, ion, params, en0, hamI, coef, basis, spin0)
-pos = params.pos;
+function [spin_e, spin_n, coef, E_si, E_int, E_tot, dEt, accpRate] = equilibrate(const, ion, params, hamI, coef, basis, E_si, E_int, E_tot, spin_e, spin_n)
 t_lim = params.tEQ; % equilibration time limit
-
 accpRate = zeros(t_lim, length(params.temp), size(params.field, 2)); % acceptance rate tracker
-spin = double.empty(size(pos,1), 3, length(params.temp), size(params.field, 2), 0); % final spin config
 dEt = double.empty(t_lim, length(params.temp), size(params.field, 2), 0); % global energy update trace
-for tt = 1:length(params.temp)
-    parfor ff = 1:size(params.field,2)
-        worker = getCurrentTask; % obtain CPU core ID  
-        if parallel.internal.pool.isPoolThreadWorker || ~isempty(getCurrentJob)
-            cID = sprintf('Core %d: ', worker.ID); % For parallel execution only
+if length(params.temp) <= size(params.field,2)
+    for tt = 1:length(params.temp)
+        if params.temp(tt) > 0
+            beta = 1/ (const.J2meV * const.kB * params.temp(tt)); % [meV]
         else
-            cID = '';
+            beta = 1e9; % approximate infinity at zero temperature
         end
-       
-        wav = coef(:,:,tt,ff); % wavfunction
-        bas = basis(:,:,tt,ff); % Ising basis
-        fprintf([cID sprintf('Temperature: %.2f, Field: %.2f.\n', params.temp(tt), vecnorm(params.field(:,ff)))])
-
-        spin_i = squeeze(spin0(:,:,tt,ff)); % initial spin configuration
-        trap_check = 0; % critical slowing-down token
-        convgTkr = 0; % convergence tracker
-        dE = zeros(t_lim,1);
-        for time = 1:t_lim
-            % thermalize the spin configuration
-            [dE(time), accpRate(time,tt,ff), en0(:,tt,ff), wav, spin_i] = thermalize(ion, const, params, params.temp(tt), en0(:,tt,ff), hamI(:,:,tt,ff), wav, bas, spin_i);
-            if accpRate(time, tt, ff) <= 0.05 || abs(dE(time)/sum(en0(:,tt,ff))) <= params.convg
-                trap_check = trap_check + 1;
-                if trap_check >= 5 % after 5 consecutive trapped random walk, invoke cluster update
-                    [cSize, de, aRate, spin_i, wav, en0(:,tt,ff)] = thermalize_cluster(ion, const, params, params.temp(tt), en0(:,tt,ff), hamI(:,:,tt,ff), wav, spin_i);
-                    dE(time) = de * aRate;
-                    fprintf([cID sprintf('Cluster size: %u, acceptance: %u, iteration: %.3e\n', cSize, aRate, time)]);
-                    trap_check = 0; % reset the tracker
-                    if aRate == 0; convgTkr = convgTkr + 1; end
-                    if convgTkr >= 10; break; end
-                    % break;
-                end
+        parfor ff = 1:size(params.field,2)
+            worker = getCurrentTask; % obtain CPU core ID
+            if parallel.internal.pool.isPoolThreadWorker || ~isempty(getCurrentJob)
+                cID = sprintf('Core %d: ', worker.ID); % For parallel execution only
+            else
+                cID = '';
             end
-            if mod(time, 200) == 0; fprintf([cID sprintf('Current acceptance rate: %.2f, iteration: %.3e\n', accpRate(time, tt, ff), time)]); end % checkpoint
+            eSpin = squeeze(spin_e(:,:,tt,ff)); % initial electronic spin configuration
+            nSpin = squeeze(spin_n(:,:,tt,ff)); % initial nuclear spin configuration
+            fprintf([cID sprintf('Temperature: %.2f, Field: %.2f.\n', params.temp(tt), vecnorm(params.field(:,ff)))])
+
+            trap_check = 0; % critical slowing-down token
+            % convgTkr = 0; % cluster update convergence tracker
+            Et_temp = zeros(t_lim,1);
+            dE = zeros(t_lim,1);
+            for time = 1:t_lim
+                % thermalize the electronic spins
+                [dE(time), accpRate(time,tt,ff), E_si(:,tt,ff), E_int(:,tt,ff), coef(:,:,tt,ff), eSpin] = thermalize(ion, const, params,...
+                    beta, E_si(:,tt,ff), E_int(:,tt,ff), hamI(:,:,tt,ff), coef(:,:,tt,ff), basis(:,:,tt,ff), eSpin, nSpin);
+
+                % thermalize the nuclear spins
+                % if params.hyp && mod(time,20) == 0 % slow down nuclear spin update
+                if params.hyp
+                    [nSpin] = therm_nuc(const, beta, ion, params, ff, eSpin, nSpin);
+                end
+
+                if accpRate(time, tt, ff) <= 0.0001 || abs( dE(time)/sum(E_si(:,tt,ff) + E_int(:,tt,ff), 1) ) <= params.convg
+                    trap_check = trap_check + 1;
+                    % if trap_check >= 5 && trap_check < 10 % after 5 consecutive trapped random walk, invoke cluster update
+                    %     [cSize, de, aRate, Esi(:,tt,ff), coef(:,:,tt,ff), eSpin] = thermalize_cluster(ion, const, params,...
+                    %         tt, Esi(:,tt,ff), hamI(:,:,tt,ff), coef(:,:,tt,ff), eSpin, nSpin);
+                    %     dE(time) = de * aRate;
+                    %     fprintf([cID sprintf('Cluster size: %1$u, acceptance: %2$u, iteration: %3$.3e\n', cSize, aRate, time)]);
+                    %     % if aRate == 0; convgTkr = convgTkr + 1; end
+                    % end
+                    if trap_check >= 20
+                        break
+                    end
+                end
+                Et_temp(time) = sum(E_si(:,tt,ff) + E_int(:,tt,ff)); % record global energy
+                if mod(time, 200) == 0; disp( strcat(cID, sprintf('Current acceptance rate: %.2f%%, iteration: %.3e\n',...
+                        accpRate(time, tt, ff)*100, time)) ); end % checkpoint
+            end
+            spin_e(:,:,tt,ff) = eSpin;
+            spin_n(:,:,tt,ff) = nSpin;
+            E_tot(:, tt, ff) = Et_temp;
+            dEt(:, tt, ff, 1) = dE;
+            fprintf([cID sprintf('Thermalization complete, total iteration: %.3e\n', time)]);
         end
-        dEt(:, tt, ff, 1) = dE;
-        coef(:,:,tt,ff) = wav;
-        spin(:,:,tt,ff,1) = spin_i;
-        fprintf([cID sprintf('Thermalization complete, total iteration: %.3e\n', time)]);
+    end
+else
+    for ff = 1:size(params.field,2)
+        parfor tt = 1:length(params.temp)
+        % for tt = 1:length(params.temp) % for debugging
+            if params.temp(tt) > 0
+                beta = 1/ (const.J2meV * const.kB * params.temp(tt)); % [meV]
+            else
+                beta = 1e9; % approximate infinity at zero temperature
+            end
+            worker = getCurrentTask; % obtain CPU core ID
+            if parallel.internal.pool.isPoolThreadWorker || ~isempty(getCurrentJob)
+                cID = sprintf('Core %d: ', worker.ID); % For parallel execution only
+            else
+                cID = '';
+            end
+            eSpin = squeeze(spin_e(:,:,tt,ff)); % initial electronic spin configuration
+            nSpin = squeeze(spin_n(:,:,tt,ff)); % initial nuclear spin configuration
+            fprintf([cID sprintf('Temperature: %.2f, Field: %.2f.\n', params.temp(tt), vecnorm(params.field(:,ff)))])
+
+            trap_check = 0; % critical slowing-down token
+            % convgTkr = 0; % cluster update convergence tracker
+            Et_temp = zeros(t_lim,1);
+            dE = zeros(t_lim,1);
+            for time = 1:t_lim
+                % thermalize the electronic spins
+                [dE(time), accpRate(time,tt,ff), E_si(:,tt,ff), E_int(:,tt,ff), coef(:,:,tt,ff), eSpin] = thermalize(ion, const, params,...
+                    beta, E_si(:,tt,ff), E_int(:,tt,ff), hamI(:,:,tt,ff), coef(:,:,tt,ff), basis(:,:,tt,ff), eSpin, nSpin);
+
+                % thermalize the nuclear spins
+                % if params.hyp && mod(time,20) == 0 % slow down nuclear spin update
+                if params.hyp
+                    [nSpin] = therm_nuc(const, beta, ion, params, ff, eSpin, nSpin);
+                end
+
+                if accpRate(time, tt, ff) <= 0.0001 || abs( dE(time)/sum(E_si(:,tt,ff)) ) <= params.convg
+                    trap_check = trap_check + 1;
+                    % if trap_check >= 5 && trap_check < 10 % after 5 consecutive trapped random walk, invoke cluster update
+                    %     [cSize, de, aRate, Esi(:,tt,ff), coef(:,:,tt,ff), eSpin] = thermalize_cluster(ion, const, params,...
+                    %         tt, Esi(:,tt,ff), hamI(:,:,tt,ff), coef(:,:,tt,ff), eSpin, nSpin);
+                    %     dE(time) = de * aRate;
+                    %     fprintf([cID sprintf('Cluster size: %1$u, acceptance: %2$u, iteration: %3$.3e\n', cSize, aRate, time)]);
+                    %     % if aRate == 0; convgTkr = convgTkr + 1; end
+                    % end
+                    if trap_check >= 20
+                        break
+                    end
+                end
+                Et_temp(time) = sum(E_si(:,tt,ff) + E_int(:,tt,ff)); % record global energy
+                if mod(time, 200) == 0; disp( strcat(cID, sprintf('Current acceptance rate: %.2f%%, iteration: %.3e\n',...
+                        accpRate(time, tt, ff)*100, time)) ); end % checkpoint
+            end
+            spin_e(:,:,tt,ff) = eSpin;
+            spin_n(:,:,tt,ff) = nSpin;
+            E_tot(:, tt, ff) = Et_temp;
+            dEt(:, tt, ff, 1) = dE;
+            fprintf([cID sprintf('Thermalization complete, total iteration: %.3e\n', time)]);
+        end
     end
 end
 end

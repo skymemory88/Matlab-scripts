@@ -1,9 +1,9 @@
-function E_tot = dipSum(const, ion, pos, spins, cutoff)
+function E_dip = dipSum(const, ion, pos, spins, cutoff)
 % Calculate the total magnetic dipole-dipole interaction energy
 % for all pairs in the ensemble of spins without double counting.
 % Initialize total interaction energy (SI units)
 gfac = const.mu0 / 4 / pi * (ion.gLande(ion.idx) * const.muB)^2;  % prefactor
-E_tot = 0; % Initialize the total energy
+E_dip = 0; % Initialize the total energy
 
 % Check for cutoff argument
 if nargin > 4
@@ -31,18 +31,18 @@ for ii = 1:size(spins, 1)
         end
 
         % Calculate dot products
-        spin_dot = dot(spins(ii, :), spins(jj, :));
-        r_dot_i = dot(r_vec, spins(ii, :));
-        r_dot_j = dot(r_vec, spins(jj, :));
+        ss_dot = dot(spins(ii, :), spins(jj, :));
+        sr_dot_i = dot(r_vec, spins(ii, :));
+        sr_dot_j = dot(r_vec, spins(jj, :));
 
         % Calculate interaction energy (meV) for the pair
-        E_dip = gfac * (spin_dot / r^3 - 3 * (r_dot_i * r_dot_j) / r^5);
+        E_ij = gfac * (ss_dot / r^3 - 3 * (sr_dot_i * sr_dot_j) / r^5);
 
         % Add to total E_tot (J)
-        E_tot = E_tot + E_dip;
+        E_dip = E_dip + E_ij;
     end
 end
 
 % Convert to meV
-E_tot = E_tot * const.J2meV;
+E_dip = E_dip * const.J2meV;
 end
