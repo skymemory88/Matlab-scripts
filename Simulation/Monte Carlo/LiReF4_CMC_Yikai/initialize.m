@@ -1,6 +1,5 @@
-function [E_si, E_int, eSpin0, nSpin0, params] = initialize(const, ion, params, coef, basis, hamI)
+function [E_si, eSpin0, nSpin0, params] = initialize(const, ion, params, coef, basis, hamI)
 E_si = double.empty(size(params.pos,1), length(params.temp), size(params.field, 2), 0); % single-ion energy
-E_int = double.empty(size(params.pos,1), length(params.temp), size(params.field, 2), 0); % interaction energy
 eSpin0 = zeros(size(params.pos,1), 3, length(params.temp), size(params.field, 2)); % initial electornic spin config
 nSpin0 = zeros(size(params.pos,1), 3, length(params.temp), size(params.field, 2)); % nuclear spin config
 for tt = 1:length(params.temp)
@@ -14,12 +13,6 @@ for tt = 1:length(params.temp)
             spz = real(wav' * bas' * ion.Jz * bas * wav)';
             eSpin0(ii,:,tt,ff) = [spx, spy, spz]; % initial electronic spin config
             E_si(ii,tt,ff,1) = real(wav' * squeeze(hamI(:,:,tt,ff)) * wav); % initial single-ion energy
-            % E_dip = CntrDip_GPU(const, params.pos, eSpin0(:,:,tt,ff), ii, eSpin0(ii,:,tt,ff)); % initial dipole interaction energy
-            % E_int(ii,tt,ff,1) = gather(E_dip); % tranfer from GPU to RAM
-            E_int(ii,tt,ff,1) = CntrDip(const.gfac, params.pos, eSpin0(:,:,tt,ff), ii, eSpin0(ii,:,tt,ff)); % initial dipole interaction energy
-            if ion.ex(ion.idx) % check exchange interaction strength
-                E_int(ii,tt,ff) = E_int(ii,tt,ff) + exchange(params, ion, eSpin0(:,:,tt,ff), ii, eSpin0(ii,:,tt,ff)); % initial exchange interaction energy
-            end
         end
         % Initialize nuclear spins (based on the isotope abundance)
         if params.hyp

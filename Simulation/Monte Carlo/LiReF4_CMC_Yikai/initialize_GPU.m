@@ -1,10 +1,12 @@
-function [E_si, E_int, E_tot, eSpin0, nSpin0, params] = initialize_GPU(const, ion, params, coef, basis, hamI)
-nnD = min(nonzeros(vecnorm(ion.tau * ion.abc{ion.idx}, 2, 2)));  % Nearest neighbour distance for exchange interaction
+function [E_si, eSpin0, nSpin0, params] = initialize_GPU(const, ion, params, coef, basis, hamI)
 E_si = gpuArray(double.empty(size(params.pos,1), length(params.temp), size(params.field, 2), 0)); % single-ion energy
-E_int = gpuArray(double.empty(size(params.pos,1), length(params.temp), size(params.field, 2), 0)); % single-ion energy
 eSpin0 = zeros(size(params.pos,1), 3, length(params.temp), size(params.field, 2), 'gpuArray'); % initial electornic spin config
+% eSpin_temp = zeros(size(params.pos,1), 3, 'gpuArray'); % initial electornic spin config
 nSpin0 = zeros(size(params.pos,1), 3, length(params.temp), size(params.field, 2), 'gpuArray'); % nuclear spin config
-E_tot = zeros(params.tEQ, length(params.temp), size(params.field, 2), 'gpuArray'); % total energy
+nnD = gpuArray(min(nonzeros(vecnorm(ion.tau * ion.abc{ion.idx}, 2, 2))));  % Nearest neighbour distance for exchange interaction
+Jex = gpuArray(ion.ex(ion.idx));
+gfac = gpuArray(const.gfac);
+
 for tt = 1:length(params.temp)
     for ff = 1:size(params.field,2)
         wav = squeeze(coef(:,:,tt,ff));
@@ -12,12 +14,6 @@ for tt = 1:length(params.temp)
         eSpin_temp = arrayfun(@(ii) newSpin_GPU(ion, bas, wav(:,ii), 'electron'), 1:size(params.pos,1), 'UniformOutput', false);
         eSpin0(:,:,tt,ff) = cat(1, eSpin_temp{:}); % concatenate and flatten the results
         E_si(:,tt,ff,1) = real(arrayfun(@(ii) wav(:,ii)' * squeeze(hamI(:,:,tt,ff)) * wav(:,ii), 1:size(params.pos,1))); % initial single-ion energy
-        E_int(:,tt,ff, 1) = arrayfun(@(ii) CntrDip_GPU(const.gfac, params.pos, eSpin0(:,:,tt,ff), ii, eSpin0(ii,:,tt,ff)), 1:size(params.pos,1)); % Initial dipole interaction energy
-        if ion.ex(ion.idx) % check exchange interaction strength
-            E_ex = arrayfun(@(ii) exchange_GPU(params.pos, ion, nnD, eSpin0(:,:,tt,ff), ii, eSpin0(ii,:,tt,ff)), 1:size(params.pos,1), 'UniformOutput', false); % initial exchange interaction energy
-            E_ex = cat(1, E_ex{:});
-            E_int(:,tt,ff) = E_int(:,tt,ff) + E_ex;
-        end
         % Initialize nuclear spins (based on the isotope abundance)
         if params.hyp
             % Number of positions with nuclear moments
