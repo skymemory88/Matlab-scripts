@@ -17,4 +17,5 @@ function spins = newSpin_GPU(ion, basis, wav, spinType)
     spy = real(wav' * basis' * Jy * basis * wav);
     spz = real(wav' * basis' * Jz * basis * wav);
     spins = gpuArray([spx; spy; spz]');
+    assert(numel(spins) == 3, 'Output size of newSpin_GPU must be 3 elements');
 end

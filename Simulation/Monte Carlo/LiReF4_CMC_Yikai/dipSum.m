@@ -1,9 +1,10 @@
-function E_dip = dipSum(const, ion, pos, spins, cutoff)
+function E_dip = dipSum(gfac, pos, spins, cutoff)
 % Calculate the total magnetic dipole-dipole interaction energy
 % for all pairs in the ensemble of spins without double counting.
 % Initialize total interaction energy (SI units)
-gfac = const.mu0 / 4 / pi * (ion.gLande(ion.idx) * const.muB)^2;  % prefactor
 E_dip = 0; % Initialize the total energy
+spins = squeeze(spins);
+pos = pos * 10^-10; % Angstrom -> meter
 
 % Check for cutoff argument
 if nargin > 4
@@ -11,6 +12,11 @@ if nargin > 4
 else
     cutoff = 2*max(vecnorm(pos,2,2)); % set cutoff beyound simulation boundary
 end
+
+% % Calculate all pairwise distances
+% [pos_i, pos_j] = ndgrid(1:numSpins, 1:numSpins);
+% r_vecs = (pos(pos_i, :) - pos(pos_j, :)) * scaling_factor; % [m]
+% r_ij = norm(r_vecs); % [m]
 
 % Iterate over spin pairs and calculate interaction energy
 for ii = 1:size(spins, 1)
@@ -22,11 +28,10 @@ for ii = 1:size(spins, 1)
 
         % Calculate position vector and distance between spin i and j
         r_vec = pos(ii, :) - pos(jj, :); % [Angstrom]
-        r_vec = r_vec * 10^-10; % Angstrom -> meter
-        r = norm(r_vec); % [m]
+        r_ij = norm(r_vec); % [m]
 
         % Apply cutoff if provided
-        if nargin > 4 && r > cutoff
+        if nargin > 4 && r_ij > cutoff
             continue; % Skip if beyond cutoff distance
         end
 
@@ -36,13 +41,10 @@ for ii = 1:size(spins, 1)
         sr_dot_j = dot(r_vec, spins(jj, :));
 
         % Calculate interaction energy (meV) for the pair
-        E_ij = gfac * (ss_dot / r^3 - 3 * (sr_dot_i * sr_dot_j) / r^5);
+        E_ij = gfac * (ss_dot / r_ij^3 - 3 * (sr_dot_i * sr_dot_j) / r_ij^5);
 
-        % Add to total E_tot (J)
+        % Add to total E_tot
         E_dip = E_dip + E_ij;
     end
 end
-
-% Convert to meV
-E_dip = E_dip * const.J2meV;
 end

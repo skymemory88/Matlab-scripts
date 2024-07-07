@@ -1,4 +1,4 @@
-function [spin_e, spin_n, coef, E_si, E_int, E_tot, dEt, accpRate] = equilibrate_a(const, ion, params, hamI, coef, basis, E_si, E_int, E_tot, spin_e, spin_n)
+function [spin_e, spin_n, coef, E_si, dEt, accpRate] = equilibrate_a(const, ion, params, hamI, coef, basis, E_si, spin_e, spin_n)
 t_lim = params.tEQ; % equilibration time limit
 accpRate = zeros(t_lim, length(params.temp), size(params.field, 2)); % acceptance rate tracker
 dEt = double.empty(t_lim, length(params.temp), size(params.field, 2), 0); % global energy update trace
@@ -10,6 +10,7 @@ if length(params.temp) <= size(params.field,2)
             beta = 1e9; % approximate infinity at zero temperature
         end
         parfor ff = 1:size(params.field,2)
+        % for ff = 1:size(params.field,2)
             worker = getCurrentTask; % obtain CPU core ID
             if parallel.internal.pool.isPoolThreadWorker || ~isempty(getCurrentJob)
                 cID = sprintf('Core %d: ', worker.ID); % For parallel execution only
@@ -26,8 +27,8 @@ if length(params.temp) <= size(params.field,2)
             dE = zeros(t_lim,1);
             for time = 1:t_lim
                 % thermalize the electronic spins
-                [dE(time), accpRate(time,tt,ff), E_si(:,tt,ff), E_int(:,tt,ff), coef(:,:,tt,ff), eSpin] = thermalize_a(ion, const, params,...
-                    beta, E_si(:,tt,ff), E_int(:,tt,ff), hamI(:,:,tt,ff), coef(:,:,tt,ff), basis(:,:,tt,ff), eSpin, nSpin);
+                [dE(time), accpRate(time,tt,ff), E_si(:,tt,ff), coef(:,:,tt,ff), eSpin] = thermalize_a(ion, const, params,...
+                    beta, E_si(:,tt,ff), hamI(:,:,tt,ff), coef(:,:,tt,ff), basis(:,:,tt,ff), eSpin, nSpin);
 
                 % thermalize the nuclear spins
                 % if params.hyp && mod(time,20) == 0 % slow down nuclear spin update
@@ -35,7 +36,7 @@ if length(params.temp) <= size(params.field,2)
                     [nSpin] = therm_nuc_a(const, beta, ion, params, ff, eSpin, nSpin);
                 end
 
-                if accpRate(time, tt, ff) <= 0.0001 || abs( dE(time)/sum(E_si(:,tt,ff) + E_int(:,tt,ff), 1) ) <= params.convg
+                if accpRate(time, tt, ff) <= 0.0001 || abs( dE(time)/sum(E_si(:,tt,ff), 1) ) <= params.convg
                     trap_check = trap_check + 1;
                     % if trap_check >= 5 && trap_check < 10 % after 5 consecutive trapped random walk, invoke cluster update
                     %     [cSize, de, aRate, Esi(:,tt,ff), coef(:,:,tt,ff), eSpin] = thermalize_cluster_a(ion, const, params,...
@@ -48,13 +49,12 @@ if length(params.temp) <= size(params.field,2)
                         break
                     end
                 end
-                Et_temp(time) = sum(E_si(:,tt,ff) + E_int(:,tt,ff)); % record global energy
+                Et_temp(time) = sum(E_si(:,tt,ff)); % record global energy
                 if mod(time, 200) == 0; disp( strcat(cID, sprintf('Current acceptance rate: %.2f%%, iteration: %.3e\n',...
                         accpRate(time, tt, ff)*100, time)) ); end % checkpoint
             end
             spin_e(:,:,tt,ff) = eSpin;
             spin_n(:,:,tt,ff) = nSpin;
-            E_tot(:, tt, ff) = Et_temp;
             dEt(:, tt, ff, 1) = dE;
             fprintf([cID sprintf('Thermalization complete, total iteration: %.3e\n', time)]);
         end
@@ -84,8 +84,8 @@ else
             dE = zeros(t_lim,1);
             for time = 1:t_lim
                 % thermalize the electronic spins
-                [dE(time), accpRate(time,tt,ff), E_si(:,tt,ff), E_int(:,tt,ff), coef(:,:,tt,ff), eSpin] = thermalize_a(ion, const, params,...
-                    beta, E_si(:,tt,ff), E_int(:,tt,ff), hamI(:,:,tt,ff), coef(:,:,tt,ff), basis(:,:,tt,ff), eSpin, nSpin);
+                [dE(time), accpRate(time,tt,ff), E_si(:,tt,ff), coef(:,:,tt,ff), eSpin] = thermalize_a(ion, const, params,...
+                    beta, E_si(:,tt,ff), hamI(:,:,tt,ff), coef(:,:,tt,ff), basis(:,:,tt,ff), eSpin, nSpin);
 
                 % thermalize the nuclear spins
                 % if params.hyp && mod(time,20) == 0 % slow down nuclear spin update
@@ -106,13 +106,12 @@ else
                         break
                     end
                 end
-                Et_temp(time) = sum(E_si(:,tt,ff) + E_int(:,tt,ff)); % record global energy
+                Et_temp(time) = sum(E_si(:,tt,ff)); % record global energy
                 if mod(time, 200) == 0; disp( strcat(cID, sprintf('Current acceptance rate: %.2f%%, iteration: %.3e\n',...
                         accpRate(time, tt, ff)*100, time)) ); end % checkpoint
             end
             spin_e(:,:,tt,ff) = eSpin;
             spin_n(:,:,tt,ff) = nSpin;
-            E_tot(:, tt, ff) = Et_temp;
             dEt(:, tt, ff, 1) = dE;
             fprintf([cID sprintf('Thermalization complete, total iteration: %.3e\n', time)]);
         end

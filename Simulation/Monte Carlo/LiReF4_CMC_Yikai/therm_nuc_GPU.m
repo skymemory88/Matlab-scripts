@@ -20,9 +20,8 @@ E_hyp = ion.A(ion.idx) * (spx .* spxi + spy .* spyi + spz .* spzi);
 E_old = EzI + E_hyp;
 
 % Define Hamiltonians (assuming constants are scalars or compatible matrices)
-H_hyp = arrayfun(@(ii) ion.A(ion.idx)...
-    * (spx(ii) * Ix + spy(ii) * Iy + spz(ii) * Iz), 1:numIso, 'UniformOutput', false); % Assuming this is a scalar operation
-H_hyp = cat(3,H_hyp{:});
+H_hyp =  arrayfun(@(ii) (spx(ii) * Ix + spy(ii) * Iy + spz(ii) * Iz), 1:numIso, 'UniformOutput', false);
+H_hyp = ion.A(ion.idx) * cat(3,H_hyp{:});
 HzI = -ion.nLande(ion.idx) * const.muN * const.J2meV * (field(1) * Ix + field(2) * Iy + field(3) * Iz);
 ham_nuc = H_hyp + HzI;
 

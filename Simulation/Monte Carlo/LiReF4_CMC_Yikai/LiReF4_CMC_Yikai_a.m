@@ -1,7 +1,7 @@
 function [init, meas, coef, ion, params] = LiReF4_CMC_Yikai_a(mion, dims, iState, hyperfineOpt, loadOpt, plotOpt, saveOpt)
 % Argument: mion, loadopt, dim, loadOpt, plotOpt, saveOpt
 % mion: Magnetic ion type
-% dim: lattice size (1 x 3 array)
+% dims: lattice size (1 x 3 array)
 % method: thermalization method (1. quench, 2. warming, 3. annealing)
 % hyperfineOpt: hyperfine interaction option
 % loadOpt: 1. load existing file or, 2. start from scratch
@@ -17,7 +17,7 @@ const.J2meV = 6.24151e+21; % [mev/J]
 
 % set base folder depending on the OS
 if ispc
-    filepath = ['G:\My Drive\File sharing\PhD program\Research projects\Li', mion,...
+    filepath = ['G:\My Drive\File sharing\PhD research\Li', mion,...
         'F4 project\Data\Simulations\MATLAB\Monte Carlo'];
 elseif ismac
     filepath = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
@@ -32,9 +32,19 @@ params.DataFile = fullfile(filepath, char(filename));
 while true
     if loadOpt % continue simulation from previous file
         if isfile(params.DataFile)
-            load(params.DataFile, "-mat", 'init', 'ion', 'params', 'coef', 'meas');
-            eSpin0 = meas.eSpin; % intermediate spin configuration after thermalization
-            E_si = meas.en0; % initial single-ion energy
+            load(params.DataFile, "-mat", 'init', 'ion', 'params', 'wav', 'meas');
+            const.gfac = const.mu0/4/pi * (ion.gLande(ion.idx) * const.muB)^2 * const.J2meV; % dipole interaction prefactor
+            const.Ngfac = -ion.nLande(ion.idx) * const.muN * const.J2meV; % Nuclear Zeeman interaction prefactor
+            coef = wav; % wavefunction (bloch coefficients)
+            if exist('meas', 'var')
+                eSpin0 = meas.eSpin; % intermediate electronic spin configuration after thermalization
+                nSpin0 = meas.nSpin; % intermediate nuclear spin configuration
+                E_si = meas.Esi; % initial single-ion energy
+            else
+                eSpin0 = init.eSpinT; % use the initial condition
+                nSpin0 = init.nSpinT;
+                E_si = init.Esi; % initial single-ion energy
+            end
             break;
         else
             loadOpt = false;
@@ -165,13 +175,29 @@ while true
         const.Ngfac = -ion.nLande(ion.idx) * const.muN * const.J2meV; % Nuclear Zeeman interaction prefactor
 
         %% Calculation parameters
-        % % For LiErF4
-        % params.temp(1:5) = linspace(0.02,0.06,5);
-        % params.temp(6:27) = linspace(0.07,0.16,22);
-        % params.temp(28:32) = linspace(0.18,0.25,5);
-
-        params.temp = 0.01;
-        
+        switch mion
+            case 'Er'
+                % For LiErF4
+                Bfield = 0;
+                params.temp(1:5) = linspace(0.02,0.06,5);
+                params.temp(6:27) = linspace(0.07,0.16,22);
+                params.temp(28:32) = linspace(0.18,0.25,5);
+            case 'Yb'
+                % For LiYbF4
+                Bfield = 0;
+                params.temp(1:12) = linspace(0.01,0.12,12);
+                params.temp(13:27) = linspace(0.120,0.140,15);
+                params.temp(28:32) = linspace(0.142,0.15,5);
+            case 'Ho'
+                % For LiHoF4
+                params.temp = 0.01;
+                Bfield = linspace(0,6,24);
+            otherwise
+                prompt = sprintf('Please specify temperature range:\n');
+                params.temp = input(prompt);
+                prompt = sprintf('Please specify magnetic field range:\n');
+                Bfield = input(prompt);
+        end
         % % Log spaced temperature points
         % params.temp = zeros(1,40);
         % logtemp = logspace(0,-5,25);
@@ -184,14 +210,6 @@ while true
         % params.temp(8:33) = linspace(0.020,0.040,26);
         % params.temp(34:40) = linspace(0.044,0.080,7);
 
-        % magnetic field (T)
-        % Bfield = 0;
-        % Bfield = [0 5 10];
-        Bfield = linspace(0,6,24);
-        % Bfield(1:15) = linspace(0,0.8,15)';
-        % Bfield(16:25) = linspace(0.84,19.8,10)';
-        % Bfield(26:40) = linspace(20,24,15)';
-
         % magnetic field orientation
         theta = 0; % out-of-plane angle (radian) from ab plane
         phi = 0; % in-plane angle (radian) from a/b axis
@@ -203,21 +221,21 @@ while true
         params.phi = phi;
 
         % initialization option
-        % sample size
-        params.convg = 1e-9; % Energy convergence criteria for thermalization stage
-        params.tEQ = 4e3; % Thermalization steps (in unit of lattice size)
-        params.sampSize = 50; % Sampling size (in unit of lattice size)
-        params.mIntv = 1e3; % Interval between measurements
-        params.sIntv = 10; % data saving interval
-        % params.pt_intv = 100; % Interval between parallel temperature trials
-
-        % % for debugging
+        % % sample size
         % params.convg = 1e-9; % Energy convergence criteria for thermalization stage
-        % params.tEQ = 2e3; % Thermalization steps (in unit of lattice size)
-        % params.sampSize = 10; % Sampling size (in unit of lattice size)
+        % params.tEQ = 4e3; % Thermalization steps (in unit of lattice size)
+        % params.sampSize = 50; % Sampling size (in unit of lattice size)
         % params.mIntv = 1e3; % Interval between measurements
-        % params.sIntv = 5; % Data saving interval
-        % % params.pt_intv = 1; % Interval between parallel temperature trials
+        % params.sIntv = 10; % data saving interval
+        % % params.pt_intv = 100; % Interval between parallel temperature trials
+
+        % sample size for debugging
+        params.convg = 1e-9; % Energy convergence criteria for thermalization stage
+        params.tEQ = 2e3; % Thermalization steps (in unit of lattice size)
+        params.sampSize = 10; % Sampling size (in unit of lattice size)
+        params.mIntv = 1e3; % Interval between measurements
+        params.sIntv = 5; % Data saving interval
+        % params.pt_intv = 1; % Interval between parallel temperature trials
 
         % construct lattice
         params.init = iState; % initial spin state
@@ -241,6 +259,14 @@ while true
                         bet = zeros(1,size(params.pos,1));
                         coef = [cos(bet/2); sin(bet/2).*exp(1i*alp)];
                     case {'Er', 'Yb'} % xy-AFM ordered state
+                        alp = zeros(1,size(params.pos,1));
+                        bet = ones(1,size(params.pos,1)) * pi/2;
+                        coef = [cos(bet/2); sin(bet/2).*exp(1i*alp)];
+
+                        % use the propogation factor to order the spins
+                        k_afm = [1 0 0]' .* (2*pi ./ diag(ion.abc{ion.idx})); % X propogation
+                        % k_afm = [0 1 0]' .* (2*pi ./ diag(ion.abc{ion.idx})); % Y propogation
+                        coef(2,:) = coef(2,:) .* exp(1i * (params.pos * k_afm))'; % Apply the propogation vector
                 end
             otherwise
                 disp('Unrecognized initial condition!\n')
@@ -252,60 +278,63 @@ end
 
 % project the electronic hamiltonian to Ising space
 [~, hamI, basis, ~, ~, ~] = Ising_proj(const, ion, params); % Ising projection
-E_tot = zeros(params.tEQ, length(params.temp), size(params.field, 2)); % total energy
 
 % Initialize the configuration for new simulations
 if  ~loadOpt
-    [E_si, E_int, eSpin0, nSpin0, params] = initialize(const, ion, params, coef, basis, hamI);
+    [E_si, eSpin0, nSpin0, params] = initialize_a(const, ion, params, coef, basis, hamI);
 end
 
 % reach thermal equilibrium
-[eSpinT, nSpinT, coef, E_si, E_int, E_tot, dE, accpRate] = equilibrate_a(const, ion, params, hamI, coef, basis, E_si, E_int, E_tot, eSpin0, nSpin0);
+[eSpinT, nSpinT, coef, E_si, dE, accpRate] = equilibrate_a(const, ion, params, hamI, coef, basis, E_si, eSpin0, nSpin0);
 init.eSpin0 = eSpin0; % initial electronic spin configuration
 init.eSpinT = eSpinT; % intermediate electronic spin configuration after thermalization
 init.nSpin0 = nSpin0;% initial nuclear spin configuration
 init.nSpinT = nSpinT; % intermediate nuclear spin configuration after thermalization
-init.Etot = E_tot; % global energy change during thermalization
 init.dEt = dE; % history of energy change during thermalization
 init.aRate = accpRate; % history of acceptance rate during thermalization
+init.Esi = E_si;
 if saveOpt == true
-    save(params.DataFile, 'init', 'params', 'ion', '-v7.3');
+    wav = coef;
+    save(params.DataFile, 'init', 'wav', 'params', 'ion', '-v7.3');
 end
 
 % start Monte Carlo sampling
 SampSz = 1;
 while SampSz <= params.sampSize
-    [Mx, My, Mz, coef, eSpinT, nSpinT, E_si, E_int] = MC_sample_a(const, ion, params, E_si, E_int, hamI, basis, coef, eSpinT, nSpinT); 
+    [Mx, My, Mz, coef, eSpinT, nSpinT, E_si, E_int] = MC_sample_a(const, ion, params, E_si, hamI, basis, coef, eSpinT, nSpinT); 
+    Et_si = reshape(sum(E_si, 1), length(params.temp), size(params.field,2));
+    E_avg = (Et_si + E_int) / size(params.pos,1);
     if SampSz == 1
         meas.Mx = Mx;
         meas.My = My;
         meas.Mz = Mz;
-        meas.Em = sum(E_si + E_int) / size(params.pos,1); % <E> (meV)
-        meas.E2m = sum( (E_si + E_int).^2 ) / size(params.pos,1); % <E^2> (meV^2)
+        meas.Esi = E_si;
+        meas.Em = E_avg; % E/N (meV)
     elseif SampSz > 1
-        meas.Mx = cat(1, meas.Mx, Mx);
-        meas.My = cat(1, meas.My, My);
-        meas.Mz = cat(1, meas.Mz, Mz);
-        meas.Em = cat(1, meas.Em, sum(E_si + E_int) / size(params.pos,1)); % <E> (meV)
-        meas.E2m = cat(1, meas.E2m, sum( (E_si + E_int).^2 ) / size(params.pos,1)); % <E^2> (meV^2)
+        meas.Mx = cat(3, meas.Mx, Mx);
+        meas.My = cat(3, meas.My, My);
+        meas.Mz = cat(3, meas.Mz, Mz);
+        meas.Esi = cat(3, meas.Esi, E_si); % E/N (meV)
+        meas.Em = cat(3, meas.Em, E_avg); % E/N (meV)
     end
     meas.eSpin = eSpinT;
     meas.nSpin = nSpinT;
     SampSz = SampSz + 1;    
-    if saveOpt == true && mod(SampSz, params.sIntv) == 0
-        save(params.DataFile, 'coef', 'meas', '-append');
+    if saveOpt == true && ismember(SampSz, 1 + (0:params.sampSize-1)*params.sIntv)
+        wav = coef;
+        save(params.DataFile, 'wav', 'meas', '-append');
         fprintf('Data saved!\n');
     end
 end
 
 if plotOpt
     if ~loadOpt
-        plot_spin(init, meas, params, 1, {'thermalization'}, 'electron')
+        plot_spin(ion, init, meas, params, [0 0], {'thermalization'}, 'electron')
     end
     if length(params.temp) > size(params.field,2)
-        plot_spin(init, meas, params, 1, {'T_mag', 'vector', [ion.oParams, 'domain']}, 'electron')
+        plot_spin(ion, init, meas, params, [0 0], {'T_mag', 'vector', [ion.oParams, 'domain']}, 'electron')
     else
-        plot_spin(init, meas, params, 1, {'B_mag', 'vector', [ion.oParams, 'domain']}, 'electron')
+        plot_spin(ion, init, meas, params, [0 0], {'B_mag', 'vector', [ion.oParams, 'domain']}, 'electron')
     end
 end
 end

@@ -1,5 +1,6 @@
-function [dE, accpRate, Esi, Eint, coef, eSpin] = thermalize(ion, const, params, beta, Esi, Eint, hamI, coef, basis, eSpin, nSpin)
+function [dE, accpRate, Esi, coef, eSpin] = thermalize(ion, const, params, beta, Esi, hamI, coef, basis, eSpin, nSpin)
 pos = params.pos;
+Esi = squeeze(Esi);
 % site = 1:size(pos,1); % uniform update of the whole lattice
 site = randperm(size(pos,1)); % random update of the whole lattice
 
@@ -28,11 +29,13 @@ for ii = site
     end
     dE_si = Esi_new - Esi(ii); % single-ion energy
 
+    Eint_old = CntrDip(const.gfac, pos, eSpin, ii, eSpin(ii,:)); % dipole interaction energy change
     Eint_new = CntrDip(const.gfac, pos, eSpin, ii, spin_new); % dipole interaction energy change
     if ion.ex(ion.idx) % check exchange interaction strength        
+        Eint_old = Eint_old + exchange(params, ion, eSpin, ii, eSpin(ii,:)); % include exchange interaction energy
         Eint_new = Eint_new + exchange(params, ion, eSpin, ii, spin_new); % include exchange interaction energy
     end
-    dE_int = Eint_new - Eint(ii); % interaction energy change
+    dE_int = Eint_new - Eint_old; % interaction energy change
     
     % total energy difference
     dEi(counter) = dE_si + dE_int;
@@ -44,7 +47,6 @@ for ii = site
         Esi(ii) = Esi_new;
         coef(:,ii) = wav;
         eSpin(ii, :) = spin_new;
-        Eint(ii) = Eint_new;
         change(counter) = 1;
     end
     counter = counter + 1;
