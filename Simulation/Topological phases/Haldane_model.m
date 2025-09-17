@@ -1,9 +1,10 @@
 % Haldane model (Tnn defaults to 1)
 mmin = 0.0;
-mmax = 0.5;
+mmax = 0.8;
 t2min = -mmax;
 t2max = +mmax;
 phi = -pi/2; % hopping phase
+lattc.Nk = 201; % number of points in k space
 
 lattc.const = 1.0;
 lattc.L = 25;
@@ -17,17 +18,16 @@ lattc.b = {[0 -sqrt(3)].*lattc.const;
     [-3/2 +sqrt(3)/2].*lattc.const};
 
 lattc.a_zig = sqrt(3) * lattc.const; % zigzag period
-
-kx_rib = linspace(-pi/lattc.a_zig, pi/lattc.a_zig, 601);   % BZ for zig-zag ribbon
+lattc.a_arm = 3 * lattc.const; % armchair period
 
 % k-vector
-kx = linspace(-pi/lattc.const, pi/lattc.const, 201);
-ky = linspace(-pi/lattc.const, pi/lattc.const, 201);
+kx = linspace(-pi/lattc.const, pi/lattc.const, lattc.Nk);
+ky = linspace(-pi/lattc.const, pi/lattc.const, lattc.Nk);
 [KX, KY] = meshgrid(kx,ky);
 
-fobj1 = figure('Position', [50, 100, 1200, 440]);
-ax1 = subplot('Position', [0.1 0.2 0.35 0.75]);
-
+% subfigure 1 (band diagram)
+fobj1 = figure('Position', [50, 100, 1400, 440]);
+ax1 = subplot('Position', [0.05 0.2 0.27 0.75]);
 box on
 hold(ax1,'on');
 [Er, Hr] = kBands(kx, ky, lattc, 0, 0, phi);
@@ -36,13 +36,13 @@ uband.EdgeColor = 'none';
 lband = surf(ax1, KX, KY, squeeze(Er(:,:,2)).');
 lband.EdgeColor = 'none';
 
-xlabel(ax1, '$\vec{k}_x$','Interpreter','latex')
+xlabel(ax1, '\vec{k}_x','Interpreter','latex')
 yticks([-pi -pi/2 0 pi/2 pi])
-xticklabels(ax1, {'$-\pi$','$-\pi/2$','0','$\pi/2$','$\pi$'});
+xticklabels(ax1, {'-\pi','-\pi/2','0','\pi/2','\pi'});
 
-ylabel(ax1, '$\vec{k}_y$','Interpreter','latex')
+ylabel(ax1, '\vec{k}_y','Interpreter','latex')
 yticks([-pi -pi/2 0 pi/2 pi])
-yticklabels(ax1, {'$-\pi$','$-\pi/2$','0','$\pi/2$','$\pi$'});
+yticklabels(ax1, {'-\pi','-\pi/2','0','\pi/2','\pi'});
 
 zlabel(ax1, 'Energy')
 set(ax1,'FontSize',15)
@@ -53,25 +53,47 @@ cmap = [flip(cmap,1); cmap];
 colormap(cmap)
 view(30,35)
 
+% subfigure 2 (ribbon plot-zigzag)
 figure(fobj1);
-ax2 = subplot('Position', [0.6 0.2 0.35 0.75]);
+ax2 = subplot('Position', [0.36 0.2 0.27 0.75]);
 box on
 hold(ax2,'on');
 
-En = band_ribbon(lattc, kx_rib, 0, 0, phi);
-cband = plot(ax2, kx_rib, En, '-w');   % use black lines so they're visible
+kx_zig = linspace(-pi/lattc.a_zig, pi/lattc.a_zig, lattc.Nk);   % BZ for zig-zag ribbon
+En_zig = band_ribbon_zig(lattc, kx_zig, 0, 0, phi);
+
+ribbon_zig = plot(ax2, kx_zig, En_zig, '-w');   % use black lines so they're visible
+
 xline(ax2,  2*pi/(3*lattc.a_zig), ':');
 xline(ax2, -2*pi/(3*lattc.a_zig), ':');
-
-xlabel(ax2, '$\vec{k}_x$','Interpreter','latex')
-ylabel(ax2, '$E_n$','Interpreter','latex')
-
 xlim(ax2, [-pi, pi]/lattc.a_zig);
 xticks(ax2, (-pi:pi/2:pi)/lattc.a_zig);
-xticklabels(ax2, {'$-\pi/a_{\rm zig}$','$-\pi/(2a_{\rm zig})$','0',...
-                  '$\pi/(2a_{\rm zig})$','$\pi/a_{\rm zig}$'});
+xticklabels(ax2, {'-\pi/a_{\rm zig}','-\pi/(2a_{\rm zig})','0',...
+    '\pi/(2a_{\rm zig})','\pi/a_{\rm zig}'});
+xlabel(ax2, '\vec{k}_x','Interpreter','latex')
+ylabel(ax2, 'E_n','Interpreter','latex')
 set(ax2,'FontSize',15)
 
+% subfigure 3 (ribbon plot-armchair)
+figure(fobj1);
+ax3 = subplot('Position', [0.67 0.2 0.27 0.75]);
+box on;
+hold(ax3, 'on');
+
+kx_arm = linspace(-pi/lattc.a_arm, pi/lattc.a_arm, lattc.Nk);
+En_arm = band_ribbon_armchair(lattc, kx_arm, 0, 0, phi);
+
+ribbon_arm = plot(ax3, kx_arm, En_arm, '-w');                   % plot armchair ribbon bands
+
+xlim(ax3, [-pi, pi]/lattc.a_arm);
+xticks(ax3, (-pi:pi/2:pi)/lattc.a_arm);
+xticklabels(ax3, {'-\pi/a_{\rm arm}','-\pi/(2a_{\rm arm})','0', ...
+    '\pi/(2a_{\rm arm})','\pi/a_{\rm arm}'});
+xlabel(ax3, '\vec{k}_x','Interpreter','latex');
+ylabel(ax3, 'E_n','Interpreter','latex');
+set(ax3,'FontSize',15);
+
+% Slider setup (T2/T1 & Mass)
 slider1 = uicontrol('Parent', fobj1, 'Style', 'slider',...
     'Position', [100 30 150 20], 'Value', 0.0, 'min', t2min, 'max', t2max);
 sld1.label = uicontrol('Parent',fobj1,'Style','text','Position',  [310 30 40 20],...
@@ -84,120 +106,36 @@ sld2.label = uicontrol('Parent',fobj1,'Style','text', 'Position', [310 10 50 20]
     'String','Mass/T1');
 box2 = uicontrol('Style', 'edit','Position', [250 10 50 20], 'String', num2str(slider2.Value));
 
-slider1.Callback = @(es,ed) band_update({uband lband cband}, kx, ky, lattc,...
+% slider update
+slider1.Callback = @(es,ed) band_update({uband, lband, ribbon_zig, ribbon_arm}, kx, ky, lattc,...
     slider2.Value, es.Value, phi, box1, box2);
-% box1.Callback = @(es,ed) band_update({uband lband cband}, kx, ky, lattc,...
-%     slider2.Value, str2double(es.Value), phi, chainL, box1, box2);
-
-slider2.Callback = @(es,ed) band_update({uband lband cband}, kx, ky, lattc,...
+slider2.Callback = @(es,ed) band_update({uband, lband, ribbon_zig, ribbon_arm}, kx, ky, lattc,...
     es.Value, slider1.Value, phi, box1, box2);
-% box2.Callback = @(es,ed) band_update({uband lband cband}, kx, ky, lattc,...
-%     str2double(es.Value), slider1.Value, phi, chainL, box1, box2);
 
+% helper function for plot live update
 function band_update(figs, kx, ky, lattc, mass, tnnn, phi, box1, box2)
 set(box1, 'String', num2str(tnnn));
 set(box2, 'String', num2str(mass));
-kx_rib = linspace(-pi/lattc.a_zig, pi/lattc.a_zig, 601);   % BZ for zig-zag ribbon
+
+kx_zig = linspace(-pi/lattc.a_zig, pi/lattc.a_zig, lattc.Nk); % BZ for zig-zag ribbon
+kx_arm = linspace(-pi/lattc.a_arm, pi/lattc.a_arm, lattc.Nk); % BZ for armchair ribbon
+
 [Er, ~] = kBands(kx, ky, lattc, mass, tnnn, phi);
-En = band_ribbon(lattc, kx_rib, mass, tnnn, phi);
+En_zig = band_ribbon_zig(lattc, kx_zig, mass, tnnn, phi);
+En_arm = band_ribbon_armchair(lattc, kx_arm, mass, tnnn, phi);
+
+% update the band diagram
 figs{1}.ZData = squeeze(Er(:,:,1)).';
 figs{2}.ZData = squeeze(Er(:,:,2)).';
+
+% update the ribbon plots
 for ii = 1:numel(figs{3})
-    figs{3}(ii).YData = real(En(:,ii));
+    figs{3}(ii).YData = real(En_zig(:,ii));
+end
+for ii = 1:numel(figs{4})
+    figs{4}(ii).YData = real(En_arm(:,ii));
 end
 drawnow
-end
-% 
-% function En = band_ribbon(lattc, kv, Hr, tnnn, phi)
-% % unit vector
-% a = lattc.a;
-% b = lattc.b;
-% NN = lattc.L;
-% 
-% En = double.empty(size(Hr,1), NN*2, 0);
-% for ii = 1:size(Hr,1)
-%     hr  = squeeze(Hr(ii,:,:));      % 2×2 Bloch block, contains NN & NNN already
-%     ham = kron(eye(NN), hr/2);      % copy it into every real-space cell
-% 
-%     % then add "NN hopping between cells" and "NNN hopping between cells"
-%     ham = ham' + ham;               % hermitize (but also doubles what's inside)
-% 
-%     % NN hopping betwen cells
-%     ham((NN+1)*2+1 : (2*NN+1)*4 : end) = cos([kv(ii) 0]*a{2}') + 1i*sin([kv(ii) 0]*a{2}'); % NN hopping betwen cells
-%     ham((NN+1)*2+(2*NN+1)*2+1 : (2*NN+1)*4 : end) = cos([kv(ii) 0]*a{3}') + 1i*sin([kv(ii) 0]*a{3}'); % NN hopping betwen cells
-% 
-%     ham(3 : 4*(2*NN+1) : end-NN*2) = tnnn*exp(-1i*phi)*(cos([kv(ii) 0]*b{1}') + 1i*sin([kv(ii) 0]*b{1}')); % NNN hopping betwen cells
-%     ham(3+2*NN+1 : 4*(2*NN+1) : end) = tnnn*exp(-1i*phi)*(cos([kv(ii) 0]*b{1}') + 1i*sin([kv(ii) 0]*b{1}')); % NNN hopping betwen cells
-%     ham(3+2*(2*NN+1) : 4*(2*NN+1) : end) = tnnn*exp(-1i*phi)*(cos([kv(ii) 0]*b{3}') + 1i*sin([kv(ii) 0]*b{3}')); % NNN hopping betwen cells
-%     ham(3+3*(2*NN+1) : 4*(2*NN+1) : end) = tnnn*exp(-1i*phi)*(cos([kv(ii) 0]*b{3}') + 1i*sin([kv(ii) 0]*b{3}')); % NNN hopping betwen cells
-% 
-%     ham = ham' + ham; % alternative way of constructing the hamiltonian
-%     ham(1) = ham(1)-tnnn*sin(phi)*sin(phi)*sin([kv(ii) 0]*a{2}')...
-%         - tnnn*sin(phi)*sin([kv(ii) 0]*a{3}'); % account for missing bonds at the edges
-%     ham(end) = ham(end)-tnnn*sin(phi)*sin(phi)*sin([kv(ii) 0]*a{2}')...
-%         - tnnn*sin(phi)*sin([kv(ii) 0]*a{3}'); % account for missing bonds at the edges
-%     [~, ee] = eig(ham);
-%     En(ii,:,1) = real(diag(ee));
-% end
-% end
-
-function En = band_ribbon(lattc, kx, mass, t2, phi)
-% Zigzag ribbon (periodic along x with a_zig = sqrt(3)*a, open along y).
-% Basis: [A1,B1,A2,B2,...,AN,BN], N = lattc.L.
-% Couplings:
-%   A_j <-> B_j          :  2 t1 cos(k a_zig / 2)
-%   B_j <-> A_{j+1}      :  t1
-%   A_j <-> A_{j+1}      :  2 t2 cos(k a_zig / 2 + phi)
-%   B_j <-> B_{j+1}      :  2 t2 cos(k a_zig / 2 - phi)
-%   Onsite: A = -m + 2 t2 cos(k a_zig - phi),  B = +m + 2 t2 cos(k a_zig + phi)
-
-    t1   = 1.0;
-    N    = lattc.L;
-    D    = 2*N;
-
-    En = zeros(numel(kx), D);
-    for p = 1:numel(kx)
-        k = kx(p);
-        H = zeros(D, D);
-
-        % On-site (A/B)
-        for j = 1:N
-            iA = 2*j - 1; iB = 2*j;
-            H(iA,iA) = -mass + 2*t2*cos(k*lattc.a_zig - phi);
-            H(iB,iB) =  mass + 2*t2*cos(k*lattc.a_zig + phi);
-        end
-
-        % Nearest neighbors
-        c_k = 2*t1*cos(k*lattc.a_zig/2);
-        for j = 1:N
-            iA = 2*j - 1; iB = 2*j;
-            % A_j <-> B_j  (k-dependent)
-            H(iA,iB) = H(iA,iB) + c_k; H(iB,iA) = H(iA,iB);
-
-            % B_j <-> A_{j+1}
-            if j < N
-                iA2 = 2*(j+1) - 1;
-                H(iB,iA2) = H(iB,iA2) + t1; H(iA2,iB) = H(iB,iA2);
-            end
-        end
-
-        % Next-nearest neighbors (same sublattice)
-        cA = 2*t2*cos(k*lattc.a_zig/2 + phi);
-        cB = 2*t2*cos(k*lattc.a_zig/2 - phi);
-        for j = 1:N-1
-            iA = 2*j - 1; iB = 2*j;
-            iA2 = 2*(j+1) - 1; iB2 = 2*(j+1);
-
-            % A_j <-> A_{j+1}
-            H(iA,iA2) = H(iA,iA2) + cA; H(iA2,iA) = H(iA,iA2);
-            % B_j <-> B_{j+1}
-            H(iB,iB2) = H(iB,iB2) + cB; H(iB2,iB) = H(iB,iB2);
-        end
-
-        H = (H + H')/2;              % numerical hermiticity
-        ev = eig(H);
-        En(p,:) = sort(real(ev)).';
-    end
 end
 
 function [Er, Hr] = kBands(kx, ky, lattc, mass, tnnn, phi)
@@ -232,5 +170,128 @@ for ii = 1:length(kx)
         [~, ee] = eig(squeeze(Hr(ii,jj,:,:,1)));
         Er(ii,jj,:,1) = diag(ee);
     end
+end
+end
+
+function En = band_ribbon_zig(lattc, kx, mass, tnnn, phi)
+% Zigzag ribbon (periodic along x with a_zig = sqrt(3)*a, open along y).
+% Basis: [A1,B1,A2,B2,...,AN,BN], N = lattc.L.
+% Couplings:
+%   A_j <-> B_j          :  2 t1 cos(k a_zig / 2)
+%   B_j <-> A_{j+1}      :  t1
+%   A_j <-> A_{j+1}      :  2 t2 cos(k a_zig / 2 + phi)
+%   B_j <-> B_{j+1}      :  2 t2 cos(k a_zig / 2 - phi)
+%   Onsite: A = -m + 2 t2 cos(k a_zig - phi),  B = +m + 2 t2 cos(k a_zig + phi)
+
+tnn   = 1.0;
+N    = lattc.L;
+D    = 2*N;
+
+En = zeros(numel(kx), D);
+for p = 1:numel(kx)
+    k = kx(p);
+    H = zeros(D, D);
+
+    % On-site (A/B)
+    for j = 1:N
+        iA = 2*j - 1; iB = 2*j;
+        H(iA,iA) = -mass + 2*tnnn*cos(k*lattc.a_zig - phi);
+        H(iB,iB) =  mass + 2*tnnn*cos(k*lattc.a_zig + phi);
+    end
+
+    % Nearest neighbors
+    c_k = 2*tnn*cos(k*lattc.a_zig/2);
+    for j = 1:N
+        iA = 2*j - 1; iB = 2*j;
+        % A_j <-> B_j  (k-dependent)
+        H(iA,iB) = H(iA,iB) + c_k; H(iB,iA) = H(iA,iB);
+
+        % B_j <-> A_{j+1}
+        if j < N
+            iA2 = 2*(j+1) - 1;
+            H(iB,iA2) = H(iB,iA2) + tnn; H(iA2,iB) = H(iB,iA2);
+        end
+    end
+
+    % Next-nearest neighbors (same sublattice)
+    cA = 2*tnnn*cos(k*lattc.a_zig/2 + phi);
+    cB = 2*tnnn*cos(k*lattc.a_zig/2 - phi);
+    for j = 1:N-1
+        iA = 2*j - 1; iB = 2*j;
+        iA2 = 2*(j+1) - 1; iB2 = 2*(j+1);
+
+        % A_j <-> A_{j+1}
+        H(iA,iA2) = H(iA,iA2) + cA; H(iA2,iA) = H(iA,iA2);
+        % B_j <-> B_{j+1}
+        H(iB,iB2) = H(iB,iB2) + cB; H(iB2,iB) = H(iB,iB2);
+    end
+
+    H = (H + H')/2;              % numerical hermiticity
+    ev = eig(H);
+    En(p,:) = sort(real(ev)).';
+end
+end
+
+function En_arm = band_ribbon_armchair(lattc, kx_arm, mass, tnnn, phi)
+% Armchair ribbon (periodic along x with a_arm = 3*a, open along y).
+% Basis: [A1, B1, A2, B2, ..., A_N, B_N], N = lattc.L (number of dimer rows).
+% Couplings:
+%   A_j <-> B_j (same row, armchair direction):  2 t1 cos(k_x * a_arm / 2)
+%   A_j <-> B_{j+1} (downward neighbor):  t1    (direct vertical/slanted bond)
+%   B_j <-> A_{j+1} (downward neighbor):  t1    (direct vertical/slanted bond)
+%   On-site: A_j = -m + 2 t2 cos(k_x * a_arm - phi),
+%            B_j = +m + 2 t2 cos(k_x * a_arm + phi)
+%   A_j <-> A_{j+1} (next-nearest between rows):  2 t2 cos(k_x * a_arm/2 + phi)
+%   B_j <-> B_{j+1} (next-nearest between rows):  2 t2 cos(k_x * a_arm/2 - phi)
+
+tnn = 1.0;
+N  = lattc.L;
+D  = 2 * N;
+En_arm = zeros(numel(kx_arm), D);
+a_arm = 3 * lattc.const;
+for p = 1:numel(kx_arm)
+    k = kx_arm(p);
+    H = zeros(D, D);
+    % On-site energies (including mass and t2 flux terms)
+    for j = 1:N
+        iA = 2*j - 1; iB = 2*j;
+        H(iA,iA) = -mass + 2*tnnn*cos(k * a_arm - phi);
+        H(iB,iB) =  mass + 2*tnnn*cos(k * a_arm + phi);
+    end
+    % Nearest-neighbor hoppings (t1)
+    c_arm = 2 * tnn * cos(k * a_arm/2);   % armchair horizontal A–B coupling
+    for j = 1:N
+        iA = 2*j - 1; iB = 2*j;
+        % A_j <-> B_j (same-row armchair bond with k-phase)
+        H(iA,iB) = H(iA,iB) + c_arm;
+        H(iB,iA) = H(iA,iB);  % symmetric
+        % Inter-row neighbors:
+        if j < N
+            % B_j <-> A_{j+1}
+            iA2 = 2*(j+1) - 1;
+            H(iB,iA2) = H(iB,iA2) + tnn;
+            H(iA2,iB) = H(iB,iA2);
+            % A_j <-> B_{j+1}
+            iB2 = 2*(j+1);
+            H(iA,iB2) = H(iA,iB2) + tnn;
+            H(iB2,iA) = H(iA,iB2);
+        end
+    end
+    % Next-nearest neighbors (t2, same sublattice couplings)
+    cA = 2 * tnnn * cos(k * a_arm/2 + phi);
+    cB = 2 * tnnn * cos(k * a_arm/2 - phi);
+    for j = 1:N-1
+        iA = 2*j - 1;   iB = 2*j;
+        iA2 = 2*(j+1) - 1; iB2 = 2*(j+1);
+        % A_j <-> A_{j+1}
+        H(iA, iA2) = H(iA, iA2) + cA;
+        H(iA2, iA) = H(iA, iA2);
+        % B_j <-> B_{j+1}
+        H(iB, iB2) = H(iB, iB2) + cB;
+        H(iB2, iB) = H(iB, iB2);
+    end
+    H = (H + H')/2;            % ensure Hermiticity
+    ev = eig(H);
+    En_arm(p, :) = sort(real(ev)).';
 end
 end
