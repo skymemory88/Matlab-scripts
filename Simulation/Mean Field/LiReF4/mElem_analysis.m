@@ -1,4 +1,4 @@
-Temperatures = 0.18;
+Temperatures = 0.13;
 theta = 0.0;
 phi = -13.5;
 nZee = true;
@@ -22,31 +22,18 @@ ELEf = gLande * muB; % Lande factor * Bohr magneton (J/T)
 NUCf = gN * muN; % (J/T)
 
 f_cav = 3.645; % cavity frequency (GHz)
-filFctr = 0.0127*2.1;
+filFctr = 0.00112;
 rho = 4e30/det(lattice); % Holmium (magnetic moment) number density [m^-3]
 gw0 = sqrt(mu0 * 2*pi * f_cav*1e9 * rho/2) * filFctr; % susceptibility prefactor [T^2/J. rad/s]^1/2
 gw2 = gw0^2 * 2*pi * 1e-9; % [T^2/J. GHz]
 
-if nZee == true
-    nZee_path = 'Hz_I=1';
+if ispc
+    location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab',...
+        '\Susceptibilities\',nZee_path];
 else
-    nZee_path = 'Hz_I=0';
-end
-
-if strcmp(pathsep, ':')
-    platform = 'Unix';
-else
-    platform = 'Win';
-end
-
-switch platform
-    case 'Win'
-        location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab',...
-            '\Susceptibilities\',nZee_path];
-    case 'Unix'
-        Options.location = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/'...
-            'File sharing/PhD program/Research projects/LiHoF4 project/Data/',...
-            'Simulations/MATLAB/Susceptibilities/', nZee_path];
+    Options.location = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/'...
+        'File sharing/PhD program/Research projects/LiHoF4 project/Data/',...
+        'Simulations/MATLAB/Susceptibilities/', nZee_path];
 end
 
 filename = strcat('Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=1.00', Temperatures, theta, phi),'.mat');

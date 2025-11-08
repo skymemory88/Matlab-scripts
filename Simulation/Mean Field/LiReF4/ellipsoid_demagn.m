@@ -1,29 +1,30 @@
 function N = ellipsoid_demagn(alpha)
-% gets the demagnetization factor for a rotational ellipsis where a = b.
-% alpha = c/a
-% formulas are from 'Magnetic domains', A. Hubert and R, Schaefer, p. 121
-if alpha == 1 %sphere
-    Na = 1/3;
-    Nb = 1/3;
-    Nc = 1/3;
-elseif alpha == 0 % needle
-    Na = 0.5;
-    Nb = 0.5;
-    Nc = 0.0;
-elseif alpha == inf % disk
-    Na = 0;
-    Nb = 0;
-    Nc = 1;
-elseif alpha < 1 % cigar
-    Nc = (alpha^2/(1-alpha^2))*((1/sqrt(1-alpha^2))*asinh(sqrt(1-alpha^2)/alpha)-1);
-    Nb = Nc;
-    Na = 0.5*(1-Nc);
-else % smarties
-    Nc = (alpha^2/(alpha^2-1))*(1-(1/sqrt(alpha^2-1))*asin(sqrt(alpha^2-1)/alpha));
-    Nb = Nc;
-    Na = 0.5*(1-Nc);
+% Demagnetization tensor for a rotational ellipsoid (spheroid) with a = b.
+%
+% Definition:
+%   alpha = a/c  (equatorial-to-polar axis ratio)
+%     alpha = 0   → needle (c >> a)
+%     alpha = 1   → sphere
+%     alpha = Inf → disk   (a >> c)
+%
+% References:
+%   A. Hubert and R. Schäfer, Magnetic Domains, p. 121
+%   (standard prolate/oblate spheroid demagnetization factors)
+if alpha == 1 % sphere
+    Nz = 1/3; Nx = (1-Nz)/2; Ny = Nx;
+elseif alpha == 0 % needle (prolate limit)
+    Nz = 0.0;  Nx = 0.5;     Ny = 0.5;
+elseif isinf(alpha) % disk (oblate limit)
+    Nz = 1.0;  Nx = 0.0;     Ny = 0.0;
+elseif alpha < 1 % prolate ("cigar")
+    Nz = (alpha^2/(1-alpha^2)) * ((1/sqrt(1-alpha^2))*asinh(sqrt(1-alpha^2)/alpha) - 1);
+    Nx = 0.5*(1-Nz); Ny = Nx;
+else % oblate ("disk/smarties")
+    Nz = (alpha^2/(alpha^2-1)) * (1 - (1/sqrt(alpha^2-1))*asin(sqrt(alpha^2-1)/alpha));
+    Nx = 0.5*(1-Nz); Ny = Nx;
 end
-N = [Na  0   0
-      0  Nb  0
-      0  0  Nc];
+
+N = [Nx  0   0
+      0  Ny  0
+      0  0  Nz];
 end

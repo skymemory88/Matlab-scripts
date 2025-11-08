@@ -13,35 +13,35 @@ function Field_scan_v4a
     Options.mksz = 3;
     Options.fitfunc = 1; % Pick fitting function from either (1) custom function of (2) spec1d
     
-    loadpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC107 (4x5x2mm)\19.05.2019';
+    loadpath = 'C:\Users\skyme\OneDrive - Nexus365\PhD\LiHoF4\Experiments\SC239\2021.07.05';
 %     loadpath = '/Volumes/GoogleDrive/My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/Experiment/LiHoF4/SC199/2020.11.05';
     %The first line is for windows, the second line is for mac OS
-    loadname = '2019_05_0026.dat';
+    loadname = '2021_07_0004.dat';
     opt = 2;% Analysis options
-    nZVL = 1; % Number of dataset from ZVL
+    nTrace = 1; % Number of dataset from ZVL
     fileobj = fullfile(loadpath,loadname);
 
     % Path and file name to save
-    savepath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\SC200';
+    savepath = 'C:\Users\skyme\OneDrive - Nexus365\PhD\LiHoF4\Experiments\SC239\';
     savename = 'Phase Diagram.mat';
     dataobj = fullfile(savepath,savename);
 
     switch opt
         case 1
             % Simple color plot of S11 (+ S21)
-            option1(fileobj, Options, nZVL)
+            option1(fileobj, Options, nTrace)
         case 2
             % On-resonance measurement processing (w/ plots)
-            option2(fileobj, Options, nZVL)
+            option2(fileobj, Options, nTrace)
         case 3
             % Data fitting and file saving (w/o plots)
-            option3(fileobj, nZVL)
+            option3(fileobj, nTrace)
         case 4
             % Off-resonance measurement processing
-            option4(fileobj, dataobj, Options, nZVL)
+            option4(fileobj, dataobj, Options, nTrace)
         case 5
             % Temperature scan
-            option5(fileobj, Options, nZVL)
+            option5(fileobj, Options, nTrace)
     end
 end
 
@@ -186,7 +186,7 @@ S11 = S11(:);
 HH = HH';
 HH = HH(:);
 
-[rows,~,freq] = find(freq); % Remove nonsensical zeros from the frequency data
+[rows, ~, freq] = find(freq); % Remove nonsensical zeros from the frequency data
 HH = HH(rows);
 S11 = S11(rows);
 

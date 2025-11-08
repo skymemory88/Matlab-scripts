@@ -1,6 +1,5 @@
 function [dE, accpRate, Esi, coef, eSpin] = thermalize(ion, const, params, beta, Esi, hamI, coef, basis, eSpin, nSpin)
 pos = params.pos;
-Esi = squeeze(Esi);
 % site = 1:size(pos,1); % uniform update of the whole lattice
 site = randperm(size(pos,1)); % random update of the whole lattice
 
@@ -40,9 +39,9 @@ for ii = site
     % total energy difference
     dEi(counter) = dE_si + dE_int;
 
-    % Glauber algorithm
     crit = rand; % update criteria
-    prob = 1 / ( 1 + exp( dEi(counter) * beta )); % probability critirion
+    % prob = 1 / ( 1 + exp( dEi(counter) * beta )); % Glauber algorithm
+    prob = exp(-dEi(counter) * beta ); % metropolis algorithm
     if prob >= crit
         Esi(ii) = Esi_new;
         coef(:,ii) = wav;

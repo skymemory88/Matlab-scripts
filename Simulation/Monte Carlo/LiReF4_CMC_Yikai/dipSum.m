@@ -4,11 +4,11 @@ function E_dip = dipSum(gfac, pos, spins, cutoff)
 % Initialize total interaction energy (SI units)
 E_dip = 0; % Initialize the total energy
 spins = squeeze(spins);
-pos = pos * 10^-10; % Angstrom -> meter
+pos = pos * 1e-10; % Angstrom -> meter
 
 % Check for cutoff argument
-if nargin > 4
-    cutoff = abs(cutoff); % Ensure cutoff is a positive scalar
+if nargin > 3
+    cutoff = abs(cutoff) * 1e-10; % Ensure cutoff is a positive scalar
 else
     cutoff = 2*max(vecnorm(pos,2,2)); % set cutoff beyound simulation boundary
 end
@@ -31,7 +31,7 @@ for ii = 1:size(spins, 1)
         r_ij = norm(r_vec); % [m]
 
         % Apply cutoff if provided
-        if nargin > 4 && r_ij > cutoff
+        if nargin > 3 && r_ij > cutoff
             continue; % Skip if beyond cutoff distance
         end
 

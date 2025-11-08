@@ -59,19 +59,19 @@ while true
         ion.cfRot = [0; -11; 0; 0; 0; 0]; % crystal field basis rotation (in degrees)
         params.hyp = hyperfineOpt; % hyperfine interaction option
         ion.alt = [1  1  1
-                   1  1  1
-                   1  1  1
-                   1  1  1]; % default ferromagnetic order parameter counting
+                          1  1  1
+                          1  1  1
+                          1  1  1]; % default ferromagnetic order parameter counting
         % Ions' proportions
         switch mion
             case 'Er'
                 ion.prop(1) = 1; % LiErF4
                 ion.idx = 1; % index of the Re ion for calculation
                 ion.oParams = 'x';
-                ion.alt = [1  1  1
-                          -1  1  1
-                          -1 -1  1
-                           1 -1  1]; % alternate counting order parameter
+                ion.alt = [ 1  1  1
+                           -1  1  1
+                           -1 -1  1
+                            1 -1  1]; % alternate counting order parameter
             case 'Ho'
                 ion.prop(2) = 1; % LiHoF4
                 ion.idx = 2;
@@ -117,12 +117,12 @@ while true
 
         % Ions' lattice parameters [Angstrom]
         ion.abc = [{[5.162 0 0; 0 5.162 0; 0 0 10.70]}      % Er
-            {[5.175 0 0; 0 5.175 0; 0 0 10.75]}      % Ho
-            {[5.132 0 0; 0 5.132 0; 0 0 10.59]}      % Yb
-            {[5.150 0 0; 0 5.150 0; 0 0 10.64]}      % Tm
-            {[5.162 0 0; 0 5.162 0; 0 0 10.70]}      % Gd
-            % {[5.132 0 0; 0 5.132 0; 0 0 10.59]}     % Gd
-            {[5.132 0 0; 0 5.132 0; 0 0 10.59]}];    % Y
+                   {[5.175 0 0; 0 5.175 0; 0 0 10.75]}      % Ho
+                   {[5.132 0 0; 0 5.132 0; 0 0 10.59]}      % Yb
+                   {[5.150 0 0; 0 5.150 0; 0 0 10.64]}      % Tm
+                   {[5.162 0 0; 0 5.162 0; 0 0 10.70]}      % Gd
+                    % {[5.132 0 0; 0 5.132 0; 0 0 10.59]}     % Gd
+                   {[5.132 0 0; 0 5.132 0; 0 0 10.59]}];    % Y
         % basis vector
         ion.tau = [ 0     0     0
                     0    1/2   1/4
@@ -177,33 +177,40 @@ while true
         %% Calculation parameters
         switch mion
             case 'Er'
-                % For LiErF4
                 Bfield = 0;
                 params.temp(1:5) = linspace(0.02,0.06,5);
                 params.temp(6:27) = linspace(0.07,0.16,22);
                 params.temp(28:32) = linspace(0.18,0.25,5);
+                theta = 0; % out-of-plane angle (radian) from ab plane
+                phi = 0; % in-plane angle (radian) from a/b axis
             case 'Yb'
-                % For LiYbF4
                 Bfield = 0;
-                params.temp(1:12) = linspace(0.01,0.12,12);
-                params.temp(13:27) = linspace(0.120,0.140,15);
-                params.temp(28:32) = linspace(0.142,0.15,5);
+                params.temp(1:14) = linspace(0.01,0.05,14);
+                params.temp(15:27) = linspace(0.05,0.10,13);
+                params.temp(28:32) = linspace(0.10,0.15,5);
+                theta = 0; % out-of-plane angle (radian) from ab plane
+                phi = 0; % in-plane angle (radian) from a/b axis
             case 'Ho'
-                % For LiHoF4
                 params.temp = 0.01;
                 Bfield = linspace(0,6,24);
+%                 params.temp = linspace(0.05, 2, 24);
+%                 Bfield = 0.01; % small magnetic field along z to break the symmetry
+                theta = 0; % out-of-plane angle (radian) from ab plane
+                phi = 0; % in-plane angle (radian) from a/b axis
             otherwise
                 prompt = sprintf('Please specify temperature range:\n');
                 params.temp = input(prompt);
                 prompt = sprintf('Please specify magnetic field range:\n');
                 Bfield = input(prompt);
+                theta = 0; % out-of-plane angle (radian) from ab plane
+                phi = 0; % in-plane angle (radian) from a/b axis
         end
         % % Log spaced temperature points
         % params.temp = zeros(1,40);
         % logtemp = logspace(0,-5,25);
         % params.temp(1:25) = 0.130*(1-logtemp);
         % params.temp(26:40) = linspace(0.130,0.250,15);
-        
+
         % % Linear spaced temperature points
         % params.temp = zeros(1,40);
         % params.temp(1:7) = linspace(0,0.016,7);
@@ -211,36 +218,37 @@ while true
         % params.temp(34:40) = linspace(0.044,0.080,7);
 
         % magnetic field orientation
-        theta = 0; % out-of-plane angle (radian) from ab plane
-        phi = 0; % in-plane angle (radian) from a/b axis
+        params.theta = theta;
+        params.phi = phi;
         Bx = Bfield * cos(phi) * cos(theta);
         By = Bfield * sin(phi) * cos(theta);
         Bz = Bfield * sin(theta);
         params.field = [Bx; By; Bz];
-        params.theta = theta;
-        params.phi = phi;
 
         % initialization option
         % sample size
         params.convg = 1e-9; % Energy convergence criteria for thermalization stage
         params.tEQ = 4e3; % Thermalization steps (in unit of lattice size)
-        params.sampSize = 50; % Sampling size (in unit of lattice size)
-        params.mIntv = 1e3; % Interval between measurements
+        params.sampSize = 1e3; % Sampling size (in unit of lattice size)
+        params.mIntv = 1e2; % Interval between measurements
         params.sIntv = 10; % data saving interval
-        % params.pt_intv = 100; % Interval between parallel temperature trials
+        params.pt_intv = 200; % Interval between parallel temperature trials
+        params.tEQ = params.tEQ - rem(params.tEQ, params.pt_intv); % Round the steps to integers
+        params.trap_lim = 30; % thermalization local minima trap limit
 
         % % sample size for debugging
         % params.convg = 1e-9; % Energy convergence criteria for thermalization stage
-        % params.tEQ = 2e3; % Thermalization steps (in unit of lattice size)
-        % params.sampSize = 10; % Sampling size (in unit of lattice size)
-        % params.mIntv = 1e3; % Interval between measurements
-        % params.sIntv = 5; % Data saving interval
-        % % params.pt_intv = 1; % Interval between parallel temperature trials
+        % params.tEQ = 50; % Thermalization steps (in unit of lattice size)
+        % params.sampSize = 8; % Sampling size (in unit of lattice size)
+        % params.mIntv = 1e2; % Interval between measurements
+        % params.sIntv = 4; % Data saving interval
+        % params.pt_intv = 6; % Interval between parallel temperature trials
+        % params.tEQ = params.tEQ - rem(params.tEQ, params.pt_intv); % Round the steps to integers
 
         % construct lattice
         params.init = iState; % initial spin state
         params.dims = dims; % N x N x N unit cells
-        params.coord = 'spherical'; % sample shape (spherical, cubic, ellipsoidal)
+        params.coord = 'cubic'; % sample shape (spherical, cubic, ellipsoidal)
         params.domRng = max(dims);  % domain cutoff (in unit of unit cells)
         params.dpRng = inf;  % domain cutoff & dipole summation range (in unit of unit cells)
         params.pos = lattice(ion.abc{ion.idx}, ion.tau, params); % lattice site coordinates
@@ -301,25 +309,33 @@ end
 % start Monte Carlo sampling
 SampSz = 1;
 while SampSz <= params.sampSize
-    [Mx, My, Mz, coef, eSpinT, nSpinT, E_si, E_int] = MC_sample(const, ion, params, E_si, hamI, basis, coef, eSpinT, nSpinT); 
+    [Mx, My, Mz, coef, eSpinT, nSpinT, E_si, E_int] = MC_sample(const, ion, params, E_si, hamI, basis, coef, eSpinT, nSpinT);
     Et_si = reshape(sum(E_si, 1), length(params.temp), size(params.field,2));
     E_avg = (Et_si + E_int) / size(params.pos,1);
+    Mxm = mean(eSpinT(:,1,:,:),1); % <Jx>
+    Mym = mean(eSpinT(:,2,:,:),1); % <Jy>
+    Mzm = mean(eSpinT(:,3,:,:),1); % <Jz>
     if SampSz == 1
         meas.Mx = Mx;
         meas.My = My;
         meas.Mz = Mz;
-        meas.Esi = E_si;
+        meas.Mxm = Mxm;
+        meas.Mym = Mym;
+        meas.Mzm = Mzm;
         meas.Em = E_avg; % E/N (meV)
     elseif SampSz > 1
         meas.Mx = cat(3, meas.Mx, Mx);
         meas.My = cat(3, meas.My, My);
         meas.Mz = cat(3, meas.Mz, Mz);
-        meas.Esi = cat(3, meas.Esi, E_si); % E/N (meV)
+        meas.Mxm = cat(1, meas.Mxm, Mxm);
+        meas.Mym = cat(1, meas.Mym, Mym);
+        meas.Mzm = cat(1, meas.Mzm, Mzm);
         meas.Em = cat(3, meas.Em, E_avg); % E/N (meV)
     end
+    meas.Esi = E_si;
     meas.eSpin = eSpinT;
     meas.nSpin = nSpinT;
-    SampSz = SampSz + 1;    
+    SampSz = SampSz + 1;
     if saveOpt == true && ismember(SampSz, 1 + (0:params.sampSize-1)*params.sIntv)
         wav = coef;
         save(params.DataFile, 'wav', 'meas', '-append');
@@ -332,9 +348,9 @@ if plotOpt
         plot_spin(ion, init, meas, params, [0 0], {'thermalization'}, 'electron')
     end
     if length(params.temp) > size(params.field,2)
-        plot_spin(ion, init, meas, params, [0 0], {'T_mag', 'vector', [ion.oParams, 'domain']}, 'electron')
+        plot_spin(ion, init, meas, params, [0 0], {'Mag_T', 'Cv_T', 'vector', [ion.oParams, 'domain']}, 'electron')
     else
-        plot_spin(ion, init, meas, params, [0 0], {'B_mag', 'vector', [ion.oParams, 'domain']}, 'electron')
+        plot_spin(ion, init, meas, params, [0 0], {'Mag_B', 'Cv_B', 'vector', [ion.oParams, 'domain']}, 'electron')
     end
 end
 end

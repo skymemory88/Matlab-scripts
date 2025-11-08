@@ -6,24 +6,24 @@ function E_dip = CntrDip(gfac, pos, spin, idx, spin0, cutoff)
 %   pos - n x 3 matrix containing the x, y, z coordinates of n spins
 %   idx - index of the spin in center
 %   spin0 - the spin configuration of the spin in center
-%   cutoff (optional) - dipolar interaction range cutoff
+%   cutoff (optional) - dipolar interaction range [Angstrom]
 % Output:
 %   E_dip - magnetic dipole-dipole interaction energy
 
 % Calculate position vectors and distances
 r_vec = pos - pos(idx, :); % [Angstrom]
-r_vec = r_vec * 10^-10; % angstrom -> meter
+r_vec = r_vec * 1e-10; % angstrom -> meter
 r = vecnorm(r_vec, 2, 2); % [m]
 
 % Apply isotropic cutoff
-if nargin > 6
-    mask = r <= cutoff;
+if nargin > 5
+    mask = r <= cutoff * 1e-10; % angstrom -> meter
 else
     mask = true(size(r));
 end
 
 % Calculate dot products
-ss_dot = dot(spin, repmat(spin0, size(spin, 1), 1), 2);
+ss_dot = dot(spin, repmat(spin0, size(spin, 1), 1), 2);clc
 sr_dot1 = sum(r_vec .* repmat(spin0, size(r_vec, 1), 1), 2);
 sr_dot2 = sum(r_vec .* spin, 2);
 

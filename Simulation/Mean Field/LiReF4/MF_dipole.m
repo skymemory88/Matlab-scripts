@@ -46,7 +46,7 @@ for nt = 1:size(tau,1)
         exp_qr = exp(-1i*q*r');
         for nn = 1:3
             for mm = 1:3
-                dip(nn,mm,nt,mt) = exp_qr*(3*r(:,nn).*r(:,mm)./r5 - eq(nn,mm)./r3);
+                dip(nn,mm,nt,mt) = -exp_qr*(3*r(:,nn).*r(:,mm)./r5 - eq(nn,mm)./r3);
             end
         end
         dip(:,:,mt,nt) = conj(dip(:,:,nt,mt)); % J_ij = J_ji*

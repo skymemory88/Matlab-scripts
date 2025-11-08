@@ -1,5 +1,5 @@
 function [fitresult, gof] = iptopt(varargin)
-%CREATEFIT(omega,S11)
+%%CREATEFIT(omega,S11)
 %  S11 input-output fit:
 %      X Input : frequency
 %      Y Output: |S11|

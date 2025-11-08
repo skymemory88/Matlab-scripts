@@ -1,4 +1,4 @@
-function  MF_RPA_Yikai(mion, scanMode, dscrt_var, freq_total, theta, phi, gama, hyp, RPA_mode)
+function  [cVar, freq_total, chi0, chiq, qvec, dscrt_var] = MF_RPA_Yikai(mion, scanMode, dscrt_var, freq_total, theta, phi, gama, hyp, RPA_mode)
 % Current version assumes complete symmetrical equivalence among the four spin moments per unit cell
 % mion: Magnetic ion type: 'Er', 'Ho'
 % scanMode: 'field' or 'temp' scan
@@ -10,9 +10,9 @@ function  MF_RPA_Yikai(mion, scanMode, dscrt_var, freq_total, theta, phi, gama, 
 % hyp: Hyperfine isotope proportion (0~1)
 % RPA_Mode: RPA option (true/false)
 
-Options.plotting = false; % Decide whether or not to plot the data at thes end
-Options.unit = 'meV'; % Energy unit choice: J, GHz, meV (default)
-Options.saving = true; % Options to save the susceptibility tensors
+Options.plotting = true; % Decide whether or not to plot the data at thes end
+Options.unit = 'GHz'; % Energy unit choice: J, GHz, meV (default)
+Options.saving = false; % Options to save the susceptibility tensors
 Options.scanMode = scanMode; % 1. Field plot with RPA; 2. Temp plot with RPA; 3. wavevector plot with RPA
 Options.nZee = true;
 Options.RPA = RPA_mode; % Apply random phase approximation (RPA) correction
@@ -22,26 +22,21 @@ if Options.RPA == false
     Options.Kplot = false;
 end
 if Options.Kplot == true
-    % qz = (6.9:0.0025:7.5)';
-    qx = linspace(0,2,301)';
+    qz = linspace(0,-1, 101)';
+    qx = linspace(0, 1, 101)';
+    % qx = ones(length(qz),1);
     qy = zeros(length(qx),1);
-    qz = zeros(length(qx),1);
+    % qz = zeros(length(qx),1);
     qvec = [qx qy qz];
-    cVar0 = [4 5]; % selected points of the continuous variable for k-plot
+    cVar0 = [0.44]; % selected points of the continuous variable for k-plot
 else
     qx = 0.0;
-    %         qx = [0.01 0.1 0.3 0.6 1]';
+    % qx = [0.01 0.1 0.3 0.6 1]';
     qy = zeros(size(qx,1),1);
     qz = zeros(size(qx,1),1);
     qvec = [qx qy qz];
 end
-clearvars -except dscrt_var theta phi gama Options mion freq_total hyp qvec cVar0 nZee_path
 
-if strcmp(pathsep, ':')
-    platform = 'Unix';
-else
-    platform = 'Win';
-end
 % Declare physical constants as global for consistency
 const.hbar = 1.05457E-34; % Reduced Planck constant [J.s]
 const.J2meV = 6.24151e+21; % convert Joule to meV
@@ -64,19 +59,17 @@ end
 for ii = 1:length(dscrt_var) 
     ipt = false;
     counter = 0;
-    if Options.nZee == true
+    if hyp > 0
         nZee_path = 'Hz_I=1';
     else
         nZee_path = 'Hz_I=0';
     end
-    switch platform
-        case 'Win'
-            Options.location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\',...
-                'Simulations\MATLAB\Susceptibilities\', nZee_path, '\'];
-        case 'Unix'
-            Options.location = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/'...
-                'File sharing/PhD program/Research projects/LiHoF4 project/Data/',...
-                'Simulations/MATLAB/Susceptibilities/', nZee_path, '/'];
+    if ispc
+        Options.location = ['C:\Users\skyme\OneDrive - Nexus365\Postdoc\Research projects\Li',mion,...
+            'F4 project\Data\Simulations\mean field\eigen-states\', nZee_path, '\'];
+    else
+        Options.location = ['/Users/yikaiyang/Library/CloudStorage/OneDrive-Nexus365/Postdoc/Research projects/',...
+            'Li', mion,'F4 project/Data/Simulations/mean field/eigen-states/', nZee_path, '/'];
     end
     while ~ipt
         switch Options.scanMode % 1. Field plot with RPA. 2. wavevector plot with RPA
@@ -133,12 +126,12 @@ for ii = 1:length(dscrt_var)
             eigenE = eee(bidx,:); % eigen-energies [meV]
             cVar = cVar(bidx); % magnetic field or temperature
         end
-        [cVar, freq_total, chi0, ~] = linear_response(ion, eigenE, cVar, freq_total, ttt, eigenW, gama, const, Options);
+        [cVar, freq_total, chi0, ~, ~] = linear_response(ion, eigenE, cVar, freq_total, ttt, eigenW, gama, const, Options);
         [~, ~, ~, chiq, ~] = RPA(qvec, cVar, freq_total, ion, chi0, const); % Electronic susceptibilitie
 %         chiq = const.ELEf^2 * chiq .* ConvUnit; % [J/T^2 or GHz/T^2 or meV/T^2]
         chiq = chiq .* ConvUnit; % [J/T^2 or GHz/T^2 or meV/T^2]
     else
-        [cVar, freq_total, chi0, ~] = linear_response(ion, eigenE, cVar, freq_total, ttt, eigenW, gama, const, Options);
+        [cVar, freq_total, chi0, ~, ~] = linear_response(ion, eigenE, cVar, freq_total, ttt, eigenW, gama, const, Options);
     end
 %     chi0 = const.ELEf^2 * chi0 .* ConvUnit; % [J/T^2 or GHz/T^2 or meV/T^2]
     chi0 = chi0 .* ConvUnit; % [J/T^2 or GHz/T^2 or meV/T^2]
@@ -158,25 +151,32 @@ for ii = 1:length(dscrt_var)
     if Options.plotting == true % Plot the susceptibilities
         plot_var = {cVar, freq_total, chi0, gama, [0,0,0], dscrt_var(ii)};
         if Options.Kplot == true
-            plot_var{3} = chiq;
-            plot_var{5} = qvec;
-            figs(plot_var, Options, const, "\chi_{RPA}", Options.Kplot);
             chi0_p = repmat(chi0,1,1,1,1,length(qvec));
 %             chi0_p = permute(chi0_p,[1 2 3 5 4]); % Add the additional dimension for the plotting purpose
-            plot_var{3} = chi0_p;
-            figs(plot_var, Options, const, "chi_0", Options.Kplot);
-        else
-            figs(plot_var, Options, const, "\chi_0", Options.Kplot);
+            plot_var{5} = qvec;
             if Options.RPA == true
-                plot_var{3} = chiq;
-                figs(plot_var, Options, const, "\chi_{RPA}", Options.Kplot);
-                plot_var{3} = chiq-chi0;
-                figs(plot_var, Options, const, "\chi_{RPA}-\chi_0", Options.Kplot);
+                chi_bundle.chi0 = chi0_p;
+                chi_bundle.chiq = chiq;
+                chi_bundle.diff = chiq - chi0_p;
+                plot_var{3} = chi_bundle;
+                figs(plot_var, Options, const, "\chi", Options.Kplot);
+            else
+                plot_var{3} = chi0_p;
+                figs(plot_var, Options, const, "\chi_0", Options.Kplot);
+            end
+        else
+            if Options.RPA == true
+                chi_bundle.chi0 = chi0;
+                chi_bundle.chiq = chiq;
+                chi_bundle.diff = chiq - chi0;
+                plot_var{3} = chi_bundle;
+                figs(plot_var, Options, const, "\chi", Options.Kplot);
+            else
+                figs(plot_var, Options, const, "\chi_0", Options.Kplot);
             end
         end
     end
 end
-clearvars chi0 chi_p chiq
 end
 
 function figs(input_var, Options, const, fig_tit, Qplot)
@@ -206,55 +206,119 @@ end
  
 pos0 = [100 300 600 400]; % initial figure position
 pos_inc = [150 0 0 0];
-indx = [strcat(fig_tit,"^{xx}") strcat(fig_tit,"^{yy}") strcat(fig_tit,"^{zz}")]; % index for figure legend
 if Qplot == true
-    qv = qvec(:,1); % use qx
-    for nb = 1:size(continu_var,1)
+    qv = vecnorm(qvec,2,2);
+    % qv = qvec(:,1); % use qx
+    if isstruct(chi) && all(isfield(chi, {'chi0','chiq','diff'}))
+        component_data = {chi.chi0, chi.chiq, chi.diff};
+        component_labels = ["\chi_0","\chi_{RPA}","\chi_{RPA}-\chi_0"];
+    else
+        component_data = {chi};
+        component_labels = string(fig_tit);
+    end
+
+    axis_labels = ["xx","yy","zz"];
+    ncols = numel(component_data);
+    base_array = component_data{1};
+    n_states = max(1, size(base_array,4));
+
+    for nb = 1:n_states
+        if numel(continu_var) >= nb
+            cont_val = continu_var(nb);
+        elseif ~isempty(continu_var)
+            cont_val = continu_var(end);
+        else
+            cont_val = NaN;
+        end
+
         switch Options.scanMode
             case 'field'
-                file_part1 = sprintf('T = %.3f K. and ', dscrt_var);
-                file_part2 = sprintf('B = %1$.2f T.', continu_var(nb));
+                file_part1 = sprintf('T = %.3f K and ', dscrt_var);
+                file_part2 = sprintf('B = %1$.2f T.', cont_val);
             case 'temp'
-                file_part1 = sprintf('B = %.3f T. and ', dscrt_var);
-                file_part2 = sprintf('B = %$.2f T.', continu_var(nb));
+                file_part1 = sprintf('B = %.3f T and ', dscrt_var);
+                file_part2 = sprintf('T = %1$.2f K.', cont_val);
             otherwise
                 disp("Unknow scan mode!")
                 return
         end
-        for jj = 3 % plot only chi_zz
-%         for jj = 1:3 % plot all three diagonal (x, y, z) elements
-            % Color plot the imaginary part of the susceptibilities of z component
-            fig(1) = figure;
-            set(fig(1),'position',pos0 + (jj-1)*pos_inc);
-            hp1 = pcolor(qv,freq_total,real(squeeze(chi(jj,jj,:,nb,:))));
-            set(hp1, 'edgeColor','none')
-            set(gca, 'xdir', 'reverse' )
-            colormap(cmap)
-%             caxis([0 100]);
-            caxis('auto');
-            colorbar
-            legend(['\gamma =' num2str(gama,'%.2e meV')]);
-            title(['Re[', char(indx(jj)), '] at ', file_part1, file_part2])
-            xlabel(sprintf('Q = [h, 0, 0]'))
-            ylabel(ylab)
-      
-            % Plot the real part of the susceptibility of the z component
-            fig(2) = figure;
-            set(fig(2),'position',pos0 + jj*pos_inc);
-            hp2 = pcolor(qv,freq_total,imag(squeeze(chi(jj,jj,:,nb,:))));
-            set(hp2, 'edgeColor','none')
-            set(gca, 'xdir', 'reverse' )
-            colormap(cmap)
-%             caxis([0 100]);
-            caxis('auto');
-            colorbar
-            legend(['\gamma =' num2str(gama,'%.2e meV')]);
-            title(['Im[', char(indx(jj)), '] at ', file_part1, file_part2])
-            xlabel(sprintf('Q = [h, 0, 0]'))
-            ylabel('Frequency (GHz)')
-            ylabel(ylab)
+
+        if isvector(freq_total)
+            freq_axis = freq_total(:);
+        else
+            freq_axis = squeeze(freq_total(min(nb,size(freq_total,1)),:));
+        end
+        freq_axis = freq_axis(:);
+        if isempty(freq_axis)
+            freq_axis = freq_total(:);
+        end
+        len_freq = numel(freq_axis);
+
+        for jj = 1:3
+            fig = figure;
+            fig_pos = pos0 + (jj-1)*pos_inc;
+            fig_pos(3) = max(fig_pos(3), 1050);
+            fig_pos(4) = max(fig_pos(4), 600);
+            set(fig,'position',fig_pos);
+
+            for cc = 1:ncols
+                state_idx = min(nb, size(component_data{cc},4));
+                data_slice = squeeze(component_data{cc}(jj,jj,:,state_idx,:));
+                if isvector(data_slice)
+                    data_slice = reshape(data_slice, len_freq, []);
+                end
+                if size(data_slice,1) ~= len_freq && size(data_slice,2) == len_freq
+                    data_slice = data_slice.';
+                end
+                if size(data_slice,1) ~= len_freq
+                    data_slice = reshape(data_slice, len_freq, []);
+                end
+                len_q = size(data_slice,2);
+                q_axis = qv(1:len_q);
+                % Show start/mid/end q-points with explicit vector labels
+                num_ticks = min(3, len_q);
+                tick_idx = unique(round(linspace(1, len_q, num_ticks)));
+                tick_idx = tick_idx(:)';
+                q_tick_vals = q_axis(tick_idx);
+                q_labels = arrayfun(@(idx) sprintf('[%0.1f %0.1f %0.1f]',...
+                    qvec(idx,1), qvec(idx,2), qvec(idx,3)), tick_idx, 'UniformOutput', false);
+
+                real_map = mag2db(abs(real(data_slice)));
+                imag_map = mag2db(abs(imag(data_slice)));
+
+                ax_real = subplot(2,ncols,cc);
+                hp_real = pcolor(q_axis,freq_axis,real_map);
+                set(hp_real,'edgeColor','none');
+                set(ax_real,'xdir','reverse');
+                set(ax_real,'XTick',q_tick_vals,'XTickLabel',q_labels,'XTickLabelRotation',45);
+                colormap(ax_real,cmap);
+                caxis(ax_real,'auto');
+                colorbar(ax_real);
+                title(ax_real,sprintf('Re[%s^{%s}]', char(component_labels(cc)), char(axis_labels(jj))));
+                if cc == 1
+                    ylabel(ax_real,ylab);
+                end
+
+                ax_imag = subplot(2,ncols,cc + ncols);
+                hp_imag = pcolor(q_axis,freq_axis,imag_map);
+                set(hp_imag,'edgeColor','none');
+                set(ax_imag,'xdir','reverse');
+                set(ax_imag,'XTick',q_tick_vals,'XTickLabel',q_labels,'XTickLabelRotation',45);
+                colormap(ax_imag,cmap);
+                caxis(ax_imag,'auto');
+                colorbar(ax_imag);
+                title(ax_imag,sprintf('Im[%s^{%s}]', char(component_labels(cc)), char(axis_labels(jj))));
+                if cc == 1
+                    ylabel(ax_imag,ylab);
+                end
+                xlabel(ax_imag,'Q = [h, k, l]');
+            end
+
+            sgtitle(sprintf('%s%s (\gamma = %s meV)', file_part1, file_part2, num2str(gama,'%.2e')), 'Interpreter','tex');
         end
     end
+
+
 else
     for nq = 1:size(qvec,1)
         switch Options.scanMode
@@ -270,37 +334,55 @@ else
                 disp("Unknow scan mode!")
                 return
         end
-        % Color plot the imaginary part of the susceptibilities
-        for jj = 3 % plot only chi_zz component
-%             for jj = 1:3
-            fig(1) = figure;
-            set(fig(1),'position',pos0 + (jj-1)*pos_inc);
-%             hp2 = pcolor(fields(1,:),freq_total,squeeze(imag(chi(jj,jj,:,:,nq))));
-            hp2 = pcolor(continu_var(1,:),freq_total,mag2db(abs(squeeze(imag(chi(jj,jj,:,:,nq))))));
-            set(hp2, 'edgeColor','none')
-            colormap(cmap)
-%             caxis([0 5]);
-            caxis('auto');
-            colorbar
-            legend(['\gamma =' num2str(gama,'%.2e meV')]);
-            title(['Im[', char(indx(jj)), '] at ', file_part1, file_part2])
-            xlabel(xlab)
-            ylabel(ylab)
-            
-            % Plot the real part of the susceptibility of the z component
-            fig(2) = figure;
-            set(fig(2),'position',pos0 + jj*pos_inc);
-%             hp3 = pcolor(fields(1,:),freq_total,squeeze(real(chi(jj,jj,:,:,nq))));
-            hp3 = pcolor(continu_var(1,:),freq_total,mag2db(abs(squeeze(real(chi(jj,jj,:,:,nq))))));
-            set(hp3, 'edgeColor','none')
-            colormap(cmap)
-%             caxis([0 5]);
-            caxis('auto');
-            colorbar
-            legend(['\gamma =' num2str(gama,'%.2e meV')]);
-            title(['Re[', char(indx(jj)), '] at ', file_part1, file_part2])
-            xlabel(xlab)
-            ylabel(ylab)
+
+        if isstruct(chi) && all(isfield(chi, {'chi0','chiq','diff'}))
+            component_data = {chi.chi0, chi.chiq, chi.diff};
+            component_labels = ["\chi_0","\chi_{RPA}","\chi_{RPA}-\chi_0"];
+        else
+            component_data = {chi};
+            component_labels = string(fig_tit);
+        end
+
+        ncols = numel(component_data);
+        axis_labels = ["xx","yy","zz"];
+
+        for jj = 1:3
+            fig = figure;
+            fig_pos = pos0 + (jj-1)*pos_inc;
+            fig_pos(3) = max(fig_pos(3), 1050);
+            fig_pos(4) = max(fig_pos(4), 600);
+            set(fig,'position',fig_pos);
+
+            for cc = 1:ncols
+                data_slice = squeeze(component_data{cc}(jj,jj,:,:,nq));
+                real_map = mag2db(abs(real(data_slice)));
+                imag_map = mag2db(abs(imag(data_slice)));
+
+                ax_real = subplot(2,ncols,cc);
+                hp_real = pcolor(continu_var(1,:),freq_total,real_map);
+                set(hp_real,'edgeColor','none');
+                colormap(ax_real,cmap);
+                caxis(ax_real,'auto');
+                colorbar(ax_real);
+                title(ax_real,sprintf('Re[%s^{%s}]', char(component_labels(cc)), char(axis_labels(jj))));
+                if cc == 1
+                    ylabel(ax_real,ylab);
+                end
+
+                ax_imag = subplot(2,ncols,cc + ncols);
+                hp_imag = pcolor(continu_var(1,:),freq_total,imag_map);
+                set(hp_imag,'edgeColor','none');
+                colormap(ax_imag,cmap);
+                caxis(ax_imag,'auto');
+                colorbar(ax_imag);
+                title(ax_imag,sprintf('Im[%s^{%s}]', char(component_labels(cc)), char(axis_labels(jj))));
+                if cc == 1
+                    ylabel(ax_imag,ylab);
+                end
+                xlabel(ax_imag,xlab);
+            end
+
+            sgtitle(sprintf('%s%s (\gamma = %s meV)', file_part1, file_part2, num2str(gama,'%.2e')), 'Interpreter','tex');
         end
     end
 end
@@ -329,7 +411,7 @@ else
 end
 end
 
-function [cVar, freq_total, chi, JIz_exp] = linear_response(ion, eigenE, cVar, freq_total,...
+function [cVar, freq_total, chi, JIz_exp, gamma] = linear_response(ion, eigenE, cVar, freq_total,...
     temperatures, eigenW, gma, const, Options)
 kB = 8.61733e-2; % Boltzmann constant [meV/K]
 gamma = ones(size(eigenE,2))*gma; % spin linewidth [meV]
@@ -384,21 +466,23 @@ for ii = 1:size(cVar,2) % calculate susceptibility for all fields
     JIz_exp(ii,:,1) = real(diag(ttz));
 end
 
-% If exists, load spin-linewidths extracted from experiments for field scan simulation
-if temperatures(1) == temperatures(end) % for fixed temperature calculations
-    if Options.nZee && ismember(temperatures(1), [0.15 0.18 0.22 0.30])
-        gma_load = load([Options.location, sprintf('Exp_fit_gamma_%umK.mat', 1000*temperatures(1))],'gma');
-        gma_load = flip(gma_load.gma)*const.Gh2mV; % [meV]
-        for kk = 1:length(gma_load)
-            gamma(kk,kk+1) = gma_load(kk);
-            gamma(kk+1,kk) = gma_load(kk);
-        end
-    elseif ~Options.nZee && ismember(temperatures(1), [0.1 0.13 0.15 0.18 0.24 0.25])
-        gma_load = load([Options.location, sprintf('Exp_fit_gamma_%umK.mat', 1000*temperatures(1))],'gma');
-        gma_load = flip(gma_load.gma)*const.Gh2mV; % [meV]
-        for kk = 1:length(gma_load)
-            gamma(kk,kk+1) = gma_load(kk);
-            gamma(kk+1,kk) = gma_load(kk);
+% For Ho, If exists, load spin-linewidths extracted from experiments for field scan simulation
+if ion.prop(2)
+    if temperatures(1) == temperatures(end) % for fixed temperature calculations
+        if Options.nZee && ismember(temperatures(1), [0.15 0.18 0.22 0.30])
+            gma_load = load([Options.location, sprintf('Exp_fit_gamma_%umK.mat', 1000*temperatures(1))],'gma');
+            gma_load = flip(gma_load.gma)*const.Gh2mV; % [meV]
+            for kk = 1:length(gma_load)
+                gamma(kk,kk+1) = gma_load(kk);
+                gamma(kk+1,kk) = gma_load(kk);
+            end
+        elseif ~Options.nZee && ismember(temperatures(1), [0.1 0.13 0.15 0.18 0.24 0.25])
+            gma_load = load([Options.location, sprintf('Exp_fit_gamma_%umK.mat', 1000*temperatures(1))],'gma');
+            gma_load = flip(gma_load.gma)*const.Gh2mV; % [meV]
+            for kk = 1:length(gma_load)
+                gamma(kk,kk+1) = gma_load(kk);
+                gamma(kk+1,kk) = gma_load(kk);
+            end
         end
     end
 end
@@ -423,11 +507,8 @@ for nf = 1:length(freq_total(1,:)) %calculate susceptibility for all frequencies
             [n,np] = meshgrid(Z,Z);
             NN = n-np;
         end
-%         % pseudo-statistics of occupation number for debugging/testing
-%         Z = 2.^(0:size(en,1)-1); % geometric sequence
-%         Z = Z./sum(Z);
-%         [n, np] = meshgrid(Z,Z);
-%         NN = n - np;
+        % % pseudo-statistics of occupation number for debugging/testing
+        % NN = ones(size(NN));
         
         [ee,eep] = meshgrid(en,en);
         EE = (eep-ee-omega); % [meV]
@@ -574,26 +655,31 @@ function [qvec, cVar, freq_total, chiq, RPA_deno] = RPA(qvec, cVar, freq_total, 
 unitN = 4; % Number of magnetic atoms in unit cell
 lattice = ion.abc{const.elem};
 Vc = sum( lattice(1,:) .* cross(lattice(2,:), lattice(3,:)) ); % Volume of unit cell [Ang^-3]
-eins = zeros(3,3,4,4);
-eins(1,1,:,:) = 1; eins(2,2,:,:) = 1; eins(3,3,:,:) = 1;
+eins = diag([1 1 1]);
+eins = repmat(eins,1,1,4,4);
+demagn_t = ellipsoid_demagn(ion.alpha);
+demagn = repmat(demagn_t,1,1,4,4);
+
 chiq = zeros(3, 3, length(freq_total(1,:)), size(cVar,2), size(qvec,1));
 D = zeros(3, 3, unitN, unitN, size(qvec,1));
+
+% k-space calculation
 parfor jj = 1:size(qvec,1)
+% for jj = 1:size(qvec,1) % for debugging
     lorz_on = 1; % keep on the Lorentz term
+    % Optional: turn off Lorentz term at finite q = [h k l]
     if abs(real(sum(exp(1i*2*pi*qvec(jj,:)*ion.tau'))/size(ion.tau,1))-1) > 1e-10
-        lorz_on = 0;  % turn off Lorentz term at finite q = [h k l]
+        lorz_on = 0;
     end
-%     D(:,:,:,:,jj) = const.gfac * (dipole_direct(qvec(jj,:), const.dpRng, lattice) + lorz_on*4*pi*eins/3/Vc)...
-%         + exchange(qvec(jj,:), ion.ex(2), lattice, ion.tau); % [meV] dipole interaction
-    D(:,:,:,:,jj) = const.gfac * (MF_dipole(qvec(jj,:), const.dpRng, lattice, ion.tau) + lorz_on*4*pi*eins/3/Vc)...
-         - exchange(qvec(jj,:), abs(ion.ex(2)), lattice, ion.tau); % [meV]
+    D(:,:,:,:,jj) = const.gfac * (MF_dipole(qvec(jj,:), const.dpRng, lattice, ion.tau) - lorz_on*4*pi/Vc*(eins/3 - ion.demag*demagn))...
+         + exchange(qvec(jj,:), abs(ion.ex(const.elem)), lattice, ion.tau); % [meV]
 end
 
 RPA_deno = zeros(3, 3, size(freq_total,1), size(cVar,2)); % RPA correction factor (denominator)
 for nb = 1:size(cVar,2) % field/temperature iterator
     for nq = 1:size(qvec,1) % q vector iterator
         Jav = squeeze( sum(sum(D(:,:,:,:,nq),4),3)/unitN ); % [meV] average over the unit cell
-        Jq = diag(ion.renorm(const.elem,:)) .* Jav; % [meV]
+        Jq = -diag(ion.renorm(const.elem,:)) .* Jav; % [meV]
         parfor nf = 1:length(freq_total(1,:))
 %         for nf = 1:length(freq_total(1,:)) % for debugging
             chi_mf = squeeze(chi0(:,:,nf,nb));

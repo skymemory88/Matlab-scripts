@@ -32,8 +32,8 @@ switch Options.scanMode % determine x-variable and data slicing direction
         continu_var = temp;
         discrt_var = vecnorm(field,2);
 end
-E = zeros(length(continu_var),H_dims);
-V = zeros(length(continu_var),H_dims,H_dims);
+E = zeros(length(continu_var), H_dims);
+V = zeros(length(continu_var), H_dims, H_dims);
 
 for ii = 1:length(discrt_var)
     % Reinitiate the angular moments at each temperature step (2020.01.02)
@@ -104,23 +104,24 @@ for ii = 1:length(discrt_var)
     end
     eee = squeeze(E(:,:));
     vvv = squeeze(V(:,:,:));
-% Save the data split by temperatures when they are multi-dimensional, otherwise save the data outside this function
-    if length(discrt_var) > 1 && length(continu_var) > 1
-        switch Options.scanMode
-            case 'field'
-                ttt = temp(ii);
-                fff = field;
-                tit = strcat('Hscan_Li',ion.name(ion.prop ~= 0), sprintf('F4_%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',...
-                    discrt_var(ii), theta*180/pi, phi*180/pi,ion.hyp(idx)));
-                save(fullfile(Options.filepath,char(tit)),'ttt','fff','eee','vvv','ion','-v7.3')
-            case 'temp'
-                ttt = temp;
-                fff = field(:,ii);
-                tit = strcat('Tscan_Li',ion.name(ion.prop ~= 0), sprintf('F4_%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',...
-                    discrt_var(ii), theta*180/pi, phi*180/pi,ion.hyp(idx)));
-                save(fullfile(Options.filepath,char(tit)),'ttt','fff','eee','vvv','ion','-v7.3')
+    if Options.save
+        % Save the data split by temperatures when they are multi-dimensional, otherwise save the data outside this function
+        if length(discrt_var) > 1 && length(continu_var) > 1
+            switch Options.scanMode
+                case 'field'
+                    ttt = temp(ii);
+                    fff = field;
+                    tit = strcat('Hscan_Li',ion.name(ion.prop ~= 0), sprintf('F4_%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',...
+                        discrt_var(ii), theta*180/pi, phi*180/pi,ion.hyp(idx)));
+                    save(fullfile(Options.filepath,char(tit)),'ttt','fff','eee','vvv','ion','-v7.3')
+                case 'temp'
+                    ttt = temp;
+                    fff = field(:,ii);
+                    tit = strcat('Tscan_Li',ion.name(ion.prop ~= 0), sprintf('F4_%1$3.3fT_%2$.2fDg_%3$.1fDg_hp=%4$.2f.mat',...
+                        discrt_var(ii), theta*180/pi, phi*180/pi,ion.hyp(idx)));
+                    save(fullfile(Options.filepath,char(tit)),'ttt','fff','eee','vvv','ion','-v7.3')
+            end
         end
     end
 end
-
 toc(t)

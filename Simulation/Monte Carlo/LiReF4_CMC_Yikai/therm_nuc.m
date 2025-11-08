@@ -24,7 +24,8 @@ for ii = params.isoIdx
 
     % use Glauber algorithm to thermally excite the nuclear spin
     crit = rand; % update criteria
-    prob = 1 / ( 1 + exp( (E_new - E_old) * beta) ); % probability critirion
+    % prob = 1 / ( 1 + exp( (E_new - E_old) * beta) ); % probability critirion
+    prob = exp(-(E_new - E_old) * beta ); % metropolis algorithm
     if prob >= crit
         Ispx = real( coef_n' * eigen_n' * ion.Ix * eigen_n * coef_n)';
         Ispy = real( coef_n' * eigen_n' * ion.Iy * eigen_n * coef_n)';

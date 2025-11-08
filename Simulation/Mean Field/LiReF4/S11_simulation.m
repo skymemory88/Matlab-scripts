@@ -27,8 +27,8 @@ filFctr = 0.0112; % SC239 (int |By| dv/int |B| dv)
 % filFctrs = [0.005 0.01 0.015 0.02 0.025 0.03 0.035 0.04];
 
 % Analysis options (1) Perturbation (2) Load MF/RPA susceptibilities (3) MF/RPA calculation (4) Susceptibilities from scratch
-Options.simType = 1; 
-Options.nZee = true; % nuclear Zeeman interaction option
+Options.simType = 2; 
+Options.nZee = false; % nuclear Zeeman interaction option
         hyp = 1.0; % hyperfine isotope proportionality
 Options.RPA = false; % Use RPA susceptibilities
 Options.noise = false; % Add white noises to the backgroud

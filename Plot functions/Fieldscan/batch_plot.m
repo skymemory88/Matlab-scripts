@@ -21,7 +21,7 @@ switch dType
     case 'off'
         switch platform
             case 'Win'
-                fpath = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Experiment\LiHoF4\',...
+                fpath = ['C:\Users\skyme\OneDrive - Nexus365\PhD\LiHoF4\Experiments\',...
                     'SC',num2str(Options.sample), divd];
             case 'Unix'
                 fpath = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/',...
@@ -67,7 +67,7 @@ switch dType
         gama_err = double.empty(length(aux_files),0);
         for ii = 1:length(aux_files)
             if strlength(aux_files(ii)) ~= 0
-                load_Obj = fullfile(location,strcat(aux_files(ii),".mat"));
+                load_Obj = fullfile(location, strcat(aux_files(ii),".mat"));
                 load(load_Obj,'H0','w0','w0_ci','gc','gc_ci','gma','gma_ci');
                 B0(ii) = mean(H0); % take the mean value
                 gcs(ii) = mean(gc);

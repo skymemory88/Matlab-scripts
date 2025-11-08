@@ -1,21 +1,24 @@
 %% Make a bar graph of coupling strenght and spin linewidth of electro-nuclear transitions in LiHoF4
 clearvars
 
-Options.figSty = 'Bar1D'; % 1: Bar1D grouped, 2. Bar2D stacked, 3. Bar3D detached, 4. TempFig
+Option.plot = false; % figure option
+Options.figSty = 'TempFig'; % 1: Bar1D grouped, 2. Bar2D stacked, 3. Bar3D detached, 4. TempFig
 Options.nZee = true; % Option to include nuclear Zeeman effect
 Options.gamma = true; % Option to plot spin linewidth from fitting
 mion = 'Ho'; % Magnetic ion species
 
 fc = 3.642; % cavity resonant frequency [GHz]
-Hc = 5; % critical field (T)
+Hc = 4.8; % critical field (T)
 theta = 0.0; % magnetic field angle in a-c plane
 phi = -13.5; % magnetic field angle in a-b plane
 n_trans = 6; % number of excitation spectra to include
 
-sim_temps = [0.1 0.18 0.3]; % simulation temperatures
-exp_temps = [0.15 0.18 0.3]; % simulation temperatures
 % sim_temps = 0.15; 
-% exp_temps = 0.15;
+% sim_temps = [0.13 0.18 0.3]; % simulation temperatures
+sim_temps = 0.0:0.025:0.3; % simulation temperatures
+
+exp_temps = [];
+% exp_temps = [0.1 0.13 0.18 0.24 0.25]; % simulation temperatures
 % crossB = [6.502 8.266 9.838 11.43 13.00 14.28]; % manually set field locations for anti-crossings
 
 lgd_sim = string(sim_temps.*1000);
@@ -36,29 +39,19 @@ mc = {[0, 0.4470, 0.7410]; [0.8500, 0.3250, 0.0980]; [0.9290, 0.6940, 0.1250]; .
 xnames = ["|5\rangle\rightarrow|6\rangle", "|4\rangle\rightarrow|5\rangle", "|3\rangle\rightarrow|4\rangle",...
     "|2\rangle\rightarrow|3\rangle", "|1\rangle\rightarrow|2\rangle", "|0\rangle\rightarrow|1\rangle"];
 
-if strcmp(pathsep, ':')
-    platform = 'Unix';
-    divd = '\';
-else
-    platform = 'Win';
-    divd = '\';
-end
-
 % determine the OS envirnment
-switch  platform
-    case 'Win'
-        fpath = ['G:\My Drive\File sharing\PhD program\Research projects\Li', mion, 'F4 project\Data\',...
-            'Simulations\Matlab\Susceptibilities\'];
-        addpath('G:\My Drive\File sharing\Programming scripts\Matlab\Plot functions\Fieldscan');
-        addpath('');
-    case 'Unix'
-        fpath = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
-            '/PhD program/Research projects/Li', mion, 'F4 project/Data/',...
-            'Simulations/Matlab/Susceptibilities/'];
-        addpath('/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
-            'Programming scripts/Matlab/Plot functions/Fieldscan');
-        addpath(['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/',...
-            'File sharing/Programming scripts/Matlab/Simulation/Mean Field/LiReF4'])
+if ispc
+    fpath = 'G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\MATLAB\Susceptibilities\';
+    addpath('C:\Users\skyme\OneDrive - Nexus365\Programming scripts\Matlab\Simulation\Mean Field\LiReF4');
+    addpath('');
+else
+    fpath = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
+        '/PhD program/Research projects/Li', mion, 'F4 project/Data/',...
+        'Simulations/Matlab/Susceptibilities/'];
+    addpath('/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/File sharing/',...
+        'Programming scripts/Matlab/Plot functions/Fieldscan');
+    addpath(['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/',...
+        'File sharing/Programming scripts/Matlab/Simulation/Mean Field/LiReF4'])
 end
 
 % nuclear Zeeman interaction option
@@ -68,9 +61,10 @@ else
     Options.location = [fpath,'Hz_I=0'];
 end
 
-g_sim = zeros(length(exp_temps), n_trans); % coupling strengths
-pop = zeros(length(exp_temps), n_trans); % Population factor (P_n - P_n+1)
-g2s_sim = zeros(length(exp_temps), 1); % coupling strengths
+g_sim_FM = zeros(length(exp_temps), n_trans); % coupling strengths
+g_sim_PM = zeros(length(exp_temps), n_trans); % coupling strengths
+pop_PM = zeros(length(exp_temps), n_trans); % Population factor (P_n - P_n+1)
+g_sim_sum = zeros(length(exp_temps), 1); % coupling strengths
 for ii = 1:length(sim_temps)
     lname=['Hscan_LiHoF4_', sprintf('%1$3.3fK_%2$.2fDg_%3$.1fDg_hp=%4$.2f', sim_temps(ii), theta, phi, 1),'.mat'];
     eFile = fullfile(Options.location, lname);
@@ -84,6 +78,7 @@ for ii = 1:length(sim_temps)
 %     Gc2 = poermute(calc.Gc2{:},[2,3,1]);
     custom.Mx = true;
     custom.Enorm = true;
+    custom.plot = false;
     calc = EngyLevels(sim_temps(ii), theta, phi, 7, custom);
     NN = squeeze(calc.pop{:});
     Gc2 = squeeze(calc.Gc2{:});
@@ -92,14 +87,17 @@ for ii = 1:length(sim_temps)
     for jj = 1:size(Ediff,2)
 %         [~,idx] = min(abs(fields-crossB(jj))); % use manually set field locations
 %         [~,idx] = min(abs(Ediff(:,jj)-fc)); % search at the entire field range
-%         [~,idx] = min(abs(Ediff(fields <= Hc,jj)-fc)); % search only below critical field (FM state)
-        [~,idx] = min(abs(Ediff(fields >= Hc,jj)-fc)); % search only above critical field (PM state)
-        idx = length(fields(fields < Hc)) + idx; % add back the truncated length
+        [~,idxf] = min(abs(Ediff(fields <= Hc,jj)-fc)); % search only below critical field (FM state)
+        [~,idxp] = min(abs(Ediff(fields > Hc,jj)-fc)); % search only above critical field (PM state)
+        idxp = length(fields(fields < Hc)) + idxp; % add back the truncated length
 %         b0(jj) = fields(idx); % for debugging
-        g_sim(ii,jj) = sqrt(Gc2(jj+1, jj, idx));
-        pop(ii,jj) = squeeze(NN(jj+1, jj, idx)); % find the appropriate excitation mode
+        g_sim_FM(ii,jj) = sqrt(Gc2(jj+1, jj, idxf));
+        g_sim_PM(ii,jj) = sqrt(Gc2(jj+1, jj, idxp));
+
+        pop_FM(ii,jj) = squeeze(NN(jj+1, jj, idxf)); % find the appropriate excitation mode
+        pop_PM(ii,jj) = squeeze(NN(jj+1, jj, idxp)); % find the appropriate excitation mode
     end
-    g2s_sim(ii) = sqrt( sum(squeeze(g_sim(ii,:)).^2,2) );
+    g_sim_sum(ii) = sqrt( sum(squeeze(g_sim_FM(ii,:)).^2, 2) );
 %     % save the raw data in an ascii file (.txt)
 %     data_sim = [reshape(b0,length(b0),1) reshape(g_sim(ii,:),length(g_sim(ii,:)),1)];
 %     loc = 'C:\Users\yiyang\Desktop\';
@@ -130,100 +128,107 @@ for ii = 1:length(exp_temps)
     end
 end
 
-
-Grp = figure;
-box on
-hold on
-xticks([1:6])
-g_sim = flip(g_sim,2);
-pop = flip(pop,2);
-xx = 1:6;
-switch Options.figSty
-    case 'Bar1D'
-        bar(g_sim','grouped')
-        xx = xx - 0.05*length(exp_temps);
-        for ii = 1:length(exp_temps)
-            xp = xx(g_exp(ii,:) ~= 0);
-            xx = xx + 0.15;
-            plot(xp, nonzeros(g_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', mc{ii}, 'MarkerSize', 10,...
-                'MarkerEdgeColor', 'k', 'Color', 'k');
-        end
-        set(gca,'XTickLabel',xnames)
-        xlabel('Transitions')
-        ylabel('Coupling strengh (GHz)')
-        legend([lgd_sim lgd_exp], 'Location', 'northwest')
-    case 'Bar2D'
-        [tempData, rIdx] = sort(g_sim,1,'descend');
-        for ii = 1:size(g_sim,1)
-            figure(Grp);
-            fig = bar(tempData(ii,:), 'stacked','FaceColor','flat');
-            for jj = 1:size(tempData(ii,:),2)
-                fig.CData(jj,:) = mc{rIdx(ii,jj)};
-            end
-        end
-        for ii = 1:length(exp_temps)
-            xp = xx(g_exp(ii,:) ~= 0);
-            plot(xp, nonzeros(g_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', mc{ii}, 'MarkerEdgeColor', 'k');
-        end
-        set(gca,'XTickLabel',xnames)
-        xlabel('Transitions')
-        ylabel('Coupling strengh (GHz)')
-        legend([lgd_sim lgd_exp], 'Location', 'northwest')
-    case 'Bar3D'
-        bar3([1:6], g_sim', 'detached')
-        for ii = 1:length(exp_temps)
-            xp = xx(g_exp(ii,:) ~= 0);
-            [~,xidx] = min(abs(sim_temps-exp_temps(ii)+0.05));
-            plot3(xidx*ones(1,length(xp)), xp, nonzeros(g_exp(ii,:)), 'Marker', mkr(ii),...
-                'MarkerFaceColor', mc{ii}, 'MarkerEdgeColor', 'k', 'linewidth', 2);
-            view(140,30);
-        end
-        set(gca,'XTickLabel', sim_temps)
-        yticks([1:6])
-        set(gca,'YTickLabel', xnames)
-        xlabel('Temperature (K)')
-        ylabel('Transitions')
-        zlabel('Coupling strengh (GHz)')
-        legend([lgd_sim lgd_exp], 'Location', 'northwest')
-    case 'TempFig'
-        plot(sim_temps, g_sim, '-');
-        plot(sim_temps, g2s_sim, '--k');        
-        for ii = 1:length(exp_temps)
-            fcol = mc{g_exp(ii,:) ~= 0};
-            scatter(exp_temps(ii), nonzeros(g_exp(ii,:)), 30, fcol, 'filled','MarkerEdgeColor', 'k');
-%             extsn = plot([0.053 exp_temps(ii)], [nonzeros(g_exp(ii,:)) nonzeros(g_exp(ii,:))]', 'lineStyle', lin(ii));
-%             for jj = 1:size(extsn)
-%                 set(extsn(jj),'color',fcol(jj,:))
-%             end
-        end
-        xlabel('Temperature (K)')
-        ylabel('Coupling strengh (GHz)')
-end
-
-if Options.gamma == true
+g_sim_PM = flip(g_sim_PM,2);
+pop_PM = flip(pop_PM,2);
+if Option.plot == true
+    Gc_fig = figure;
+    hold on
+    box on
     xx = 1:6;
-    gfig = figure;
-    hold on
-    box on
-    cfig = figure;
-    hold on
-    box on
-    for ii = 1:length(exp_temps)
-        xp = xx(gma_exp(ii,:) ~= 0);
-        figure(gfig)
-        plot(xp, nonzeros(gma_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', mc{ii}, 'MarkerSize', 6,...
-            'MarkerEdgeColor', 'k');
-        figure(cfig)
-        plot(xp, nonzeros(g_exp(ii,:)).^2./nonzeros(gma_exp(ii,:))/5e-4, 'Marker', mkr(ii), 'MarkerFaceColor', mc{ii}, 'MarkerSize', 6,...
-            'MarkerEdgeColor', 'k');
+    switch Options.figSty
+        case 'Bar1D'
+            figure(Gc_fig)
+            bar(g_sim_PM','grouped')
+            xx = xx - 0.05*length(exp_temps);
+            for ii = 1:length(exp_temps)
+                xp = xx(g_exp(ii,:) ~= 0);
+                xx = xx + 0.15;
+                plot(xp, nonzeros(g_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', mc{ii}, 'MarkerSize', 10,...
+                    'MarkerEdgeColor', 'k', 'Color', 'k');
+            end
+            set(gca,'XTickLabel',xnames)
+            xlabel('Transitions')
+            ylabel('Coupling strengh (GHz)')
+            legend([lgd_sim lgd_exp], 'Location', 'northwest')
+        case 'Bar2D'
+            [tempData, rIdx] = sort(g_sim_PM,1,'descend');
+            for ii = 1:size(g_sim_PM,1)
+                Grp_PM = figure;
+                box on
+                hold on
+                xticks([1:6])
+                fig = bar(tempData(ii,:), 'stacked','FaceColor','flat');
+                for jj = 1:size(tempData(ii,:),2)
+                    fig.CData(jj,:) = mc{rIdx(ii,jj)};
+                end
+            end
+            figure(Gc_fig)
+            for ii = 1:length(exp_temps)
+                xp = xx(g_exp(ii,:) ~= 0);
+                plot(xp, nonzeros(g_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', mc{ii}, 'MarkerEdgeColor', 'k');
+            end
+            set(gca,'XTickLabel',xnames)
+            xlabel('Transitions')
+            ylabel('Coupling strengh (GHz)')
+            legend([lgd_sim lgd_exp], 'Location', 'northwest')
+        case 'Bar3D'
+            figure(Gc_fig)
+            bar3([1:6], g_sim_PM', 'detached')
+            for ii = 1:length(exp_temps)
+                xp = xx(g_exp(ii,:) ~= 0);
+                [~,xidx] = min(abs(sim_temps-exp_temps(ii)+0.05));
+                plot3(xidx*ones(1,length(xp)), xp, nonzeros(g_exp(ii,:)), 'Marker', mkr(ii),...
+                    'MarkerFaceColor', mc{ii}, 'MarkerEdgeColor', 'k', 'linewidth', 2);
+                view(140,30);
+            end
+            set(gca,'XTickLabel', sim_temps)
+            yticks([1:6])
+            set(gca,'YTickLabel', xnames)
+            xlabel('Temperature (K)')
+            ylabel('Transitions')
+            zlabel('Coupling strengh (GHz)')
+            legend([lgd_sim lgd_exp], 'Location', 'northwest')
+        case 'TempFig'
+            figure(Gc_fig)
+            plot(sim_temps, g_sim_PM, '-');
+            plot(sim_temps, g_sim_sum, '--k');
+            for ii = 1:length(exp_temps)
+                fcol = cell2mat(mc);
+                scatter(exp_temps(ii), nonzeros(g_exp(ii,:)), 30, fcol(g_exp(ii,:) ~= 0,:), 'filled','MarkerEdgeColor', 'k');
+                %             extsn = plot([0.053 exp_temps(ii)], [nonzeros(g_exp(ii,:)) nonzeros(g_exp(ii,:))]', 'lineStyle', lin(ii));
+                %             for jj = 1:size(extsn)
+                %                 set(extsn(jj),'color',fcol(jj,:))
+                %             end
+            end
+            xlabel('Temperature (K)')
+            ylabel('Coupling strengh (GHz)')
     end
-    figure(gfig)
-    ylabel('Spin line width (GHz)')
-    set(gca,'XTickLabel',xnames)
-    legend([lgd_exp], 'Location', 'northwest')
-    figure(cfig)
-    ylabel('Cooperativity')
-    set(gca,'XTickLabel',xnames)
-    legend([lgd_exp], 'Location', 'northwest')
+
+    if Options.gamma == true
+        xx = 1:6;
+        gfig = figure;
+        hold on
+        box on
+        cfig = figure;
+        hold on
+        box on
+        for ii = 1:length(exp_temps)
+            xp = xx(gma_exp(ii,:) ~= 0);
+            figure(gfig)
+            plot(xp, nonzeros(gma_exp(ii,:)), 'Marker', mkr(ii), 'MarkerFaceColor', mc{ii}, 'MarkerSize', 6,...
+                'MarkerEdgeColor', 'k');
+            figure(cfig)
+            plot(xp, nonzeros(g_exp(ii,:)).^2./nonzeros(gma_exp(ii,:))/5e-4, 'Marker', mkr(ii), 'MarkerFaceColor', mc{ii}, 'MarkerSize', 6,...
+                'MarkerEdgeColor', 'k');
+        end
+        figure(gfig)
+        ylabel('Spin line width (GHz)')
+        set(gca,'XTickLabel',xnames)
+        legend([lgd_exp], 'Location', 'northwest')
+        figure(cfig)
+        ylabel('Cooperativity')
+        set(gca,'XTickLabel',xnames)
+        legend([lgd_exp], 'Location', 'northwest')
+    end
 end
 cd(currentLoc)

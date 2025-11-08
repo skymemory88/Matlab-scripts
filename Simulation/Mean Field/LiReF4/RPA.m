@@ -24,20 +24,13 @@ else
     nZee_path = 'Hz_I=0';
 end
 
-if strcmp(pathsep, ':')
-    platform = 'Unix';
+if ispc
+    location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\',...
+        'Simulations\MATLAB\Susceptibilities\', nZee_path, '\'];
 else
-    platform = 'Win';
-end
-
-switch platform
-    case 'Win'
-        location = ['G:\My Drive\File sharing\PhD program\Research projects\LiHoF4 project\Data\Simulations\Matlab',...
-            '\Susceptibilities\',nZee_path];
-    case 'Unix'
-        Options.location = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/My Drive/'...
-            'File sharing/PhD program/Research projects/LiHoF4 project/Data/',...
-            'Simulations/MATLAB/Susceptibilities/', nZee_path];
+    Options.location = ['/Users/yikaiyang/Library/CloudStorage/GoogleDrive-yikai.yang@epfl.ch/',...
+        'My Drive/File sharing/PhD program/Research projects/LiHoF4 project/Data/',...
+        'Simulations/MATLAB/Susceptibilities/', nZee_path, '/'];
 end
 
 % load the MF and MF susceptibility files
@@ -47,10 +40,18 @@ MF_file = fullfile(location, MF_name);
 load(MF_file,'-mat','ion'); % loads variables "fields", "temp", "E" (eigenvalues) and "V" (eigenstates)
 unitN = size(ion.tau,1); % moment per unit cell
 
-chi_name = sprintf('chi0_LiHoF4_%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e_*GHz.mat', temp, theta, phi, gama);
+chi_name = sprintf('chi_LiHoF4_%1$3.3fK_%2$.2fDg_%3$.1fDg_%4$.2e_*GHz.mat', temp, theta, phi, gama);
 chi_file = dir( fullfile(location, chi_name) ); % susceptibility data to load
-load([location chi_file.name],'-mat','fields','freq_total','chi','unit');
-
+if exist([location chi_file.name], 'file')
+    load([location chi_file.name],'-mat','fields','freq_total','chi','unit');
+    if size(fields, 2) > size(temp)
+        continu_var = fields;
+    else
+        continu_var = temp;
+    end
+else
+    disp('file does not exist!')
+end
 [~, elem] = ismember(mion, ion.name); % find appropriate element index
 if temp > 0; beta = 1/const.kB/temp; else; beta = 1; end % [meV^-1]
 lattice = ion.abc{elem}; % retrieve lattice constants
@@ -86,7 +87,7 @@ parfor jj = 1:size(qvec,1)
 end
 % Jq = zeros(3,3,unitN,unitN,size(qvec,1));
 % Jq(3,3,:,:,:) = repmat(diag(ion.renorm(elem,:)),1,1,4,4) .*...
-%                   (D(3,3,:,:,:) - J(3,3,:,:,:)); % truncate to Ising interaction
+% (D(3,3,:,:,:) - J(3,3,:,:,:)); % truncate to Ising interaction
 Jq = repmat(diag(ion.renorm(elem,:)),1,1,4,4) .* (D - J);
 
 counter = 1;
@@ -114,7 +115,7 @@ for nb = bidx % field iterator
     end
     counter = counter + 1;
 end
-chi = ELEf^2 .* chiq; % [meV/T^2]
+chiq = ELEf^2 .* chiq; % [meV/T^2]
 
 if Options.saving == true % Save the susceptibilities
     RPA_deno = squeeze(deno);
@@ -122,7 +123,7 @@ if Options.saving == true % Save the susceptibilities
         theta, phi, gama, min(freq_total), max(freq_total));
     save_name = strcat('RPA_Li',mion,'F4_',file_part, '.mat');
     savefile = fullfile(location,save_name);
-    save(savefile, 'temp', 'fields', 'freq_total', 'chi', 'gama', 'qvec', 'unit', 'RPA_deno', 'const', '-v7.3');
+    save(savefile, 'temp', 'fields', 'freq_total', 'chiq', 'gama', 'qvec', 'unit', 'RPA_deno', 'const', '-v7.3');
 end
 
 if Options.plot == true % incomplete

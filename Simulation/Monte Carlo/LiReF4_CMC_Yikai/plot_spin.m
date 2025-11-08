@@ -87,7 +87,7 @@ for ii = 1:length(plotOpt)
         set(fig1, 'Units', 'Normalized', 'OuterPosition', [0.5 0.04 0.5 0.5]);
     end
     if strcmpi(pOpt, 'vector') || strcmpi(pOpt, 'all')
-        pos = params.pos;
+        pos = params.pos; % [Angstrom]
         spin0t = spin0(:,:,idx);
         spinTt = spinT(:,:,idx);
         spint = spin(:,:,idx);
@@ -99,37 +99,31 @@ for ii = 1:length(plotOpt)
         % convert to real unit (angstrom)
         pos = pos - orgn .* diag(ion.abc{ion.idx})';
 
-        % set the range to be plotted
+        % define the spatial domain to be plotted
         prompt = sprintf('Please select the range (Dims: %d x %d x %d):\n', params.dims);
         rng = input(prompt);
         if rng < 0;  error('Range must be positive!'); end
         rng = rng .* diag(ion.abc{ion.idx})'; % convert to real unit (angstrom)
-        outer = find(abs(pos(:,1)) > rng(1) | abs(pos(:,2)) > rng(2) | abs(pos(:,3)) > rng(3));
-
-        % truncate the spins
-        spin0t(outer,:) = [];
-        spinTt(outer,:) = [];
-        spint(outer,:) = [];
-        pos(outer,:) = [];
+        inner = abs(pos(:,1)) <= rng(1) & abs(pos(:,2)) <= rng(2) & abs(pos(:,3)) <= rng(3);
 
         fig2 = figure;
         sf1 = subplot(1,3,1);
-        quiver3(pos(:,1), pos(:,2), pos(:,3), spin0t(:,1), spin0t(:,2), spin0t(:,3), 'k');
+        quiver3(pos(inner,1), pos(inner,2), pos(inner,3), spin0t(inner,1), spin0t(inner,2), spin0t(inner,3), 'k');
         pbaspect([params.dims(1) params.dims(2) params.dims(3)])
         title(sprintf('Initial spin config at T = %.2f K, B = %.2f T', params.temp(tt), vecnorm(params.field(:,ff))))
         set(gcf, 'Units', 'Normalized', 'OuterPosition', [0.5 0.4 0.5 0.5]);
 
         sf2 = subplot(1,3,2);
-        quiver3(pos(:,1), pos(:,2), pos(:,3), spinTt(:,1), spinTt(:,2), spinTt(:,3), 'b');
+        quiver3(pos(inner,1), pos(inner,2), pos(inner,3), spinTt(inner,1), spinTt(inner,2), spinTt(inner,3), 'b');
         pbaspect([params.dims(1) params.dims(2) params.dims(3)])
         title(sprintf('Thermalized spin config at T = %.2f K, B = %.2f T', params.temp(tt), vecnorm(params.field(:,ff))))
 
         sf3 = subplot(1,3,3);
-        quiver3(pos(:,1), pos(:,2), pos(:,3), spint(:,1), spint(:,2), spint(:,3),'r');
+        quiver3(pos(inner,1), pos(inner,2), pos(inner,3), spint(inner,1), spint(inner,2), spint(inner,3),'r');
         pbaspect([params.dims(1) params.dims(2) params.dims(3)])
         title(sprintf('Final spin config at T = %.2f K, B = %.2f T', params.temp(tt), vecnorm(params.field(:,ff))))
     end
-    if strcmpi(pOpt, 'B_mag') || strcmpi(pOpt, 'all')
+    if strcmpi(pOpt, 'Mag_B') || strcmpi(pOpt, 'all')
         fg3 = figure;
         ax3 = fg3.CurrentAxes;
         hold on
@@ -142,7 +136,7 @@ for ii = 1:length(plotOpt)
         ylabel('$\langle J \rangle$','Interpreter','latex')
         set(ax3, 'FontSize', FntSz);
     end
-    if strcmpi(pOpt, 'T_mag') || strcmpi(pOpt, 'all')
+    if strcmpi(pOpt, 'Mag_T') || strcmpi(pOpt, 'all')
         fg4 = figure;
         ax4 = fg4.CurrentAxes;
         hold on
@@ -158,23 +152,33 @@ for ii = 1:length(plotOpt)
     if strcmpi(pOpt, 'Cv_T') || strcmpi(pOpt, 'all')
         fg5 = figure;
         ax5 = fg5.CurrentAxes;
-        E2m = squeeze(sum(meas.Em(:,ff).^2, 3)); % <E^2>
-        Em2 = squeeze(sum(meas.Em(:,ff), 3).^2); % <E>^2
         hold on
-        plot(params.temp, (E2m - Em2)./ (kB * params.temp.^2), 'o', 'Color', colorOption{1});
+        % E2m = squeeze(sum(meas.Em(:,ff).^2, 3)); % <E^2>
+        % Em2 = squeeze(sum(meas.Em(:,ff), 3).^2); % <E>^2
+        % plot(params.temp, (E2m - Em2)./ (kB * params.temp.^2), '-o', 'Color', colorOption{1});
+        Em_var = squeeze(var(meas.Em,0,3))';
+        Cv_T = Em_var./ (kB * params.temp.^2);
+        plot(params.temp, Cv_T, '-o', 'Color', colorOption{1});
+        ylabel('C$_v$(T)','Interpreter','latex')
+        % plot(params.temp, log(Cv_T), '-o', 'Color', colorOption{1});
+        % ylabel('log[C$_v$(T)]','Interpreter','latex')
         xlabel('Temperature (K)')
-        ylabel('$C_v(T)$','Interpreter','latex')
         set(ax5, 'FontSize', FntSz);
     end
     if strcmpi(pOpt, 'Cv_B') || strcmpi(pOpt, 'all')
         fg6 = figure;
         ax6 = fg6.CurrentAxes;
-        E2m = squeeze(sum(meas.Em(tt,:).^2, 3)); % <E^2>
-        Em2 = squeeze(sum(meas.Em(tt,:), 3).^2); % <E>^2
         hold on
-        plot(vecnorm(params.field,1), (E2m - Em2)./ (kB * vecnorm(params.field,1).^2), 'o', 'Color', colorOption{1});
+        % E2m = squeeze(sum(meas.Em(tt,:).^2, 3)); % <E^2>
+        % Em2 = squeeze(sum(meas.Em(tt,:), 3).^2); % <E>^2
+        % plot(vecnorm(params.field,1), (E2m - Em2)./ (kB * vecnorm(params.field,1).^2), '-o', 'Color', colorOption{1});
+        Em_var = squeeze(var(meas.Em,0,3));
+        Cv_B = Em_var./ (kB * vecnorm(params.field,1).^2);
+        plot(vecnorm(params.field,1), Cv_B, '-o', 'Color', colorOption{1});
+        ylabel('C$_v$(B)','Interpreter','latex')
+        % plot(vecnorm(params.field,1), log(Cv_B), '-o', 'Color', colorOption{1});
+        % ylabel('log[C$_v$(B)]','Interpreter','latex')
         xlabel('Magnetic Field (T)')
-        ylabel('$C_v(B)$','Interpreter','latex')
         set(ax6, 'FontSize', FntSz);
     end
     if strcmpi(pOpt, 'thermalization') || strcmpi(pOpt, 'all')
