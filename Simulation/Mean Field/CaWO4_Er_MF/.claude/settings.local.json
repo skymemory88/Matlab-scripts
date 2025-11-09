@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(matlab:*)",
+      "Bash(git checkout:*)",
+      "Bash(cd:*)",
+      "Bash(find:*)",
+      "Bash(dir)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
